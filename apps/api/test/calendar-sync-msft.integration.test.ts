@@ -198,6 +198,7 @@ beforeAll(async () => {
   const port = await startStub()
 
   process.env.DATABASE_URL = dbUrl
+  process.env.LOCAL_JWT_SECRET = SECRET
   delete process.env.AUTH0_DOMAIN
   delete process.env.GOOGLE_CLIENT_ID // Google intentionally unconfigured
   delete process.env.GOOGLE_CLIENT_SECRET
