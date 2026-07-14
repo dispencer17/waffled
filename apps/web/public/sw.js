@@ -5,14 +5,17 @@
 // Strategy:
 //   • navigations      → network-first, fall back to the cached app shell
 //   • hashed assets     → cache-first (Vite fingerprints them, so they're immutable)
+//   • GET /media/*      → stale-while-revalidate (uploaded photos/thumbnails; they
+//                         never change under a URL, so serving stale is always right)
 //   • GET /api/*        → straight to network (never persisted by this worker)
 //   • everything else   → straight to network
 // API requests are never cached because their responses contain household data
 // scoped by authorization headers, while Cache Storage keys requests by URL.
 
-const VERSION = 'waffled-v1'
+const VERSION = 'waffled-v2'
 const SHELL = `${VERSION}-shell`
 const ASSETS = `${VERSION}-assets`
+const MEDIA = `${VERSION}-media`
 const SHELL_URL = '/index.html'
 
 // Precache the shell AND its hashed assets at install time. We don't have a
@@ -42,7 +45,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   // This also removes the API cache created by older workers.
-  const keep = new Set([SHELL, ASSETS])
+  const keep = new Set([SHELL, ASSETS, MEDIA])
   event.waitUntil(
     caches.keys()
       .then((names) => Promise.all(names.filter((n) => !keep.has(n)).map((n) => caches.delete(n))))
@@ -74,6 +77,20 @@ async function cacheFirst(request) {
   return res
 }
 
+// Serve the cached copy immediately (media blobs are immutable per URL) while
+// refreshing in the background; first hit populates the cache.
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(MEDIA)
+  const cached = await cache.match(request)
+  const refresh = fetch(request)
+    .then((res) => {
+      if (res.ok) cache.put(request, res.clone())
+      return res
+    })
+    .catch(() => undefined)
+  return cached || (await refresh) || Response.error()
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return
@@ -83,6 +100,10 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstShell(request))
+    return
+  }
+  if (url.pathname.startsWith('/media/')) {
+    event.respondWith(staleWhileRevalidate(request))
     return
   }
   if (isAsset(url)) {

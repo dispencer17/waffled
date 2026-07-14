@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { useThemePref } from '../lib/theme'
+import { useInstallPrompt } from '../lib/pwa'
 import { PersonModal } from './components/PersonModal'
 import { SettingCard } from './components/SettingCard'
 import { ConfirmDialog } from './components/ConfirmDialog'
@@ -2419,6 +2420,7 @@ function FamilyNightSettings() {
 
 function AboutPanel() {
   const { household } = useHousehold()
+  const { canInstall, promptInstall } = useInstallPrompt()
   return (
     <div className="set-panel">
       <div className="set-head"><div className="wf-serif set-head-t">About</div></div>
@@ -2428,6 +2430,15 @@ function AboutPanel() {
           Self-hosted{household?.name ? ` · ${household.name}` : ''}. Version and storage info land here.
         </div>
       </SettingCard>
+      {canInstall && (
+        <SettingCard style={{ marginTop: 18 }}>
+          <SettingRow icon="📲" title="Install the app" sub="Add Waffled to this device's home screen — full screen, its own icon, works like a native app.">
+            <button type="button" className="btn btn-primary" onClick={() => void promptInstall()}>
+              Install
+            </button>
+          </SettingRow>
+        </SettingCard>
+      )}
       <SettingCard style={{ marginTop: 18 }}>
         <div className="set-row2-t" style={{ marginBottom: 4 }}>Account</div>
         <div className="tiny muted" style={{ fontWeight: 600, marginBottom: 16 }}>

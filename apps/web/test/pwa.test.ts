@@ -65,4 +65,37 @@ describe('service worker request privacy', () => {
 
     expect(cacheStorage.delete).toHaveBeenCalledWith('waffled-v1-api')
   })
+
+  it('serves /media/ through the stale-while-revalidate cache', async () => {
+    const { listeners, cacheStorage } = await loadWorker()
+    const respondWith = vi.fn()
+
+    listeners.get('fetch')?.({
+      request: { method: 'GET', mode: 'no-cors', url: 'https://waffled.test/media/photos/abc.webp' },
+      respondWith,
+    })
+
+    expect(respondWith).toHaveBeenCalledOnce()
+    await respondWith.mock.calls[0][0] // the SWR promise resolves without throwing
+    expect(cacheStorage.open).toHaveBeenCalledWith('waffled-v2-media')
+  })
+})
+
+describe('web app manifest (Android install)', () => {
+  it('is installable on phones: any orientation, id, and shortcuts', async () => {
+    const manifestPath = resolve(dirname(fileURLToPath(import.meta.url)), '../public/manifest.webmanifest')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    expect(manifest.orientation).toBe('any') // phones are portrait; kiosk CSS handles landscape
+    expect(manifest.id).toBeTruthy()
+    expect(manifest.display).toBe('standalone')
+    expect(manifest.shortcuts?.length).toBeGreaterThan(0)
+    // Maskable icon required for a proper Android launcher icon.
+    expect(manifest.icons.some((i: { purpose?: string }) => i.purpose === 'maskable')).toBe(true)
+  })
+
+  it('ships an assetlinks.json for the TWA', async () => {
+    const p = resolve(dirname(fileURLToPath(import.meta.url)), '../public/.well-known/assetlinks.json')
+    const links = JSON.parse(await readFile(p, 'utf8'))
+    expect(links[0].target.package_name).toBe('app.waffled.twa')
+  })
 })
