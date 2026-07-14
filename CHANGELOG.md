@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejects oversized payloads before buffering and throttles repeated login, setup, OIDC,
   kiosk, refresh, and media attempts; Caddy normalizes the client address and direct API
   access is restricted to the Docker host.
+- **Production starts only with durable, non-default secrets.** Setup generates a stable
+  PowerSync signing key with the other required secrets, repairs missing environment values,
+  and refuses production startup when secrets are malformed or still use public development
+  defaults.
+- **Public traffic now enters through Caddy instead of raw service ports.** Postgres and
+  direct API diagnostics bind to loopback, while device-facing PowerSync and Google OAuth
+  callbacks use Caddy; upgrades also migrate the exact legacy localhost callback safely.
+- **Application containers now drop root privileges after volume preparation.** The API and
+  backup scheduler run as unprivileged image users, while a short-lived startup job safely
+  updates ownership on volumes created by older root-running releases.
+- **Caddy now enforces a restrictive browser security policy.** Outbound sync is limited to
+  the configured PowerSync endpoint, and HSTS, MIME-sniffing, referrer, and browser-capability
+  protections are enabled while preserving camera and photo support.
 
 ### Added
 - **Plan breakfast and lunch from the iPhone meal planner, not just dinner.** Each day in the
@@ -72,7 +85,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the scattered one-off hex values that had crept in were consolidated onto them. This is what
   makes dark mode consistent — and keeps future color changes to one place.
 
+- **The self-hosting quick start is now copy-pasteable for first-time Docker users.** It
+  explains the required terminal, initial credentials, success checks, and safe troubleshooting.
+
 ### Fixed
+- **Upgrades now stop when their safety checks fail.** `./waffled upgrade` aborts after
+  a failed repository fast-forward or database backup unless backup skipping is explicit.
+
+- **Up-for-grabs chores now appear on Today.** The Family Chores card shows unassigned
+  chores that anyone can claim instead of incorrectly saying there are no chores yet.
+
+- **The iOS photo grid now reuses decoded images while scrolling.** Photo tiles no longer
+  refetch and decode the same image whenever SwiftUI recreates a grid cell.
+- **`./waffled up` now waits for health checks before showing its final status.** Normal startup
+  no longer looks like a failure just because API, PowerSync, or Caddy is still warming up.
+
 - **The iPhone Goals list now updates itself after you change a goal.** Deleting a goal, logging
   progress, ticking a checklist step, or editing an entry from a goal's detail screen now refreshes
   the list the moment you go back — no more stale card until you pull-to-refresh.
