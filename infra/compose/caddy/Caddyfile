@@ -20,9 +20,13 @@
 			header_up X-Forwarded-For {remote_host}
 		}
 	}
-	# Google's browser callback is intentionally outside /api, but still enters
-	# through the same public proxy instead of the loopback-only direct API port.
+	# OAuth browser callbacks (Google + Microsoft) are intentionally outside /api,
+	# but still enter through the same public proxy instead of the loopback-only
+	# direct API port.
 	handle /auth/google/* {
+		reverse_proxy api:3000
+	}
+	handle /auth/microsoft/* {
 		reverse_proxy api:3000
 	}
 

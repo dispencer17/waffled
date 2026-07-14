@@ -1397,11 +1397,14 @@ function CalendarsPanel() {
   if (loading) return <div className="set-panel"><div className="muted" style={{ padding: 20 }}>Loading…</div></div>
   if (error || !status) return <div className="set-panel"><div className="muted" style={{ padding: 20 }}>Couldn't load calendars — try reloading or signing in again.</div></div>
 
-  async function connect() {
+  async function connect(provider: 'google' | 'microsoft' = 'google') {
     setConnecting(true)
     try {
-      const { url } = await calendarsApi.connectCalendar(window.location.href)
-      window.location.href = url // full-page handoff to Google's consent screen
+      const { url } =
+        provider === 'microsoft'
+          ? await calendarsApi.connectMicrosoftCalendar(window.location.href)
+          : await calendarsApi.connectCalendar(window.location.href)
+      window.location.href = url // full-page handoff to the provider's consent screen
     } catch {
       setConnecting(false)
     }
@@ -1451,7 +1454,7 @@ function CalendarsPanel() {
     load()
   }
   async function disconnect(accountId: string) {
-    if (!window.confirm('Disconnect this Google account? Its calendars stop syncing (already-imported events stay).')) return
+    if (!window.confirm('Disconnect this account? Its calendars stop syncing (already-imported events stay).')) return
     await calendarsApi.disconnectAccount(accountId)
     load()
   }
@@ -1532,15 +1535,16 @@ function CalendarsPanel() {
     )
   }
 
-  if (!status.configured) {
+  if (!status.configured && !status.microsoftConfigured) {
     return (
       <div className="set-panel">
         <div className="set-head"><div className="wf-serif set-head-t">Calendars</div></div>
         <SettingCard>
           <div className="muted" style={{ fontWeight: 600 }}>
-            Google Calendar isn’t configured on the server yet. Set <code>GOOGLE_CLIENT_ID</code>,{' '}
-            <code>GOOGLE_CLIENT_SECRET</code>, <code>GOOGLE_CALENDAR_REDIRECT_URI</code> and{' '}
-            <code>TOKEN_ENCRYPTION_KEY</code> in the server environment, then reload.
+            No calendar provider is configured on the server yet. For Google set <code>GOOGLE_CLIENT_ID</code>,{' '}
+            <code>GOOGLE_CLIENT_SECRET</code>, <code>GOOGLE_CALENDAR_REDIRECT_URI</code>; for Outlook set{' '}
+            <code>MS_CLIENT_ID</code>, <code>MS_CLIENT_SECRET</code>, <code>MS_CALENDAR_REDIRECT_URI</code> — plus{' '}
+            <code>TOKEN_ENCRYPTION_KEY</code> — then reload.
           </div>
         </SettingCard>
       </div>
@@ -1562,13 +1566,22 @@ function CalendarsPanel() {
 
       {!status.connected ? (
         <SettingCard>
-          <div className="set-row2-t" style={{ marginBottom: 6 }}>Connect a Google Account</div>
+          <div className="set-row2-t" style={{ marginBottom: 6 }}>Connect a calendar account</div>
           <div className="tiny muted" style={{ fontWeight: 600, marginBottom: 16 }}>
-            Bring your family’s Google calendars into Waffled. You’ll pick which ones sync and who each one belongs to.
+            Bring your family’s calendars into Waffled. You’ll pick which ones sync and who each one belongs to.
           </div>
-          <button type="button" className="btn btn-primary" onClick={connect} disabled={connecting}>
-            {connecting ? 'Opening Google…' : 'Connect Google Calendar'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {status.configured && (
+              <button type="button" className="btn btn-primary" onClick={() => connect('google')} disabled={connecting}>
+                {connecting ? 'Opening…' : 'Connect Google Calendar'}
+              </button>
+            )}
+            {status.microsoftConfigured && (
+              <button type="button" className="btn btn-primary" onClick={() => connect('microsoft')} disabled={connecting}>
+                {connecting ? 'Opening…' : 'Connect Outlook Calendar'}
+              </button>
+            )}
+          </div>
         </SettingCard>
       ) : (
         <>
@@ -1611,20 +1624,20 @@ function CalendarsPanel() {
                   tabIndex={0}
                   onClick={() => setCollapsed((c) => ({ ...c, [acct.id]: !c[acct.id] }))}
                 >
-                  <span className="set-ic2">🔗</span>
+                  <span className="set-ic2">{acct.provider === 'microsoft' ? '📧' : '🔗'}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span className="set-row2-t" style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {acct.email ?? acct.googleSub}
                     </span>
                     <span className="tiny muted" style={{ fontWeight: 600 }}>
-                      {syncingCount} of {all.length} syncing · connected {fmtWhen(acct.connectedAt)}
+                      {acct.provider === 'microsoft' ? 'Outlook' : 'Google'} · {syncingCount} of {all.length} syncing · connected {fmtWhen(acct.connectedAt)}
                     </span>
                   </span>
                   {/* A dead Google sign-in (expired/revoked refresh token) surfaces here
                       with a one-tap Reconnect that re-auths IN PLACE — keeps every
                       calendar→person mapping + ★ write-target (unlike Disconnect). */}
                   {acct.lastSyncError && (
-                    <button type="button" className="btn btn-primary cal-reconnect" disabled={connecting} onClick={(e) => { e.stopPropagation(); connect() }}>
+                    <button type="button" className="btn btn-primary cal-reconnect" disabled={connecting} onClick={(e) => { e.stopPropagation(); connect(acct.provider) }}>
                       Reconnect
                     </button>
                   )}
@@ -1635,7 +1648,7 @@ function CalendarsPanel() {
                 </div>
                 {acct.lastSyncError && (
                   <div className="cal-acct-error">
-                    ⚠ Problem syncing — Google sign-in expired or was revoked. Click <b>Reconnect</b> to fix (your calendar assignments are kept).
+                    ⚠ Problem syncing — the sign-in expired or was revoked. Click <b>Reconnect</b> to fix (your calendar assignments are kept).
                   </div>
                 )}
 
@@ -1659,9 +1672,18 @@ function CalendarsPanel() {
             )
           })}
 
-          <button type="button" className="btn btn-ghost set-add" onClick={connect} disabled={connecting}>
-            ＋ Connect another account
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {status.configured && (
+              <button type="button" className="btn btn-ghost set-add" onClick={() => connect('google')} disabled={connecting}>
+                ＋ Connect another Google account
+              </button>
+            )}
+            {status.microsoftConfigured && (
+              <button type="button" className="btn btn-ghost set-add" onClick={() => connect('microsoft')} disabled={connecting}>
+                ＋ Connect an Outlook account
+              </button>
+            )}
+          </div>
         </>
       )}
     </div>
