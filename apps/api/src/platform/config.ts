@@ -103,6 +103,14 @@ export interface WalmartConfig {
   apiBase: string
 }
 
+/** Voice / speech-to-text (fork). An explicit WHISPER_BASE_URL (any
+ *  OpenAI-audio-compatible server, e.g. faster-whisper) wins; else the OpenAI
+ *  key is used with whisper-1; else transcription is unavailable (501). */
+export interface VoiceConfig {
+  whisperBaseUrl: string | null
+  whisperModel: string
+}
+
 export interface AppConfig {
   env: string
   port: number
@@ -110,6 +118,7 @@ export interface AppConfig {
   google: GoogleConfig
   microsoft: MicrosoftConfig
   walmart: WalmartConfig
+  voice: VoiceConfig
   /** Secrets-at-rest. tokenEncryptionKey encrypts Google refresh tokens (src/crypto.ts). */
   security: { tokenEncryptionKey: string | null }
   auth: {
@@ -192,6 +201,14 @@ export const config: AppConfig = {
     privateKey: process.env.WALMART_PRIVATE_KEY ?? null,
     publisherId: process.env.WALMART_PUBLISHER_ID ?? null,
     apiBase: process.env.WALMART_API_BASE ?? 'https://developer.api.walmart.com',
+  },
+
+  // Voice STT (fork). Point WHISPER_BASE_URL at any OpenAI-audio-compatible
+  // server (self-hosted faster-whisper via the compose `voice` profile), or
+  // leave it unset to fall back to OpenAI whisper-1 when OPENAI_API_KEY is set.
+  voice: {
+    whisperBaseUrl: env('WHISPER_BASE_URL') ?? null,
+    whisperModel: env('WHISPER_MODEL') ?? 'whisper-1',
   },
 
   security: { tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? null },

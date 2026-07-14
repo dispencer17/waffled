@@ -2865,6 +2865,13 @@ function DisplayKioskPanel() {
     setCfg((c) => (c ? { ...c, ...patch } : c))
     dirtyRef.current = true
   }
+  // Older servers / test fixtures may lack the voice block — default it.
+  type VoiceCfg = NonNullable<DisplayConfig['voice']>
+  const VOICE_DEFAULTS: VoiceCfg = { wakeWord: false, picovoiceKey: null, keyword: 'Computer' }
+  function updateVoice(patch: Partial<VoiceCfg>) {
+    dirtyRef.current = true
+    setCfg((c) => (c ? { ...c, voice: { ...VOICE_DEFAULTS, ...(c.voice ?? {}), ...patch } } : c))
+  }
   function updateDim(patch: Partial<DisplayConfig['nightDim']>) {
     setCfg((c) => (c ? { ...c, nightDim: { ...c.nightDim, ...patch } } : c))
     dirtyRef.current = true
@@ -3035,6 +3042,40 @@ function DisplayKioskPanel() {
                   <input type="time" className="set-inline-input" value={cfg.nightDim.end} onChange={(e) => updateDim({ end: e.target.value })} />
                 </div>
               </SettingRow>
+            )}
+          </SettingCard>
+
+          <SettingCard style={{ marginTop: 16 }}>
+            <SettingRow icon="🎙️" title="Wake word" sub="Hands-free voice on this kiosk — say the wake word, then ask for timers, groceries, lights, or your day. Needs a free Picovoice AccessKey (picovoice.ai) and a microphone.">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={(cfg.voice ?? VOICE_DEFAULTS).wakeWord}
+                aria-label="Enable wake word"
+                className={`toggle ${(cfg.voice ?? VOICE_DEFAULTS).wakeWord ? 'on' : ''}`}
+                onClick={() => updateVoice({ wakeWord: !(cfg.voice ?? VOICE_DEFAULTS).wakeWord })}
+              />
+            </SettingRow>
+            {(cfg.voice ?? VOICE_DEFAULTS).wakeWord && (
+              <>
+                <SettingRow icon="🔑" title="Picovoice AccessKey" sub="From console.picovoice.ai — free personal tier. Served to this kiosk's browser.">
+                  <input
+                    type="password"
+                    className="set-inline-input"
+                    style={{ width: 220 }}
+                    placeholder={cfg.voice?.picovoiceKey ? '•••••• (saved)' : 'AccessKey'}
+                    onChange={(e) => updateVoice({ picovoiceKey: e.target.value })}
+                    aria-label="Picovoice AccessKey"
+                  />
+                </SettingRow>
+                <SettingRow icon="🗣️" title="Wake word phrase" sub="Built-in Porcupine keywords; a custom phrase needs a model trained on the Picovoice console.">
+                  <select className="sel" value={(cfg.voice ?? VOICE_DEFAULTS).keyword} onChange={(e) => updateVoice({ keyword: e.target.value })} aria-label="Wake word phrase">
+                    {['Computer', 'Jarvis', 'Bumblebee', 'Porcupine', 'Blueberry', 'Grasshopper', 'Terminator'].map((k) => (
+                      <option key={k} value={k}>{k}</option>
+                    ))}
+                  </select>
+                </SettingRow>
+              </>
             )}
           </SettingCard>
         </>

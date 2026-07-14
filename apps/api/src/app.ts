@@ -33,6 +33,7 @@ import { registerCountdownRoutes } from './modules/countdowns/countdowns'
 import { registerFamilyNightRoutes } from './modules/familyNight/familyNight.routes'
 import { registerHomeAssistantRoutes } from './modules/homeassistant/homeassistant.routes'
 import { registerShoppingRoutes } from './modules/shopping/shopping.routes'
+import { registerVoiceRoutes } from './modules/voice/voice.routes'
 import { registerCalendarAiRoutes } from './modules/calendar/calendar-ai'
 import { registerCalendarRoutes } from './modules/calendar/calendars'
 import { registerCalendarSyncRoutes } from './modules/calendar/calendar-sync.routes'
@@ -237,6 +238,9 @@ registerHomeAssistantRoutes(api)
 
 // Walmart cart handoff (/api/shopping/walmart…) — rides the lists module
 registerShoppingRoutes(api)
+
+// Voice assistant (/api/voice…) — kiosk push-to-talk + wake word
+registerVoiceRoutes(api)
 
 // Calendar AI cards (/api/calendar/heads-up, /api/events/:id/insight)
 registerCalendarAiRoutes(api)

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../icons'
-import { usePersons, api, localToday, type Person, type ListSummary } from '../../lib/api'
+import { usePersons, api, localToday, requestVoiceCapture, voiceApi, CAPTURE_PREFILL, type Person, type ListSummary } from '../../lib/api'
 import { parseCapture, intentSummary, looksConfident, type ParsedIntent } from '../../lib/capture/parse'
 import { describeRrule } from './recurrence'
 
@@ -292,6 +292,27 @@ export function CaptureBar() {
     void api.warm()
     setTimeout(() => taRef.current?.focus(), 0)
   }
+
+  // Voice (fork): a spoken command the assistant couldn't run directly lands
+  // here prefilled, keeping the visual preview/commit flow. The mic button in
+  // the composer hands off to the VoiceHud pipeline.
+  useEffect(() => {
+    const onPrefill = (e: Event) => {
+      const d = (e as CustomEvent<{ text: string }>).detail
+      if (!d?.text) return
+      open()
+      setText(d.text)
+    }
+    window.addEventListener(CAPTURE_PREFILL, onPrefill)
+    return () => window.removeEventListener(CAPTURE_PREFILL, onPrefill)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const [micAvailable, setMicAvailable] = useState(false)
+  useEffect(() => {
+    let alive = true
+    voiceApi.status().then((s) => alive && setMicAvailable(!!s.stt)).catch(() => {})
+    return () => { alive = false }
+  }, [])
   function close() {
     setExpanded(false)
     setText('')
@@ -416,6 +437,18 @@ export function CaptureBar() {
                     rows={1}
                     disabled={busy}
                   />
+                  {micAvailable && (
+                    <button
+                      type="button"
+                      className="cap-go mic"
+                      aria-label="Speak a command"
+                      title="Speak a command"
+                      disabled={busy}
+                      onClick={() => { close(); requestVoiceCapture() }}
+                    >
+                      🎙
+                    </button>
+                  )}
                   <button type="submit" className="cap-go" aria-label="Add" disabled={busy || !text.trim() || !canCommit}>
                     ↵
                   </button>

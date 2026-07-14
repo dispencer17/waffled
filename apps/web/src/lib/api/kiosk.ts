@@ -22,6 +22,8 @@ export interface DisplayConfig {
   photoAlbum: string | null
   photoInterval: number
   photoShuffle: boolean
+  // Wake-word voice control (fork). Optional: older servers won't send it.
+  voice?: { wakeWord: boolean; picovoiceKey: string | null; keyword: string }
 }
 
 export interface KioskDevice {

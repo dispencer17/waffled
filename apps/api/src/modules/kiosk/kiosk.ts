@@ -39,6 +39,9 @@ interface DisplaySettings {
   photoAlbum: string | null
   photoInterval: number // seconds between photos
   photoShuffle: boolean
+  // Wake-word voice control (fork). The Picovoice AccessKey necessarily reaches
+  // the kiosk browser (Porcupine runs in-page WASM) — per-install, usage-metered.
+  voice: { wakeWord: boolean; picovoiceKey: string | null; keyword: string }
 }
 const DISPLAY_DEFAULTS: DisplaySettings = {
   screensaverMinutes: 15,
@@ -50,6 +53,7 @@ const DISPLAY_DEFAULTS: DisplaySettings = {
   photoAlbum: null,
   photoInterval: 10,
   photoShuffle: false,
+  voice: { wakeWord: false, picovoiceKey: null, keyword: 'Computer' },
 }
 
 const CODE_TTL_MIN = 10
@@ -106,7 +110,12 @@ async function readDisplay(householdId: string): Promise<DisplaySettings> {
     [householdId]
   )
   const d = rows[0]?.settings?.display ?? {}
-  return { ...DISPLAY_DEFAULTS, ...d, nightDim: { ...DISPLAY_DEFAULTS.nightDim, ...(d.nightDim ?? {}) } }
+  return {
+    ...DISPLAY_DEFAULTS,
+    ...d,
+    nightDim: { ...DISPLAY_DEFAULTS.nightDim, ...(d.nightDim ?? {}) },
+    voice: { ...DISPLAY_DEFAULTS.voice, ...(d.voice ?? {}) },
+  }
 }
 
 const CONTENT_VALUES = new Set(['photos', 'clock', 'off'])
@@ -130,6 +139,14 @@ function sanitizeDisplay(body: unknown): Partial<DisplaySettings> {
     if (typeof nd.enabled === 'boolean') out.nightDim.enabled = nd.enabled
     if (typeof nd.start === 'string') out.nightDim.start = nd.start
     if (typeof nd.end === 'string') out.nightDim.end = nd.end
+  }
+  const v = b.voice as Record<string, unknown> | undefined
+  if (v && typeof v === 'object') {
+    out.voice = {} as DisplaySettings['voice']
+    if (typeof v.wakeWord === 'boolean') out.voice.wakeWord = v.wakeWord
+    if (typeof v.picovoiceKey === 'string') out.voice.picovoiceKey = v.picovoiceKey.trim() || null
+    else if (v.picovoiceKey === null) out.voice.picovoiceKey = null
+    if (typeof v.keyword === 'string' && v.keyword.trim()) out.voice.keyword = v.keyword.trim().slice(0, 40)
   }
   return out
 }
@@ -228,7 +245,12 @@ export function registerKioskRoutes(api: Api): void {
     requireAdmin(tenant)
     const patch = sanitizeDisplay(req.body)
     const current = await readDisplay(tenant.householdId)
-    const next: DisplaySettings = { ...current, ...patch, nightDim: { ...current.nightDim, ...(patch.nightDim ?? {}) } }
+    const next: DisplaySettings = {
+      ...current,
+      ...patch,
+      nightDim: { ...current.nightDim, ...(patch.nightDim ?? {}) },
+      voice: { ...current.voice, ...(patch.voice ?? {}) },
+    }
     await query(
       `update households set settings = coalesce(settings, '{}'::jsonb) || jsonb_build_object('display', $2::jsonb) where id = $1`,
       [tenant.householdId, JSON.stringify(next)]

@@ -12,6 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@picovoice/porcupine-web": "^4.0.1",
+    "@picovoice/web-voice-processor": "^4.0.10",
     "@powersync/react": "^1.10.0",
     "@powersync/web": "^1.38.3",
     "@types/qrcode": "^1.5.6",

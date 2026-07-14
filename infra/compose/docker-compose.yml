@@ -158,6 +158,10 @@ services:
       WALMART_PRIVATE_KEY: ${WALMART_PRIVATE_KEY:-}
       WALMART_KEY_VERSION: ${WALMART_KEY_VERSION:-}
       WALMART_PUBLISHER_ID: ${WALMART_PUBLISHER_ID:-}
+      # --- Voice STT (fork). With the `voice` profile the bundled faster-whisper
+      # answers this; otherwise leave unset to use OpenAI (OPENAI_API_KEY).
+      WHISPER_BASE_URL: ${WHISPER_BASE_URL:-}
+      WHISPER_MODEL: ${WHISPER_MODEL:-}
       # --- OpenTelemetry (optional, OFF by default). Set OTEL_EXPORTER_OTLP_ENDPOINT
       # to export traces+metrics to any OTLP backend. `./waffled observability up` runs a
       # local Grafana stack (the `observability` profile below) and sets this for you.
@@ -307,6 +311,21 @@ services:
   # Tempo + Loki in one container. Started only with the `observability` profile
   # (`./waffled observability up`); receives OTLP from the api and gives you Grafana
   # dashboards entirely on your machine. Nothing leaves the host.
+  # Optional self-hosted speech-to-text (fork) — an OpenAI-audio-compatible
+  # faster-whisper server for the kiosk voice assistant. Started only with the
+  # `voice` profile (docker compose --profile voice up -d); set
+  # WHISPER_BASE_URL=http://whisper:8000/v1 in .env so the api uses it. CPU
+  # image; expect a few seconds per utterance on typical home-server hardware.
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cpu
+    container_name: waffled-whisper
+    profiles: ["voice"]
+    environment:
+      WHISPER__MODEL: ${WHISPER_LOCAL_MODEL:-Systran/faster-whisper-small}
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
   lgtm:
     image: grafana/otel-lgtm:latest
     container_name: waffled-lgtm
@@ -333,3 +352,4 @@ volumes:
   caddy_data:
   caddy_config:
   lgtm_data:         # Grafana/Prometheus/Tempo/Loki state (observability profile)
+  whisper_cache:     # downloaded faster-whisper models (voice profile, fork)

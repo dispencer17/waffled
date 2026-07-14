@@ -3,6 +3,8 @@ import { Rail } from './components/Rail'
 import { Topbar } from './components/Topbar'
 import { OfflineBanner } from './components/OfflineBanner'
 import { UpdateModal } from './components/UpdateModal'
+import { VoiceHud } from './components/VoiceHud'
+import { Timers } from './components/Timers'
 import { TopbarSlotProvider } from './topbar-slot'
 import '../styles/kiosk-profiles.css'
 
@@ -20,6 +22,8 @@ export function KioskLayout() {
           <Outlet />
         </div>
         <UpdateModal />
+        <VoiceHud />
+        <Timers />
       </div>
     </TopbarSlotProvider>
   )

@@ -34,6 +34,14 @@ export default defineConfig({
   // @powersync/web ships its own SQLite WASM + worker; pre-bundling breaks them,
   // so exclude it from Vite's dep optimizer (PowerSync's documented Vite setup).
   optimizeDeps: { exclude: ['@powersync/web'] },
+  // The Picovoice packages declare only a `module` entry (no main/exports),
+  // which Vitest's SSR resolver can't locate — point straight at the ESM files.
+  resolve: {
+    alias: {
+      '@picovoice/porcupine-web': '@picovoice/porcupine-web/dist/esm/index.js',
+      '@picovoice/web-voice-processor': '@picovoice/web-voice-processor/dist/esm/index.js',
+    },
+  },
   worker: { format: 'es' },
   server: {
     port: 5175,
