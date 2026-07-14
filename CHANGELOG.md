@@ -57,6 +57,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   protections are enabled while preserving camera and photo support.
 
 ### Added
+- **The theme can now follow the sun.** A new **"Follow the sun"** choice in Settings →
+  Appearance switches to the dark theme at your local sunset and back at sunrise, using the
+  household location already set for weather — no schedule to maintain. Kiosk night dimming
+  gained the same trick: flip **"Sunset to sunrise"** in Display & Kiosk and the dim window
+  tracks the seasons, with real screen-backlight dimming on tablets running Fully Kiosk.
+- **Outlook and Microsoft 365 calendars now sync, right beside Google.** Settings → Calendars
+  gains a **Connect Outlook** button; connected accounts show a provider badge and behave
+  exactly like Google ones — two-way sync, per-person calendar mapping, write targets, and the
+  same five-minute background poll. Requires `MS_CLIENT_ID` / `MS_CLIENT_SECRET` /
+  `MS_CALENDAR_REDIRECT_URI` from a (free) Azure app registration.
+- **Smart Home module: control your house from the kitchen.** A new optional module connects
+  Waffled to your own Home Assistant. Admins pin the entities that matter — lights, scenes,
+  switches — and a Smart Home card on Today gives everyone one-tap control of exactly those
+  devices and nothing else. The HA token stays on the server, encrypted at rest.
+- **Send your grocery list to Walmart.** The grocery board's **Send to Walmart** button matches
+  your items to Walmart products and shows a QR code — scan it with your phone and the Walmart
+  app opens with a pre-filled cart, ready to check out with Walmart+. Items it can't match fall
+  back to a shareable text list, and a "right product" pin teaches it your brands over time.
+- **Talk to the kiosk.** The capture bar's microphone now works: hold it and say "set a timer
+  for 10 minutes", "add milk to the grocery list", or "turn off the kitchen lights" — timers ring
+  on the kiosk, groceries land on the list, pinned smart-home devices respond, and questions get
+  short spoken answers. An optional always-listening wake word (Picovoice) can be enabled in
+  Display & Kiosk settings. Speech-to-text runs through your own Whisper container or OpenAI —
+  your choice, shown in Settings.
+- **Waffled installs like an app on Android phones.** The web app is now a proper installable
+  PWA in portrait — install it from Chrome's menu (or the new prompt in Settings → About), get
+  home-screen shortcuts for Capture, Grocery, and Today, and an offline page when the server is
+  unreachable. For a no-URL-bar experience, `apps/android-twa/` builds a sideloadable APK.
 - **Plan breakfast and lunch from the iPhone meal planner, not just dinner.** Each day in the
   weekly planner now offers an add button for every unplanned meal — Breakfast, Lunch, and
   Dinner — instead of a lone "Plan dinner" affordance, matching what the iPad grid already did.
