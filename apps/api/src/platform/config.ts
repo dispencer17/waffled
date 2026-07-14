@@ -93,12 +93,23 @@ export interface MicrosoftConfig {
   graphBase: string
 }
 
+/** Walmart affiliate product API (fork) — powers the grocery cart handoff.
+ *  privateKey is the base64 of the RSA PEM registered on walmart.io. */
+export interface WalmartConfig {
+  consumerId: string | null
+  keyVersion: string
+  privateKey: string | null
+  publisherId: string | null
+  apiBase: string
+}
+
 export interface AppConfig {
   env: string
   port: number
   ai: AiConfig
   google: GoogleConfig
   microsoft: MicrosoftConfig
+  walmart: WalmartConfig
   /** Secrets-at-rest. tokenEncryptionKey encrypts Google refresh tokens (src/crypto.ts). */
   security: { tokenEncryptionKey: string | null }
   auth: {
@@ -171,6 +182,16 @@ export const config: AppConfig = {
     authUrl: process.env.MS_AUTH_URL ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     tokenUrl: process.env.MS_TOKEN_URL ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
     graphBase: process.env.MS_GRAPH_BASE ?? 'https://graph.microsoft.com/v1.0',
+  },
+
+  // Walmart affiliate product search (fork). Sign up at walmart.io, upload the
+  // RSA public key, and set the consumer id + base64-encoded private key PEM.
+  walmart: {
+    consumerId: process.env.WALMART_CONSUMER_ID ?? null,
+    keyVersion: process.env.WALMART_KEY_VERSION ?? '1',
+    privateKey: process.env.WALMART_PRIVATE_KEY ?? null,
+    publisherId: process.env.WALMART_PUBLISHER_ID ?? null,
+    apiBase: process.env.WALMART_API_BASE ?? 'https://developer.api.walmart.com',
   },
 
   security: { tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? null },

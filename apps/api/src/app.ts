@@ -32,6 +32,7 @@ import { registerEventRoutes } from './modules/events/events'
 import { registerCountdownRoutes } from './modules/countdowns/countdowns'
 import { registerFamilyNightRoutes } from './modules/familyNight/familyNight.routes'
 import { registerHomeAssistantRoutes } from './modules/homeassistant/homeassistant.routes'
+import { registerShoppingRoutes } from './modules/shopping/shopping.routes'
 import { registerCalendarAiRoutes } from './modules/calendar/calendar-ai'
 import { registerCalendarRoutes } from './modules/calendar/calendars'
 import { registerCalendarSyncRoutes } from './modules/calendar/calendar-sync.routes'
@@ -233,6 +234,9 @@ registerFamilyNightRoutes(api)
 
 // Smart Home / Home Assistant (/api/homeassistant…) — optional module
 registerHomeAssistantRoutes(api)
+
+// Walmart cart handoff (/api/shopping/walmart…) — rides the lists module
+registerShoppingRoutes(api)
 
 // Calendar AI cards (/api/calendar/heads-up, /api/events/:id/insight)
 registerCalendarAiRoutes(api)
