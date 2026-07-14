@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
-import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef } from '../lib/api'
+import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { useThemePref } from '../lib/theme'
 import { PersonModal } from './components/PersonModal'
@@ -28,6 +28,7 @@ const NAV = [
   { key: 'lists', icon: '📝', label: 'Lists', admin: true, group: 'family' },
   { key: 'modules', icon: '🧩', label: 'Modules', admin: true, group: 'family' },
   { key: 'display', icon: '🖥️', label: 'Display & Kiosk', admin: true, group: 'family' },
+  { key: 'smarthome', icon: '💡', label: 'Smart Home', admin: true, group: 'family' },
   { key: 'notifications', icon: '🔔', label: 'Notifications', admin: true, group: 'family' },
   // System — the self-hosted deployment (admin/operator)
   { key: 'security', icon: '🔐', label: 'Sign-in & Security', admin: true, group: 'system' },
@@ -3058,6 +3059,134 @@ function ThemePreview({ label, active, pinned, colors, onSelect }: {
   )
 }
 
+function SmartHomePanel() {
+  const [status, setStatus] = useState<HaStatus | null>(null)
+  const [baseUrl, setBaseUrl] = useState('')
+  const [token, setToken] = useState('')
+  const [pinned, setPinned] = useState<string[]>([])
+  const [all, setAll] = useState<HaEntity[] | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const refresh = () =>
+    homeAssistantApi.status().then((s) => {
+      setStatus(s)
+      setPinned(s.entities)
+      if (s.configured && s.connected) {
+        homeAssistantApi.allEntities().then((r) => setAll(r.entities)).catch(() => setAll(null))
+      }
+      return s
+    })
+
+  useEffect(() => {
+    let alive = true
+    homeAssistantApi
+      .config()
+      .then((c) => { if (alive) setBaseUrl(c.baseUrl ?? '') })
+      .catch(() => {})
+    refresh().catch(() => alive && setErr("Couldn't load Smart Home settings — is the module enabled in Settings → Modules?"))
+    return () => { alive = false }
+  }, [])
+
+  async function saveConnection() {
+    setSaving(true); setSaved(false); setErr(null)
+    try {
+      await homeAssistantApi.saveConfig({ baseUrl, ...(token.trim() ? { token } : {}) })
+      setToken('')
+      await refresh()
+      setSaved(true)
+    } catch {
+      setErr("Couldn't save — check the URL and token.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function togglePin(entityId: string) {
+    const next = pinned.includes(entityId) ? pinned.filter((e) => e !== entityId) : [...pinned, entityId]
+    setPinned(next)
+    try {
+      await homeAssistantApi.saveConfig({ entities: next })
+    } catch {
+      setErr("Couldn't save the pinned devices.")
+    }
+  }
+
+  // Domains worth pinning; everything else (sensors etc.) is display-only noise here.
+  const pickable = (all ?? []).filter((e) =>
+    ['light', 'switch', 'fan', 'scene', 'script', 'lock', 'input_boolean', 'cover', 'climate', 'button', 'input_button'].includes(e.domain)
+  )
+
+  return (
+    <div className="set-panel">
+      <div className="set-head">
+        <div className="wf-serif set-head-t">Smart Home</div>
+        <div className="tiny muted" style={{ fontWeight: 600 }}>Home Assistant — quick controls on Today</div>
+      </div>
+
+      {err && <div className="tiny" style={{ color: 'var(--danger)', padding: '0 2px 10px', fontWeight: 700 }}>{err}</div>}
+
+      <SettingCard>
+        <SettingRow icon="🔗" title="Connection" sub={
+          !status?.configured ? 'Not connected — enter your HA URL and a long-lived access token.'
+          : status.connected ? `Connected to ${status.locationName ?? 'Home Assistant'}${status.version ? ` (v${status.version})` : ''}.`
+          : `Saved, but ${status.error ?? 'unreachable'}.`
+        }>
+          <span className={`pill${status?.connected ? ' on' : ''}`}>{status?.connected ? 'Connected' : status?.configured ? 'Offline' : 'Off'}</span>
+        </SettingRow>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 2px 10px' }}>
+          <input
+            className="set-inline-input"
+            placeholder="http://homeassistant.local:8123"
+            value={baseUrl}
+            onChange={(e) => { setBaseUrl(e.target.value); setSaved(false) }}
+            aria-label="Home Assistant URL"
+          />
+          <input
+            className="set-inline-input"
+            type="password"
+            placeholder={status?.configured ? 'Long-lived access token (leave blank to keep current)' : 'Long-lived access token'}
+            value={token}
+            onChange={(e) => { setToken(e.target.value); setSaved(false) }}
+            aria-label="Home Assistant access token"
+          />
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button type="button" className="btn btn-primary" disabled={saving || !baseUrl.trim()} onClick={saveConnection}>
+              {saving ? 'Saving…' : 'Save & test'}
+            </button>
+            {saved && <span className="tiny muted" style={{ fontWeight: 700 }}>Saved ✓</span>}
+          </div>
+          <div className="tiny muted">Create a token in Home Assistant under your profile → Security → Long-lived access tokens. It's stored encrypted and never shown again.</div>
+        </div>
+      </SettingCard>
+
+      <SettingCard style={{ marginTop: 16 }}>
+        <SettingRow icon="📌" title="Pinned devices" sub="Only pinned devices appear on the Today card — and they're the only ones Waffled can control.">
+          <span className="pill">{pinned.length}</span>
+        </SettingRow>
+        {!status?.connected && <div className="muted" style={{ padding: '4px 2px 12px' }}>Connect above to browse your devices.</div>}
+        {status?.connected && all === null && <div className="muted" style={{ padding: '4px 2px 12px' }}>Loading devices…</div>}
+        {status?.connected && all !== null && pickable.length === 0 && (
+          <div className="muted" style={{ padding: '4px 2px 12px' }}>No controllable devices found.</div>
+        )}
+        {status?.connected && pickable.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, padding: '4px 2px 12px' }}>
+            {pickable.map((e) => (
+              <label key={e.entityId} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" className="set-check" checked={pinned.includes(e.entityId)} onChange={() => togglePin(e.entityId)} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {e.name} <span className="tiny muted">({e.entityId})</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </SettingCard>
+    </div>
+  )
+}
+
 function AppearancePanel() {
   const { pref, resolved, setPref } = useThemePref()
   const matchSystem = pref === 'system'
@@ -3170,7 +3299,7 @@ export function Settings() {
         </div>
       </div>
       <div className="set-content">
-        {activeTab === 'appearance' ? <AppearancePanel /> : activeTab === 'profile' ? <MyProfilePanel /> : activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : activeTab === 'about' ? <AboutPanel /> : <Placeholder tab={activeTab} />}
+        {activeTab === 'appearance' ? <AppearancePanel /> : activeTab === 'profile' ? <MyProfilePanel /> : activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'smarthome' ? <SmartHomePanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : activeTab === 'about' ? <AboutPanel /> : <Placeholder tab={activeTab} />}
       </div>
     </div>
   )

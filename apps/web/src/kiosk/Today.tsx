@@ -5,6 +5,7 @@ import { ChoresCard } from './components/ChoresCard'
 import { GroceryCard } from './components/GroceryCard'
 import { CountdownsCard } from './components/CountdownsCard'
 import { FamilyNightCard } from './components/FamilyNightCard'
+import { QuickControlsCard } from './components/QuickControls'
 import { GoalSpotlightCard } from './components/GoalSpotlightCard'
 import { GoalRecapBar } from './components/GoalRecap'
 import { ApprovalsBar } from './components/Approvals'
@@ -31,6 +32,7 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
   familyNight: { label: 'Family Night', node: <FamilyNightCard /> },
   goals: { label: 'Goals', node: <GoalSpotlightCard /> },
   pantry: { label: 'Pantry', node: <PantryCard /> },
+  smartHome: { label: 'Smart Home', node: <QuickControlsCard /> },
 }
 
 // Layout helpers (pure). A card lives in exactly one column.
@@ -103,6 +105,7 @@ export function Today() {
   const showGrocery = moduleEnabled(household, 'lists')
   const showFamilyNight = moduleEnabled(household, 'familyNight') && household?.settings?.familyNight?.showOnToday !== false
   const showGoals = moduleEnabled(household, 'goals')
+  const showSmartHome = moduleEnabled(household, 'smartHome')
   // Whether each card is available to show at all (its module is on). Cards with
   // no module gate are always available. Drives which hidden cards can be brought
   // back from the tray — showing one whose module is off would just get stripped.
@@ -115,8 +118,9 @@ export function Today() {
       tonight: showMeals,
       week: showMeals,
       grocery: showGrocery,
+      smartHome: showSmartHome,
     }),
-    [showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery]
+    [showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome]
   )
   const isAvailable = (card: string) => cardAvailable[card] ?? true
   const effectiveResolved = useMemo<StoredLayout>(() => {
@@ -124,12 +128,13 @@ export function Today() {
     let cols = applyModuleCard(resolved.cols, 'pantry', showPantry, hidden, 1) // pantry → middle column by default
     cols = applyModuleCard(cols, 'familyNight', showFamilyNight, hidden)
     cols = applyModuleCard(cols, 'goals', showGoals, hidden, 0) // goals → left column by default
+    cols = applyModuleCard(cols, 'smartHome', showSmartHome, hidden)
     cols = hideModuleCard(cols, 'chores', showChores)
     cols = hideModuleCard(cols, 'tonight', showMeals)
     cols = hideModuleCard(cols, 'week', showMeals)
     cols = hideModuleCard(cols, 'grocery', showGrocery)
     return { cols, hidden }
-  }, [resolved, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery])
+  }, [resolved, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome])
   const [editing, setEditing] = useState(false)
   const [layout, setLayout] = useState<string[][]>(effectiveResolved.cols)
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)

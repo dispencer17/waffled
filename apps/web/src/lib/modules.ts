@@ -3,7 +3,7 @@
 // docs/product/extensibility.md.
 import type { Household } from './api'
 
-export type ModuleKey = 'pantry' | 'chores' | 'goals' | 'meals' | 'lists' | 'familyNight' | 'quotes'
+export type ModuleKey = 'pantry' | 'chores' | 'goals' | 'meals' | 'lists' | 'familyNight' | 'smartHome' | 'quotes'
 
 export interface ModuleDef {
   key: ModuleKey
@@ -66,6 +66,15 @@ export const MODULES: ModuleDef[] = [
     name: 'Family Night',
     icon: '🏡',
     description: 'A recurring family gathering with a customizable agenda whose parts auto-rotate among members. Adds a Today card and can put it on the calendar.',
+    status: 'available',
+    defaultOn: false,
+    hasSettings: true,
+  },
+  {
+    key: 'smartHome',
+    name: 'Smart Home',
+    icon: '💡',
+    description: 'Control pinned Home Assistant devices (lights, scenes, switches) from a Today card. Connects to your own HA instance.',
     status: 'available',
     defaultOn: false,
     hasSettings: true,

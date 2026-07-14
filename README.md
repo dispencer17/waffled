@@ -23,6 +23,42 @@ A shared family operating system rendered across three surfaces:
 One household, one source of truth: calendar (2-way Google sync), chores & stars,
 goals & rewards, meals & recipes, lists, photos, and an AI "Add anything" capture bar.
 
+## This fork
+
+This is a personal fork of [kevinpsites/waffled](https://github.com/kevinpsites/waffled)
+adding: sunset-triggered dark mode & sunset-to-sunrise night dimming, a Smart Home
+module (Home Assistant quick controls + entity allowlist), Outlook calendar sync,
+a Walmart grocery-cart handoff, kiosk voice control, and Android PWA/TWA packaging.
+
+### Home Assistant ↔ Waffled
+
+**Waffled → HA** (this fork): enable the *Smart Home* module (Settings → Modules),
+then Settings → Smart Home to connect your HA URL + a long-lived access token and
+pin the entities the Today card may control.
+
+**HA → Waffled** (upstream feature): create a scoped API key in Settings → API Keys
+and call the REST API from HA, e.g.:
+
+```yaml
+# configuration.yaml
+rest_command:
+  waffled_add_grocery:
+    url: "https://waffled.example.com/api/lists/grocery/items"
+    method: post
+    headers:
+      x-api-key: !secret waffled_api_key   # needs lists:write scope
+    content_type: application/json
+    payload: '{"name": "{{ item }}"}'
+
+sensor:
+  - platform: rest
+    name: Waffled Weather
+    resource: https://waffled.example.com/api/weather
+    headers:
+      x-api-key: !secret waffled_api_key   # weather:read scope
+    value_template: "{{ value_json.tempF }}"
+```
+
 ## Repo layout
 
 ```
