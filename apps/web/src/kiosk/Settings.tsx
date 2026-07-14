@@ -2989,6 +2989,22 @@ function DisplayKioskPanel() {
               <input type="checkbox" className="set-check" checked={cfg.nightDim.enabled} onChange={(e) => updateDim({ enabled: e.target.checked })} />
             </SettingRow>
             {cfg.nightDim.enabled && (
+              <SettingRow icon="🌅" title="Sunset to sunrise" sub="Follow your household location's sun times instead of fixed hours.">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={cfg.nightDim.start === 'sunset'}
+                  aria-label="Dim from sunset to sunrise"
+                  className={`toggle ${cfg.nightDim.start === 'sunset' ? 'on' : ''}`}
+                  onClick={() =>
+                    cfg.nightDim.start === 'sunset'
+                      ? updateDim({ start: '22:00', end: '07:00' })
+                      : updateDim({ start: 'sunset', end: 'sunrise' })
+                  }
+                />
+              </SettingRow>
+            )}
+            {cfg.nightDim.enabled && cfg.nightDim.start !== 'sunset' && (
               <SettingRow icon="🕙" title="Dim from → to">
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <input type="time" className="set-inline-input" value={cfg.nightDim.start} onChange={(e) => updateDim({ start: e.target.value })} />
@@ -3045,6 +3061,7 @@ function ThemePreview({ label, active, pinned, colors, onSelect }: {
 function AppearancePanel() {
   const { pref, resolved, setPref } = useThemePref()
   const matchSystem = pref === 'system'
+  const followSun = pref === 'sun'
   return (
     <div className="set-panel">
       <div className="set-head"><div className="wf-serif set-head-t">Appearance</div></div>
@@ -3076,6 +3093,16 @@ function AppearancePanel() {
             aria-label="Match system appearance"
             className={`toggle ${matchSystem ? 'on' : ''}`}
             onClick={() => setPref(matchSystem ? resolved : 'system')}
+          />
+        </SettingRow>
+        <SettingRow icon="🌅" title="Follow the sun" sub="Dark from sunset to sunrise, using your household location's sun times.">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={followSun}
+            aria-label="Follow the sun"
+            className={`toggle ${followSun ? 'on' : ''}`}
+            onClick={() => setPref(followSun ? resolved : 'sun')}
           />
         </SettingRow>
       </SettingCard>

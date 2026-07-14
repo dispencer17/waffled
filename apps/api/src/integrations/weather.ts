@@ -23,6 +23,10 @@ interface WeatherDto {
   isDay?: boolean
   location?: string
   fetchedAt?: string
+  // Today's sun times as local wall-clock ISO at the household location
+  // (timezone=auto), e.g. "2026-07-14T05:44". Drives the sunset theme + dim.
+  sunrise?: string
+  sunset?: string
 }
 
 const geoCache = new Map<string, Geo | null>()
@@ -86,11 +90,13 @@ export function registerWeatherRoutes(api: Api): void {
     try {
       const url =
         `${FORECAST_URL}?latitude=${geo.lat}&longitude=${geo.lon}` +
-        `&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph`
+        `&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph` +
+        `&daily=sunrise,sunset&forecast_days=1&timezone=auto`
       const fr = await fetch(url)
       if (!fr.ok) throw new Error(`forecast -> ${fr.status}`)
       const fd = (await fr.json()) as {
         current?: { temperature_2m: number; weather_code: number; is_day: number }
+        daily?: { sunrise?: string[]; sunset?: string[] }
       }
       const c = fd.current
       if (!c) return { configured: false }
@@ -104,6 +110,8 @@ export function registerWeatherRoutes(api: Api): void {
         isDay: c.is_day === 1,
         location: geo.label,
         fetchedAt: new Date(now).toISOString(),
+        sunrise: fd.daily?.sunrise?.[0],
+        sunset: fd.daily?.sunset?.[0],
       }
       forecastCache.set(cacheKey, { data, expiresAt: now + FORECAST_TTL_MS })
       return data

@@ -5,7 +5,10 @@ import {
   resolveTheme,
   applyTheme,
   initTheme,
+  setSunTimes,
+  sunPrefersDark,
   THEME_KEY,
+  SUN_KEY,
   type ThemePref,
 } from './theme'
 
@@ -124,6 +127,73 @@ describe('theme store', () => {
   })
 })
 
-// Type-only guard: ThemePref is the three-value union we expect.
-const _pref: ThemePref[] = ['light', 'dark', 'system']
+describe('sun schedule', () => {
+  // Local wall-clock at the household location, as the weather endpoint returns.
+  const SUNRISE = '2026-07-14T05:44'
+  const SUNSET = '2026-07-14T20:32'
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('sunPrefersDark is null until sun times are known', () => {
+    expect(sunPrefersDark()).toBeNull()
+  })
+
+  it('resolveTheme("sun") falls back to the OS before sun times arrive', () => {
+    const mm = installMatchMedia(false)
+    expect(resolveTheme('sun')).toBe('light')
+    mm.set(true)
+    expect(resolveTheme('sun')).toBe('dark')
+  })
+
+  it('is light during the day, dark after sunset and before sunrise', () => {
+    vi.useFakeTimers()
+    setSunTimes(SUNRISE, SUNSET)
+    vi.setSystemTime(new Date(2026, 6, 14, 12, 0)) // midday
+    expect(sunPrefersDark()).toBe(false)
+    expect(resolveTheme('sun')).toBe('light')
+    vi.setSystemTime(new Date(2026, 6, 14, 21, 0)) // after sunset
+    expect(sunPrefersDark()).toBe(true)
+    expect(resolveTheme('sun')).toBe('dark')
+    vi.setSystemTime(new Date(2026, 6, 15, 4, 30)) // pre-dawn next day
+    expect(sunPrefersDark()).toBe(true)
+  })
+
+  it('readPref accepts a stored "sun" preference', () => {
+    localStorage.setItem(THEME_KEY, 'sun')
+    expect(readPref()).toBe('sun')
+  })
+
+  it('setSunTimes re-applies the theme when preference is "sun"', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 14, 21, 0)) // night
+    installMatchMedia(false) // OS says light — sun schedule must win
+    setPref('sun') // no times yet → resolves via OS → light
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    const spy = vi.fn()
+    window.addEventListener('waffled:theme-changed', spy)
+    setSunTimes(SUNRISE, SUNSET) // times arrive → it's night → flips dark
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(spy).toHaveBeenCalledOnce()
+    window.removeEventListener('waffled:theme-changed', spy)
+  })
+
+  it('ignores malformed sun times', () => {
+    setSunTimes('garbage', 'also-garbage')
+    expect(localStorage.getItem(SUN_KEY)).toBeNull()
+    expect(sunPrefersDark()).toBeNull()
+  })
+
+  it('persists sun times for the next load', () => {
+    setSunTimes(SUNRISE, SUNSET)
+    expect(JSON.parse(localStorage.getItem(SUN_KEY) as string)).toEqual({
+      sunrise: SUNRISE,
+      sunset: SUNSET,
+    })
+  })
+})
+
+// Type-only guard: ThemePref is the four-value union we expect.
+const _pref: ThemePref[] = ['light', 'dark', 'system', 'sun']
 void _pref

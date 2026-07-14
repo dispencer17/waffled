@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from './client'
 import { HOUSEHOLD_CHANGED } from './persons'
+import { setSunTimes } from '../theme'
 
 export interface Weather {
   configured: boolean
@@ -13,6 +14,9 @@ export interface Weather {
   emoji?: string
   isDay?: boolean
   location?: string
+  // Today's sun times as local wall-clock ISO at the household location.
+  sunrise?: string
+  sunset?: string
 }
 
 const REFRESH_MS = 10 * 60 * 1000
@@ -28,7 +32,10 @@ export function useWeather(): Weather | null {
     const load = () =>
       weatherApi
         .current()
-        .then((w) => alive && setWx(w))
+        .then((w) => {
+          setSunTimes(w.sunrise, w.sunset) // feed the 'sun' theme schedule
+          if (alive) setWx(w)
+        })
         .catch(() => alive && setWx(null))
     load()
     const id = setInterval(load, REFRESH_MS)

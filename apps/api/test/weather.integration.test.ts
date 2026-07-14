@@ -42,7 +42,10 @@ function startStub(): Promise<number> {
         res.end(JSON.stringify({ results: [{ latitude: 30.27, longitude: -97.74, name: 'Austin', admin1: 'Texas' }] }))
       } else if (u.pathname === '/forecast') {
         forecastCalls++
-        res.end(JSON.stringify({ current: { temperature_2m: 78.4, weather_code: 2, is_day: 1 } }))
+        res.end(JSON.stringify({
+          current: { temperature_2m: 78.4, weather_code: 2, is_day: 1 },
+          daily: { sunrise: ['2026-07-14T05:44'], sunset: ['2026-07-14T20:32'] },
+        }))
       } else {
         res.statusCode = 404
         res.end('{}')
@@ -91,6 +94,13 @@ describe('weather', () => {
     const res = await call('GET', '/api/weather', kevin)
     const w = JSON.parse(res.body)
     expect(w).toMatchObject({ configured: true, tempF: 78, code: 2, label: 'Partly cloudy', emoji: '⛅', location: 'Austin, Texas' })
+  })
+
+  it("includes today's sun times for the sunset theme/dim schedule", async () => {
+    const res = await call('GET', '/api/weather', kevin)
+    const w = JSON.parse(res.body)
+    expect(w.sunrise).toBe('2026-07-14T05:44')
+    expect(w.sunset).toBe('2026-07-14T20:32')
   })
 
   it('caches the forecast (no extra Open-Meteo calls on the next read)', async () => {

@@ -129,14 +129,19 @@ function DisplayLayer() {
     return () => evs.forEach((e) => window.removeEventListener(e, wake))
   }, [saver])
 
-  // Night dimming on a schedule.
+  // Night dimming on a schedule. 'sunset'/'sunrise' resolve from today's sun
+  // times (weather endpoint, wall-clock at the household location) with fixed
+  // fallbacks until the first weather fetch lands.
   useEffect(() => {
     if (!cfg?.nightDim.enabled) { setDim(false); return }
-    const tick = () => setDim(inNightWindow(cfg.nightDim.start, cfg.nightDim.end, household?.timezone))
+    const hhmm = (iso?: string) => iso ? /T(\d{2}:\d{2})/.exec(iso)?.[1] : undefined
+    const start = cfg.nightDim.start === 'sunset' ? (hhmm(wx?.sunset) ?? '20:00') : cfg.nightDim.start
+    const end = cfg.nightDim.end === 'sunrise' ? (hhmm(wx?.sunrise) ?? '07:00') : cfg.nightDim.end
+    const tick = () => setDim(inNightWindow(start, end, household?.timezone))
     tick()
     const id = setInterval(tick, 60_000)
     return () => clearInterval(id)
-  }, [cfg, household?.timezone])
+  }, [cfg, household?.timezone, wx?.sunrise, wx?.sunset])
 
   return (
     <>
