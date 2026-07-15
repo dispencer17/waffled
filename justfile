@@ -66,14 +66,23 @@ api:
 web:
     cd apps/web && npm run dev
 
-# seed a demo household + members + chores + a grocery item; print a kiosk token
-# (needs the stack up + migrated)
+# seed a demo household + members + chores + a grocery item; print a kiosk token.
+# ONE-SHOT: /api/auth/setup (the real first-run bootstrap) only works while the
+# instance has never been initialized — it 409s forever after your first
+# household exists, whether that was created by this recipe or the browser
+# wizard. So run this BEFORE ever visiting localhost:8080, on a fresh `just up`
+# + `just migrate`. If you've already onboarded through the browser, skip it —
+# there is no "second" demo household to create alongside your real one.
 seed:
     #!/usr/bin/env bash
     set -euo pipefail
-    TOKEN=$({{compose}} run --rm --no-deps -T api node dist/mint-token.js --sub 'dev|demo')
+    SETUP=$(curl -s -X POST -H 'Content-Type: application/json' -d '{"household":{"name":"Demo Family","timezone":"America/Chicago"},"admin":{"name":"Kevin","email":"kevin@demo.waffled.local","password":"demo-password-1"}}' localhost:3000/api/auth/setup)
+    TOKEN=$(echo "$SETUP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['accessToken'])" 2>/dev/null) || {
+      echo "Couldn't provision the demo household — the instance is likely already set up (this only works once, before you first visit http://localhost:8080)." >&2
+      echo "Server said: $SETUP" >&2
+      exit 1
+    }
     H="Authorization: Bearer $TOKEN"; J="Content-Type: application/json"
-    curl -s -X POST -H "$H" -H "$J" -d '{"name":"Demo Family","timezone":"America/Chicago","person":{"name":"Kevin","avatarEmoji":"🐻","colorHex":"#2F7FED"}}' localhost:3000/api/households >/dev/null || true
     for m in \
       '{"name":"Kelly","memberType":"adult","isAdmin":true,"avatarEmoji":"🦊","colorHex":"#E0548B"}' \
       '{"name":"Wally","memberType":"kid","avatarEmoji":"🐢","colorHex":"#25A368"}' \
@@ -112,7 +121,7 @@ seed:
       curl -s -X POST -H "$H" -H "$J" -d "${ings[$i]}" "localhost:3000/api/recipes/$rid/ingredients" >/dev/null || true
     done
     for i in 0 1 2 3 4; do
-      d=$(date -v+"$i"d +%Y-%m-%d)
+      d=$(date -d "+$i days" +%Y-%m-%d)
       curl -s -X POST -H "$H" -H "$J" -d "{\"date\":\"$d\",\"mealType\":\"dinner\",\"recipeId\":\"${ids[$i]}\"}" localhost:3000/api/meals/plan >/dev/null || true
     done
     # today's calendar events
