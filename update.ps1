@@ -44,13 +44,26 @@ if ($behind -gt 0) {
         Write-Host "Resolve the divergence (or ask Claude to), then rerun."
         exit 1
     }
-} elseif ($Force) {
-    Write-Host "Code already up to date -- rebuilding anyway (-Force)."
 } else {
-    # Nothing new: exit quietly so an unattended nightly run is a cheap no-op
-    # instead of a rebuild + restart. Use -Force to rebuild regardless.
-    Write-Host "Already up to date -- nothing to deploy." -ForegroundColor Green
-    exit 0
+    Write-Host "Code already up to date with origin/main."
+}
+
+# 2b. Skip the rebuild only when the RUNNING stack already matches HEAD. Comparing
+#     against git-behind is wrong on a machine that commits locally (HEAD is never
+#     behind origin right after a push, yet the stack still runs the old build) --
+#     the API bakes its git SHA into the image and serves it on /healthz.
+if (-not $Force) {
+    $head = git rev-parse --short HEAD
+    $runningSha = $null
+    try {
+        $runningSha = (Invoke-RestMethod -Uri 'http://127.0.0.1:3000/healthz' -TimeoutSec 5).version.sha
+    } catch {
+        # API down/unreachable -- rebuild to converge.
+    }
+    if ($runningSha -and ($runningSha -eq $head)) {
+        Write-Host "Stack already runs $head -- nothing to deploy." -ForegroundColor Green
+        exit 0
+    }
 }
 
 # 3. Rebuild from source + restart. Image names are pinned to waffled-fork/* in
