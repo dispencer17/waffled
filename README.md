@@ -39,7 +39,10 @@ in-app notifier (Settings → System Health) at this repo instead of upstream.
 
 - **Deploy the latest fork code (the "update button"):** run `.\update.ps1` from
   PowerShell (or a desktop shortcut to it). It fast-forwards to `origin/main` — which is
-  always CI-tested — and rebuilds the stack from source. Refuses to run on a dirty tree.
+  always CI-tested — and rebuilds the stack from source. Refuses to run on a dirty tree;
+  exits early when nothing's new (`-Force` rebuilds anyway). For hands-free updates,
+  schedule it nightly (Task Scheduler); the kiosk display then reloads itself once idle
+  when it notices the new build — no one touches the tablet.
 - **Integrate an upstream release:** deliberate, not automatic — `git fetch upstream`,
   `git merge upstream/main`, resolve, test, push (CI gates it), then press the button.
 - **Don't use `./waffled upgrade`:** it fast-forwards from a release tag and pulls

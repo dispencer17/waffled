@@ -12,6 +12,11 @@
 # deploys it. Double-click via a shortcut with target:
 #   powershell -ExecutionPolicy Bypass -File C:\Users\dispe\Code\waffled_fork\update.ps1
 
+param(
+    # Rebuild even when no new commits arrived (e.g. after editing .env).
+    [switch]$Force
+)
+
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -39,8 +44,13 @@ if ($behind -gt 0) {
         Write-Host "Resolve the divergence (or ask Claude to), then rerun."
         exit 1
     }
+} elseif ($Force) {
+    Write-Host "Code already up to date -- rebuilding anyway (-Force)."
 } else {
-    Write-Host "Code already up to date -- rebuilding to converge the running stack."
+    # Nothing new: exit quietly so an unattended nightly run is a cheap no-op
+    # instead of a rebuild + restart. Use -Force to rebuild regardless.
+    Write-Host "Already up to date -- nothing to deploy." -ForegroundColor Green
+    exit 0
 }
 
 # 3. Rebuild from source + restart. Image names are pinned to waffled-fork/* in

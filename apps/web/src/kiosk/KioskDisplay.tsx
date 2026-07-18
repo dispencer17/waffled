@@ -18,6 +18,7 @@ import {
   type AgendaEvent,
 } from '../lib/api'
 import { Screensaver, screensaverPhotos } from './components/Screensaver'
+import { startBuildWatch } from '../lib/build-watch'
 import '../styles/kiosk-profiles.css'
 
 export function KioskDisplay({ children }: { children: ReactNode }) {
@@ -63,6 +64,11 @@ function DisplayLayer() {
   const [dim, setDim] = useState(false)
   const locRef = useRef(location.pathname)
   locRef.current = location.pathname
+  // For the build watch: when the tablet was last touched, and whether the
+  // screensaver is up (screensaver = definitionally idle).
+  const lastActivity = useRef(Date.now())
+  const saverRef = useRef(saver)
+  saverRef.current = saver
 
   // Keep the screen awake while this is the family display.
   useEffect(() => {
@@ -103,6 +109,7 @@ function DisplayLayer() {
     let homeT: ReturnType<typeof setTimeout> | undefined
     let saverT: ReturnType<typeof setTimeout> | undefined
     const arm = () => {
+      lastActivity.current = Date.now() // feeds the build-watch idle check
       clearTimeout(homeT); clearTimeout(saverT)
       if (cfg.resetHomeMinutes > 0) {
         homeT = setTimeout(() => { if (locRef.current !== '/') navigate('/') }, cfg.resetHomeMinutes * 60_000)
@@ -128,6 +135,17 @@ function DisplayLayer() {
     evs.forEach((e) => window.addEventListener(e, wake, { passive: true }))
     return () => evs.forEach((e) => window.removeEventListener(e, wake))
   }, [saver])
+
+  // Auto-update: when the server starts serving a new build (update.ps1 ran),
+  // reload once nobody's using the display — screensaver counts as idle — so the
+  // always-on tablet picks up fork updates without anyone touching it.
+  useEffect(
+    () =>
+      startBuildWatch({
+        idleMs: () => (saverRef.current ? Infinity : Date.now() - lastActivity.current),
+      }),
+    []
+  )
 
   // Night dimming on a schedule. 'sunset'/'sunrise' resolve from today's sun
   // times (weather endpoint, wall-clock at the household location) with fixed

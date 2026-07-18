@@ -59,9 +59,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **One-click updates for the fork.** A new `update.ps1` at the repo root is the update
   button: it fast-forwards to the fork's CI-tested `main` and rebuilds the stack from
-  source. The compose config now pins image names to local builds so a plain
-  `./waffled up` can never overwrite the fork with upstream's published images, and the
-  in-app update notifier (Settings → System Health) watches this fork's releases.
+  source (exiting early when there's nothing new — use `-Force` to rebuild anyway). The
+  compose config now pins image names to local builds so a plain `./waffled up` can never
+  overwrite the fork with upstream's published images, and the in-app update notifier
+  (Settings → System Health) watches this fork's releases.
+- **The kiosk updates itself.** When the server starts serving a new build, the always-on
+  display notices (it re-checks the app shell every few minutes) and quietly reloads —
+  but only once the tablet has sat untouched for ten minutes or the screensaver is up,
+  never mid-use. Combined with a scheduled nightly `update.ps1` on the server, updates
+  now reach the kitchen tablet with nobody touching anything.
 - **The theme can now follow the sun.** A new **"Follow the sun"** choice in Settings →
   Appearance switches to the dark theme at your local sunset and back at sunrise, using the
   household location already set for weather — no schedule to maintain. Kiosk night dimming
