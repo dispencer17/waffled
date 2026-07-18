@@ -229,7 +229,7 @@ describe('Settings screen', () => {
     expect(await screen.findByText('Kiosk Devices')).toBeInTheDocument()
   })
 
-  it('hides admin-only tabs from non-admins (Appearance + About + Sign out)', async () => {
+  it('hides admin-only tabs from non-admins but keeps Display & Kiosk (appearance lives there)', async () => {
     // Same data, but the signed-in person is not an admin.
     globalThis.fetch = vi.fn(async (url: string) => {
       if (String(url).includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
@@ -242,10 +242,45 @@ describe('Settings screen', () => {
     expect(await screen.findByText('Waffled — Family Hub')).toBeInTheDocument() // About panel content (default landing)
     expect(screen.getByText('About', { selector: '.set-navitem' })).toBeInTheDocument()
     expect(screen.getByText(/Sign out/, { selector: '.set-signout' })).toBeInTheDocument()
-    // Appearance is a per-device preference — available to everyone, not admin-gated.
-    expect(screen.getByText('Appearance', { selector: '.set-navitem' })).toBeInTheDocument()
+    // The standalone Appearance tab is gone — its options moved under Display & Kiosk,
+    // which stays visible to everyone because the theme is a per-device preference.
+    expect(screen.queryByText('Appearance', { selector: '.set-navitem' })).not.toBeInTheDocument()
+    expect(screen.getByText('Display & Kiosk', { selector: '.set-navitem' })).toBeInTheDocument()
     expect(screen.queryByText('Family & People')).not.toBeInTheDocument()
     expect(screen.queryByText('Sign-in & Security')).not.toBeInTheDocument()
+
+    // A non-admin opening Display & Kiosk gets the appearance controls…
+    fireEvent.click(screen.getByText('Display & Kiosk', { selector: '.set-navitem' }))
+    expect(await screen.findByText('Match system')).toBeInTheDocument()
+    expect(screen.getByText('COLOR THEME')).toBeInTheDocument()
+    // …but not the admin-only kiosk/screensaver configuration.
+    expect(screen.queryByText('Use this browser as the family display')).not.toBeInTheDocument()
+    expect(screen.queryByText('Screensaver after')).not.toBeInTheDocument()
+  })
+
+  it('Display & Kiosk hosts the appearance options and the color-theme picker (admin)', async () => {
+    localStorage.removeItem('waffled:palette')
+    document.documentElement.removeAttribute('data-palette')
+    mockApi()
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('Display & Kiosk'))
+
+    // Light/dark controls moved in from the old Appearance tab.
+    expect(await screen.findByText('Match system')).toBeInTheDocument()
+    expect(screen.getByText('Follow the sun')).toBeInTheDocument()
+
+    // The color-theme picker lists the palettes and applies one on tap.
+    expect(screen.getByText('COLOR THEME')).toBeInTheDocument()
+    expect(screen.getByText('Golden Waffle')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Blueberry'))
+    expect(localStorage.getItem('waffled:palette')).toBe('blueberry')
+    expect(document.documentElement.getAttribute('data-palette')).toBe('blueberry')
+    fireEvent.click(screen.getByText('Golden Waffle'))
+    expect(localStorage.getItem('waffled:palette')).toBe('waffle')
+
+    // Admins still get the kiosk configuration below.
+    expect(screen.getByText('Use this browser as the family display')).toBeInTheDocument()
   })
 
   it('Meals: the thaw reminder toggle enables the time + meal chips and auto-saves', async () => {

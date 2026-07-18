@@ -79,8 +79,8 @@ export function MonthView({
                 return (
                   <div
                     key={e.id}
-                    className={`ev ${isMeal ? 'ev-meal' : ''}`}
-                    style={{ background: `${color}22`, color, cursor: 'pointer' }}
+                    className={`ev ev-tint ${isMeal ? 'ev-meal' : ''}`}
+                    style={{ '--ev': color, cursor: 'pointer' } as React.CSSProperties}
                     title={isMeal ? 'Planned meal' : undefined}
                     onClick={(ev) => {
                       ev.stopPropagation()

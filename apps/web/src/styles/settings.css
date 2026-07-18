@@ -644,5 +644,15 @@ select.sel {
 }
 .appr-check { color: var(--primary); font-weight: 800; }
 
+/* ---- Color-theme (palette) picker ---- */
+.pal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px; }
+.pal-mini {
+  border-radius: 12px; padding: 11px 12px; display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--hair);
+}
+.pal-dot { width: 22px; height: 22px; border-radius: 999px; flex: none; box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+.pal-bar { flex: 1; height: 12px; border-radius: 999px; opacity: .9; }
+.pal-night { width: 18px; height: 18px; border-radius: 6px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+
 /* The .toggle pill is normally a <span>; reset it when used as a real button. */
 button.toggle { border: 0; padding: 0; cursor: pointer; -webkit-appearance: none; appearance: none; }

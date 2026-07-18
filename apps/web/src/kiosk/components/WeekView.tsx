@@ -128,8 +128,8 @@ export function WeekView({
                   return (
                     <div
                       key={e.id}
-                      className="wk-allday-ev"
-                      style={{ background: `${color}22`, color }}
+                      className="wk-allday-ev ev-tint"
+                      style={{ '--ev': color } as React.CSSProperties}
                       onClick={() => onOpenEvent(e)}
                     >
                       {e.title}
@@ -175,8 +175,8 @@ export function WeekView({
                     return (
                       <div
                         key={e.id}
-                        className={`wk-ev ${isMeal ? 'ev-meal' : ''} ${tight ? 'tight' : ''}`}
-                        style={{ top, height, left, width, background: `${color}22`, color, borderLeft: `3px solid ${color}` }}
+                        className={`wk-ev ev-tint ${isMeal ? 'ev-meal' : ''} ${tight ? 'tight' : ''}`}
+                        style={{ top, height, left, width, '--ev': color, borderLeft: `3px solid ${color}` } as React.CSSProperties}
                         title={isMeal ? `Planned meal · ${e.title}` : `${fmtTime(e)} · ${e.title}`}
                         onClick={(ev) => {
                           ev.stopPropagation()

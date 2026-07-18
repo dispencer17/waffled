@@ -1,4 +1,4 @@
-// Theme store — light / dark / follow-the-OS.
+// Theme store — light / dark / follow-the-OS, plus a color palette axis.
 //
 // The palette lives entirely in CSS custom properties (styles/waffled.css). This
 // module only decides which resolved theme is active and stamps it onto the
@@ -11,15 +11,54 @@
 //   'sun'             → dark from sunset to sunrise (household sun times fed by
 //                       the weather endpoint); falls back to 'system' until times arrive
 // Default is 'system' so a fresh install matches the device out of the box.
+//
+// The COLOR PALETTE is a second, independent axis: it re-hues the brand accent and
+// subtly tints every surface, in both light and dark, via `data-palette="<id>"` on
+// the root (CSS override blocks in styles/waffled.css key off it). Stored per
+// device like the light/dark preference.
 
 import { useSyncExternalStore } from 'react'
 
 export type ThemePref = 'light' | 'dark' | 'system' | 'sun'
 export type ResolvedTheme = 'light' | 'dark'
+export type PaletteId =
+  | 'waffle'
+  | 'flamingo'
+  | 'honey'
+  | 'matcha'
+  | 'tidepool'
+  | 'blueberry'
+  | 'lavender'
+  | 'sundae'
 
 export const THEME_KEY = 'waffled:theme'
 export const SUN_KEY = 'waffled:sun-times'
+export const PALETTE_KEY = 'waffled:palette'
 const DARK_MQ = '(prefers-color-scheme: dark)'
+
+// The picker catalog. `swatch` is [primary, canvas tint, dark canvas] — enough for
+// a mini preview card without loading the palette itself. Order = picker order,
+// default first.
+export interface PaletteDef {
+  id: PaletteId
+  label: string
+  emoji: string
+  sub: string
+  swatch: [string, string, string]
+}
+
+export const PALETTES: PaletteDef[] = [
+  { id: 'waffle', label: 'Golden Waffle', emoji: '🧇', sub: 'The classic — warm cream & coral.', swatch: ['#EC6049', '#FAF7F2', '#14110C'] },
+  { id: 'flamingo', label: 'Flamingo', emoji: '🦩', sub: 'Playful pink with a rosy glow.', swatch: ['#E23D8E', '#FBF3F7', '#180F14'] },
+  { id: 'sundae', label: 'Cherry Sundae', emoji: '🍒', sub: 'Bold cherry red, whipped-cream white.', swatch: ['#CE2D3F', '#FBF4F2', '#170F0F'] },
+  { id: 'honey', label: 'Honey', emoji: '🍯', sub: 'Amber and golden toast.', swatch: ['#D9730D', '#FAF5EA', '#171205'] },
+  { id: 'matcha', label: 'Matcha', emoji: '🍵', sub: 'Calm leafy green.', swatch: ['#2F8F5B', '#F3F8F0', '#0E140F'] },
+  { id: 'tidepool', label: 'Tide Pool', emoji: '🌊', sub: 'Cool teal & sea glass.', swatch: ['#0E8598', '#F0F7F8', '#0C1416'] },
+  { id: 'blueberry', label: 'Blueberry', emoji: '🫐', sub: 'Crisp blue on a cool canvas.', swatch: ['#3A66D4', '#F3F5FB', '#0F1219'] },
+  { id: 'lavender', label: 'Lavender', emoji: '🪻', sub: 'Soft violet, a little dreamy.', swatch: ['#7A4FD6', '#F6F4FB', '#120F19'] },
+]
+
+const PALETTE_IDS = new Set<string>(PALETTES.map((p) => p.id))
 
 /** The stored preference, defaulting to 'system' (also for any garbage value). */
 export function readPref(): ThemePref {
@@ -30,6 +69,37 @@ export function readPref(): ThemePref {
     // localStorage can throw in private-mode / sandboxed contexts — treat as unset.
   }
   return 'system'
+}
+
+/** The stored color palette, defaulting to 'waffle' (also for any garbage value). */
+export function readPalette(): PaletteId {
+  try {
+    const v = localStorage.getItem(PALETTE_KEY)
+    if (v && PALETTE_IDS.has(v)) return v as PaletteId
+  } catch {
+    // Same private-mode caveat as readPref — treat as unset.
+  }
+  return 'waffle'
+}
+
+/** Stamp the palette onto <html data-palette> (always, so CSS keys stay simple). */
+export function applyPalette(palette: PaletteId): void {
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-palette', palette)
+  }
+}
+
+/** Persist a palette, apply it, and notify listeners (same event as light/dark). */
+export function setPalette(palette: PaletteId): void {
+  try {
+    localStorage.setItem(PALETTE_KEY, palette)
+  } catch {
+    // Non-fatal: the choice just won't survive a reload.
+  }
+  applyPalette(palette)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('waffled:theme-changed'))
+  }
 }
 
 /** Whether the OS currently prefers a dark color scheme. */
@@ -129,6 +199,7 @@ export function setPref(pref: ThemePref): void {
 // once at startup; applyTheme is idempotent so a stray re-call is harmless.
 export function initTheme(): void {
   applyTheme(resolveTheme(readPref()))
+  applyPalette(readPalette())
   if (typeof window === 'undefined') return
   // Minute tick so 'sun' flips at sunset/sunrise without any interaction.
   // reapply() is a no-op unless the resolved theme actually changed.
@@ -161,20 +232,23 @@ function subscribe(cb: () => void): () => void {
   }
 }
 
-// Snapshot encodes BOTH the preference and the resolved theme, so a live OS flip
-// (pref stays 'system' but resolved changes) still produces a new snapshot and
-// re-renders — a bare pref snapshot would be identical and bail out.
+// Snapshot encodes the preference, the resolved theme AND the palette, so a live
+// OS flip (pref stays 'system' but resolved changes) or a palette switch each
+// produce a new snapshot and re-render — a bare pref snapshot would be identical
+// and bail out.
 function snapshot(): string {
   const p = readPref()
-  return `${p}|${resolveTheme(p)}`
+  return `${p}|${resolveTheme(p)}|${readPalette()}`
 }
 
 export function useThemePref(): {
   pref: ThemePref
   resolved: ResolvedTheme
+  palette: PaletteId
   setPref: (p: ThemePref) => void
+  setPalette: (p: PaletteId) => void
 } {
-  const snap = useSyncExternalStore(subscribe, snapshot, () => 'system|light')
-  const [pref, resolved] = snap.split('|') as [ThemePref, ResolvedTheme]
-  return { pref, resolved, setPref }
+  const snap = useSyncExternalStore(subscribe, snapshot, () => 'system|light|waffle')
+  const [pref, resolved, palette] = snap.split('|') as [ThemePref, ResolvedTheme, PaletteId]
+  return { pref, resolved, palette, setPref, setPalette }
 }

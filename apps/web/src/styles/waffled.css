@@ -186,6 +186,102 @@
   color-scheme: dark;
 }
 
+/* ------------------------------------------------------------
+   COLOR PALETTES — a second axis, independent of light/dark.
+   `data-palette="<id>"` on the root re-hues the brand accent and
+   subtly tints every surface so the whole canvas takes the hue.
+   The default ("waffle") is the untouched :root above — no block.
+
+   Discipline: each palette's dark block re-specifies EVERY token
+   its light block sets (plus --card), so file order can't let a
+   palette's light surfaces leak into dark mode. Person, status,
+   gold and AI tokens stay put — identity & semantics don't re-hue.
+   ------------------------------------------------------------ */
+
+/* 🦩 Flamingo — playful pink, rosy canvas */
+:root[data-palette="flamingo"] {
+  --primary: #E23D8E; --primary-d: #C42A74; --primary-t: #FADEEC;
+  --bg: #FBF4F8; --rail: #F5E7EE; --panel: #F7EAF0; --card-2: #FDF8FB;
+  --control-track: #DCCAD4;
+}
+:root[data-palette="flamingo"][data-theme="dark"] {
+  --primary: #ED64A6; --primary-d: #F383B9; --primary-t: rgba(226,61,142,.20);
+  --bg: #181014; --rail: #201419; --panel: #1E1217; --card: #291B21; --card-2: #22151B;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🍒 Cherry Sundae — bold cherry red, whipped-cream white */
+:root[data-palette="sundae"] {
+  --primary: #CE2D3F; --primary-d: #AE1F30; --primary-t: #F9DFE1;
+  --bg: #FBF4F3; --rail: #F5E7E5; --panel: #F7EAE8; --card-2: #FDF8F7;
+  --control-track: #DCCACB;
+}
+:root[data-palette="sundae"][data-theme="dark"] {
+  --primary: #E45766; --primary-d: #EB7683; --primary-t: rgba(206,45,63,.20);
+  --bg: #170F10; --rail: #1F1314; --panel: #1D1112; --card: #281A1B; --card-2: #211415;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🍯 Honey — amber & golden toast */
+:root[data-palette="honey"] {
+  --primary: #D9730D; --primary-d: #B65E06; --primary-t: #F9E8D4;
+  --bg: #FAF5EA; --rail: #F3EBD9; --panel: #F5EDDC; --card-2: #FCF8EF;
+  --control-track: #DCD0BC;
+}
+:root[data-palette="honey"][data-theme="dark"] {
+  --primary: #F08C28; --primary-d: #F4A34F; --primary-t: rgba(217,115,13,.20);
+  --bg: #171205; --rail: #1E180A; --panel: #1C1608; --card: #272010; --card-2: #201A0B;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🍵 Matcha — calm leafy green */
+:root[data-palette="matcha"] {
+  --primary: #2F8F5B; --primary-d: #237347; --primary-t: #DFF0E6;
+  --bg: #F3F8F0; --rail: #E9F1E2; --panel: #ECF3E6; --card-2: #F8FCF5;
+  --control-track: #CFD8CC;
+}
+:root[data-palette="matcha"][data-theme="dark"] {
+  --primary: #48B47C; --primary-d: #66C492; --primary-t: rgba(47,143,91,.22);
+  --bg: #0E140F; --rail: #121A13; --panel: #101811; --card: #1A241C; --card-2: #141D16;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🌊 Tide Pool — cool teal & sea glass */
+:root[data-palette="tidepool"] {
+  --primary: #0E8598; --primary-d: #086C7D; --primary-t: #DBEFF2;
+  --bg: #F0F7F8; --rail: #E4EFF1; --panel: #E7F1F2; --card-2: #F6FBFC;
+  --control-track: #C9D6D9;
+}
+:root[data-palette="tidepool"][data-theme="dark"] {
+  --primary: #2CA9BE; --primary-d: #4FBCCE; --primary-t: rgba(14,133,152,.22);
+  --bg: #0C1416; --rail: #10191C; --panel: #0E171A; --card: #172326; --card-2: #111C1F;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🫐 Blueberry — crisp blue on a cool canvas */
+:root[data-palette="blueberry"] {
+  --primary: #3A66D4; --primary-d: #2951B4; --primary-t: #E2EAFB;
+  --bg: #F3F5FB; --rail: #E9EDF7; --panel: #ECEFF8; --card-2: #F8FAFE;
+  --control-track: #CDD3E0;
+}
+:root[data-palette="blueberry"][data-theme="dark"] {
+  --primary: #6B8FEF; --primary-d: #86A4F3; --primary-t: rgba(58,102,212,.22);
+  --bg: #0F1219; --rail: #131722; --panel: #111520; --card: #1A2030; --card-2: #141A28;
+  --control-track: rgba(255,255,255,.16);
+}
+
+/* 🪻 Lavender — soft violet, a little dreamy */
+:root[data-palette="lavender"] {
+  --primary: #7A4FD6; --primary-d: #6339BC; --primary-t: #EBE3FA;
+  --bg: #F6F4FB; --rail: #EEE9F7; --panel: #F0ECF8; --card-2: #FAF9FE;
+  --control-track: #D3CEE0;
+}
+:root[data-palette="lavender"][data-theme="dark"] {
+  --primary: #9C79EA; --primary-d: #B194F0; --primary-t: rgba(122,79,214,.22);
+  --bg: #120F19; --rail: #171223; --panel: #141020; --card: #1F1930; --card-2: #181328;
+  --control-track: rgba(255,255,255,.16);
+}
+
 
 * { box-sizing: border-box; }
 
@@ -432,6 +528,24 @@ select.cap-edit-sub { cursor: pointer; }
 .ev.meal { background: var(--card); border: 1.5px solid var(--hair); color: var(--ink-2); }
 .ev.time::before { content: attr(data-t); color: inherit; opacity: .7; margin-right: 5px; font-weight: 700; }
 .ev-more { font-size: 11px; color: var(--ink-3); font-weight: 600; padding-left: 4px; }
+
+/* Theme-aware event tinting. A chip sets its person color as `--ev` and takes
+   `.ev-tint`; the wash and text derive from it by mixing against the current
+   theme's ink — darker, richer text in light, a bright pastel in dark — instead
+   of a fixed `${hex}22` wash + raw color text, which goes illegible in dark.
+   `.ev-ink` is the text-only variant (colored times/labels on a card). */
+.ev-tint {
+  background: color-mix(in srgb, var(--ev, var(--ink-3)) 14%, transparent);
+  color: color-mix(in srgb, var(--ev, var(--ink-3)) 58%, var(--ink));
+}
+:root[data-theme="dark"] .ev-tint, .dark .ev-tint {
+  background: color-mix(in srgb, var(--ev, var(--ink-3)) 24%, transparent);
+  color: color-mix(in srgb, var(--ev, var(--ink-3)) 42%, var(--ink));
+}
+.ev-ink { color: color-mix(in srgb, var(--ev, var(--ink-3)) 70%, var(--ink)); }
+:root[data-theme="dark"] .ev-ink, .dark .ev-ink {
+  color: color-mix(in srgb, var(--ev, var(--ink-3)) 55%, var(--ink));
+}
 
 /* ===== chore columns ============================================ */
 .chore-col { background: var(--card); border-radius: var(--r-lg); padding: 16px;

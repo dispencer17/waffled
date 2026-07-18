@@ -17,11 +17,16 @@ Legend: ✅ done · 🟡 partial / in progress · 🚧 planned · ⛔ dropped (s
 
 ## Done ✅
 
-- **Dark mode (web/kiosk)** — a warm dark theme alongside light, chosen from **Settings →
-  Appearance** (Light / Dark / Match system), saved per device and applied instantly. Built on a
-  consolidated design-token layer (one canonical `:root` + a `[data-theme="dark"]` override; new
-  semantic success/danger/warn/info tokens). **iPhone/iPad parity is the remaining piece** — the
-  palette + plan are captured in `apps/ios/DARK_MODE.md`.
+- **Dark mode + color themes (web/kiosk)** — a warm dark theme alongside light, plus eight
+  color themes (Golden Waffle default, Flamingo, Cherry Sundae, Honey, Matcha, Tide Pool,
+  Blueberry, Lavender) that re-hue the accent and subtly tint every surface in both modes.
+  Chosen from **Settings → Display & Kiosk** (Light / Dark / Match system / Follow the sun +
+  a color-theme picker; the old standalone Appearance tab merged in), saved per device and
+  applied instantly. Built on a consolidated design-token layer (one canonical `:root` + a
+  `[data-theme="dark"]` override + per-palette `[data-palette]` overrides; new semantic
+  success/danger/warn/info tokens), with theme-aware calendar-event tinting so events pass
+  contrast in dark mode. **iPhone/iPad parity is the remaining piece** — the palette + plan
+  are captured in `apps/ios/DARK_MODE.md`.
 - **Self-host packaging** — one-command `./waffled up` (pulls multi-arch GHCR images by
   default; `--build` for source), in-container migrations, and one-command `./waffled
   upgrade` (repo fast-forward + version bump + DB snapshot + pull + migrate).
