@@ -45,7 +45,18 @@ if ($behind -gt 0) {
 
 # 3. Rebuild from source + restart. Image names are pinned to waffled-fork/* in
 #    infra/compose/.env, so this can never resurrect upstream's registry images.
-bash ./waffled up --build
+#    NOTE: must be GIT bash — in PowerShell a bare `bash` resolves to the WSL relay
+#    stub in System32, which fails when no WSL distro is installed.
+$gitBash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+if (-not (Test-Path $gitBash)) {
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($git) { $gitBash = Join-Path (Split-Path (Split-Path $git.Source)) 'bin\bash.exe' }
+}
+if (-not (Test-Path $gitBash)) {
+    Write-Host "Couldn't find Git Bash (needed to run ./waffled). Is Git for Windows installed?" -ForegroundColor Red
+    exit 1
+}
+& $gitBash ./waffled up --build
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Build/restart failed -- see output above." -ForegroundColor Red
     exit 1
