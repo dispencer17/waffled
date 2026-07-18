@@ -1,0 +1,8 @@
+# Files executed inside Linux containers (or parsed by strict tooling) must be
+# LF on EVERY checkout — Windows autocrlf otherwise smudges them to CRLF, and a
+# CRLF shebang inside a container fails with "bash\r: No such file or directory"
+# (this crash-looped the locally-built backup image on Windows).
+*.sh text eol=lf
+waffled text eol=lf
+waffled-demo text eol=lf
+infra/compose/docker-compose.yml text eol=lf
