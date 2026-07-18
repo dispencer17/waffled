@@ -30,6 +30,21 @@ adding: sunset-triggered dark mode & sunset-to-sunrise night dimming, a Smart Ho
 module (Home Assistant quick controls + entity allowlist), Outlook calendar sync,
 a Walmart grocery-cart handoff, kiosk voice control, and Android PWA/TWA packaging.
 
+### Updating this fork (never `./waffled upgrade`)
+
+This fork runs **from source**, not from upstream's published images. `infra/compose/.env`
+pins the image names to local-only tags (`waffled-fork/*:local`), so a plain `./waffled up`
+can never pull upstream's images over your build — and `UPDATE_CHECK_REPO` points the
+in-app notifier (Settings → System Health) at this repo instead of upstream.
+
+- **Deploy the latest fork code (the "update button"):** run `.\update.ps1` from
+  PowerShell (or a desktop shortcut to it). It fast-forwards to `origin/main` — which is
+  always CI-tested — and rebuilds the stack from source. Refuses to run on a dirty tree.
+- **Integrate an upstream release:** deliberate, not automatic — `git fetch upstream`,
+  `git merge upstream/main`, resolve, test, push (CI gates it), then press the button.
+- **Don't use `./waffled upgrade`:** it fast-forwards from a release tag and pulls
+  upstream's GHCR images — both wrong for a fork carrying its own commits.
+
 ### Home Assistant ↔ Waffled
 
 **Waffled → HA** (this fork): enable the *Smart Home* module (Settings → Modules),

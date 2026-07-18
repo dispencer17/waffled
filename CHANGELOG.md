@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   protections are enabled while preserving camera and photo support.
 
 ### Added
+- **One-click updates for the fork.** A new `update.ps1` at the repo root is the update
+  button: it fast-forwards to the fork's CI-tested `main` and rebuilds the stack from
+  source. The compose config now pins image names to local builds so a plain
+  `./waffled up` can never overwrite the fork with upstream's published images, and the
+  in-app update notifier (Settings → System Health) watches this fork's releases.
 - **The theme can now follow the sun.** A new **"Follow the sun"** choice in Settings →
   Appearance switches to the dark theme at your local sunset and back at sunrise, using the
   household location already set for weather — no schedule to maintain. Kiosk night dimming
