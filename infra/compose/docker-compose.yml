@@ -38,6 +38,13 @@ services:
     image: ${WAFFLED_API_IMAGE:-ghcr.io/kevinpsites/waffled-api:${WAFFLED_VERSION:-latest}}
     build:
       context: ../../apps/api
+      args:
+        # Same provenance args as the api service below: both build blocks tag the
+        # SAME image name, and whichever build finishes last owns the tag — without
+        # these, migrate's unstamped build can race api's and /healthz reports
+        # sha "dev" (which also defeats update.ps1's already-deployed check).
+        GIT_SHA: ${GIT_SHA:-dev}
+        BUILD_TIME: ${BUILD_TIME:-}
     container_name: waffled-migrate
     depends_on:
       postgres:
