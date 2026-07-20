@@ -63,7 +63,8 @@ fork features (Appearance tab, Smart Home in Modules, Connect Outlook button).
 
 ## P2 — ICS calendar feeds (read-only subscriptions)
 
-- [ ] **Add "subscribe to a calendar feed (ICS URL)" as a third calendar source.**
+- [x] **Add "subscribe to a calendar feed (ICS URL)" as a third calendar source.**
+  - *Result (2026-07-20): shipped as 4ad39f66 (migration 0102, ical.js parser, 15-min ics-sync job, feeds routes + Settings UI). 10/10 new integration tests; api 910/910, web 419/419. Real-world smoke: subscribed the live stack to officeholidays.com/ics/usa → 34 events imported, Labor Day correctly on 2026-09-07. Deploy also surfaced+fixed a build-provenance race (migrate vs api image tag).*
 
 **Why:** the user's employer will likely deny OAuth access to the work Outlook
 calendar (OIT request pending, expectations low). Outlook/Google/school/sports
