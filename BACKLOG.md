@@ -138,6 +138,11 @@ status → existing Walmart flow unchanged. Run the web suite.
 - [ ] **Drive the running kiosk with Playwright, capture light+dark screenshots
   of every page, review them, and fix what's broken.**
 
+*Partial (2026-07-20): both-theme screenshots captured to the session scratchpad
+(p4-shots/) and the Share-list modal reviewed OK in dark, but the run was cut short by
+the Anthropic monthly spend limit before any fixes landed (branch fix/dark-visual is
+empty; tree clean). Resume: re-screenshot fresh, then fix at the token level per spec.*
+
 **Why:** dark mode has never been looked at by anyone — the repo's own web
 CLAUDE.md mandates Playwright-driven visual verification, and the family sees
 this nightly after sunset.
