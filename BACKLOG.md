@@ -133,42 +133,102 @@ status → existing Walmart flow unchanged. Run the web suite.
 
 ---
 
-## P4 — Dark-mode visual sweep with Playwright (screenshots both themes)
+## P4 — Dark-mode visual check, fork-added surfaces only
 
-- [ ] **Drive the running kiosk with Playwright, capture light+dark screenshots
-  of every page, review them, and fix what's broken.**
+- [x] **Drive the running kiosk with Playwright, screenshot only the fork's own
+  post-merge UI additions in both themes, and fix what's broken.**
+  - *Result (2026-07-20): all four fork surfaces reviewed at full height in both
+    themes via Playwright (viewport + 2600px-tall passes) — Display & Kiosk
+    appearance section OK, Smart Home OK, Calendars incl. feeds add/list rows OK,
+    grocery board + Share-list modal OK (QR correctly stays on a white tile).
+    NO dark-mode defects; zero code changes needed — the fork panels use
+    design-system classes so upstream's token layer carries them. Shots left in
+    session scratchpad `p4/shots/` for morning review. Side observation (not
+    theming): Smart Home panel shows a "Couldn't load Smart Home settings — is
+    the module enabled?" banner while still rendering the connection card —
+    module-state quirk, pre-existing.*
 
-*Partial (2026-07-20): both-theme screenshots captured to the session scratchpad
-(p4-shots/) and the Share-list modal reviewed OK in dark, but the run was cut short by
-the Anthropic monthly spend limit before any fixes landed (branch fix/dark-visual is
-empty; tree clean). Resume: re-screenshot fresh, then fix at the token level per spec.*
+*(Scope note: originally an 11-page full sweep; narrowed 2026-07-20 — see Why.)*
 
-**Why:** dark mode has never been looked at by anyone — the repo's own web
-CLAUDE.md mandates Playwright-driven visual verification, and the family sees
-this nightly after sunset.
+**Why:** originally scoped as a full 11-page sweep on the premise that "dark
+mode has never been looked at by anyone." That premise was wrong: upstream
+v0.8.0 shipped a fully audited dark mode (canonical tokens, a hardcoded-color
+migration pass, and even a code-review fix for two inverted-fill icons that
+stayed white — commits `5a1ffc69`, `8897edaf`, `598b7b89`), plus a separate iOS
+dark-mode PR — all merged into `main` via P1. The user has also since looked at
+it directly and found it fine. What upstream's audit *couldn't* have covered is
+UI that didn't exist yet when it ran: the fork's own Appearance/Smart Home
+panels (sun-preference + palette picker, `SmartHomePanel` in
+`apps/web/src/kiosk/Settings.tsx`) and everything added by P2/P3 afterward
+(Calendar feeds section in `Settings.tsx`, and `WalmartHandoff.tsx` +
+`GroceryBoard.tsx` for Share list). That's the actual unaudited surface — scope
+the check to it instead of re-reviewing pages upstream already hardened.
 
-**How:** the stack is live at http://localhost:8080 with seeded content.
-`npm i -D playwright` in a scratch dir (or use `npx playwright` with chromium),
-script: inject the admin token (mint as in ground rules; the web app stores it —
-check `apps/web/src/lib/api/client.ts` for the storage key, e.g.
-localStorage 'waffled.token' — read the code, don't guess), then for each route
-(/, /calendar, /meals, /meals/recipes, /lists, /tasks, /photos, /goals,
-/pantry, /settings?tab=appearance, /settings?tab=display) capture at 1280x800 in
-BOTH themes (set localStorage `waffled:theme` to 'light' then 'dark').
-Save PNGs to the session scratchpad. REVIEW EVERY IMAGE (Read tool renders
-them): look for unreadable text (dark-on-dark/light-on-light), invisible
-borders/dividers, stuck-light surfaces (hardcoded hex instead of tokens),
-broken contrast on chips/pills/badges. Fix root causes in the CSS token layer
-(`apps/web/src/styles/*.css`) — prefer fixing the variable, not per-component
-overrides. Re-screenshot after fixes.
+**How:** stack live at http://localhost:8080 with seeded content, Playwright
+via `npx playwright` (chromium), admin token injected as in the ground rules.
+Screenshot only: `/settings?tab=appearance` (palette cards + sun-pref control),
+`/settings?tab=smarthome`, `/settings?tab=calendars` (Calendar feeds
+add/list/edit rows), and the grocery list's Share-list flow (`GroceryBoard` →
+`WalmartHandoff` unconfigured state: share view, copy, QR code) — each in both
+themes (`localStorage 'waffled:theme'` = 'light' / 'dark'). Save PNGs to the
+scratchpad. Review each for unreadable text, invisible borders, stuck-light
+surfaces (hardcoded hex instead of tokens), broken chip/pill/badge contrast.
+Fix root causes in the CSS token layer (`apps/web/src/styles/*.css`) over
+per-component overrides.
 
-**Verify:** before/after screenshots for anything fixed; web suite green
-(CSS-only changes still run the suite).
+**Verify:** before/after screenshots for anything fixed; web suite green.
 
-**Done when:** all pages reviewed in both themes, fixes merged + pushed + CI
-green, and a short findings note (per-page OK/fixed list) appended below this
-item. Leave the final screenshot set in the scratchpad for the user's morning
-review.
+**Done when:** the four fork-added surfaces above are reviewed in both themes,
+any fixes merged + pushed + CI green, and a short findings note (per-surface
+OK/fixed list) appended below this item.
+
+---
+
+## P4.5 — Clearly visible fork version (user request 2026-07-20)
+
+- [ ] **Surface a distinct fork version in the app, alongside the upstream base.**
+
+**Why:** the user checked Settings and could only find "0.8.0" — which is the
+upstream base version, indistinguishable from vanilla upstream. The fork deploys
+nightly from `main` with no visible identity of its own, the About panel is
+literally a "Version and storage info land here" placeholder, and the update
+checker 404s (UPDATE_CHECK_REPO points at the fork repo, which has no releases).
+
+**How:** the fork version is `git describe --tags --always` — e.g.
+`v0.8.0-145-g18dc02d3` = upstream base + fork commits ahead + sha. Auto-derived,
+never hand-bumped. Mirror the existing GIT_SHA plumbing end to end:
+- `waffled` script (~line 62, next to GIT_SHA): export
+  `FORK_VERSION="$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo dev)"`.
+- `infra/compose/docker-compose.yml`: pass `FORK_VERSION: ${FORK_VERSION:-dev}`
+  as a build arg on the same services that get GIT_SHA (api ~line 46, +migrate
+  ~line 67 — the 0ee64bfa provenance-race fix means BOTH need it).
+- `apps/api/Dockerfile`: `ARG FORK_VERSION=dev` → `ENV` (next to GIT_SHA ~line 28).
+- `apps/api/src/platform/version.ts`: add `fork: process.env.FORK_VERSION || 'dev'`;
+  flows into `/api/health` version block and `/api/updates` `current`.
+- Web: finish the About placeholder (`Settings.tsx` AboutPanel ~line 2537) —
+  fork version prominent, "upstream base 0.8.0 · built <time>" beneath. Also
+  append the fork version to the System Health build line (~line 524) and show
+  it in the UpdateBanner "Running …" lines.
+- KEEP `package.json` at upstream parity (0.8.0) — it feeds the update checker's
+  semver compare; the fork version is display-only provenance, not a semver.
+- On the live stack (user-local `infra/compose/.env`, never committed): flip
+  `UPDATE_CHECK_REPO` to `kevinpsites/waffled` so "latest is vX.Y.Z" reflects
+  upstream releases. Reword the UpdateBanner upgrade hint (`Settings.tsx` ~548):
+  for a fork, "upstream has a newer release — merge it" — running
+  `./waffled upgrade` onto upstream images would drop the fork features.
+- NOTE: `.github/workflows/publish-images.yml` also passes GIT_SHA (~line 101)
+  and would need FORK_VERSION for GHCR builds — but workflows are untouchable
+  (token scope). Fine: GHCR images fall back to 'dev'; the kiosk builds from
+  source via `./waffled up --build` so it always gets the real value. Add the
+  one-line workflow edit to the user-blocked list below.
+
+**Verify (TDD):** api test — version payload includes `fork` and `/api/updates`
+`current.fork` (set the env var in the test); web test — AboutPanel renders the
+fork version and upstream base from the health/updates payload; typecheck both.
+
+**Done when:** tests green, merged, pushed, CI green, CHANGELOG entry, and after
+a `.\update.ps1 -Force` (or the nightly run) Settings → About on the live kiosk
+shows a `v0.8.0-<n>-g<sha>` fork version.
 
 ---
 
@@ -259,9 +319,17 @@ merged + pushed.
   Until then CI runs the old layout (no CLI tests, no e2e job in CI; e2e still runnable
   locally via `npm run test:e2e` in apps/api).
 
+- **Add FORK_VERSION to publish-images.yml** (once P4.5 lands) — same workflow-scope
+  problem as above; the GHCR builds need `FORK_VERSION=$(git describe --tags --always)`
+  passed as a build arg next to GIT_SHA (~line 101) or GHCR images report fork version
+  'dev'. Harmless for the kiosk (it builds from source) but worth the one-line fix
+  whenever the token gets workflow scope.
+
 - Outlook work-account connect — waiting on OIT approval; retry is a user click.
-- Google Calendar OAuth client — user is mid-walkthrough in Google Cloud console;
-  when Client ID/secret arrive, wire GOOGLE_* into infra/compose/.env + restart api.
+- ~~Google Calendar OAuth client~~ — DONE (verified 2026-07-20): GOOGLE_* wired
+  into infra/compose/.env, account connected, primary calendar syncing with no
+  errors. Note: several calendars on the account exist but aren't selected for
+  sync — enabling them is a user choice in Settings → Calendars.
 - Fully Kiosk PLUS purchase/config, tablet install, wake-word mic tests — user hardware.
 - HTTPS for tablet mic (Tailscale/hostname mode) — needs user network decisions.
 - HA device onboarding — needs the family's actual device brands/accounts.
