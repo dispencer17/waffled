@@ -2,6 +2,7 @@ import { Outlet } from 'react-router'
 import { Rail } from './components/Rail'
 import { Topbar } from './components/Topbar'
 import { OfflineBanner } from './components/OfflineBanner'
+import { SyncHealthBanner } from './components/SyncHealthBanner'
 import { UpdateModal } from './components/UpdateModal'
 import { VoiceHud } from './components/VoiceHud'
 import { Timers } from './components/Timers'
@@ -18,6 +19,7 @@ export function KioskLayout() {
         <Rail />
         <div className="kiosk-main">
           <OfflineBanner />
+          <SyncHealthBanner />
           <Topbar />
           <Outlet />
         </div>
