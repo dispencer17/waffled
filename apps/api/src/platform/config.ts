@@ -180,17 +180,20 @@ export const config: AppConfig = {
   // Microsoft / Outlook calendar OAuth (fork). Register an app in Entra ID
   // (portal.azure.com → App registrations, "personal + work accounts"), add the
   // redirect URI, and set MS_CLIENT_ID/MS_CLIENT_SECRET. URLs overridable for tests.
+  // All via env() (empty = unset): compose passes these through as "" when not
+  // set in .env, and a literal scope="" made Microsoft reject the consent URL
+  // with AADSTS900144.
   microsoft: {
-    clientId: process.env.MS_CLIENT_ID ?? null,
-    clientSecret: process.env.MS_CLIENT_SECRET ?? null,
+    clientId: env('MS_CLIENT_ID') ?? null,
+    clientSecret: env('MS_CLIENT_SECRET') ?? null,
     // Local dev: http://localhost:8080/auth/microsoft/calendar/callback
-    redirectUri: process.env.MS_CALENDAR_REDIRECT_URI ?? null,
+    redirectUri: env('MS_CALENDAR_REDIRECT_URI') ?? null,
     // offline_access → refresh token; User.Read → /me identity; Calendars.ReadWrite
     // covers the calendar list + events + write-back.
-    scopes: process.env.MS_CALENDAR_SCOPES ?? 'openid email offline_access User.Read Calendars.ReadWrite',
-    authUrl: process.env.MS_AUTH_URL ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    tokenUrl: process.env.MS_TOKEN_URL ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    graphBase: process.env.MS_GRAPH_BASE ?? 'https://graph.microsoft.com/v1.0',
+    scopes: env('MS_CALENDAR_SCOPES') ?? 'openid email offline_access User.Read Calendars.ReadWrite',
+    authUrl: env('MS_AUTH_URL') ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    tokenUrl: env('MS_TOKEN_URL') ?? 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    graphBase: env('MS_GRAPH_BASE') ?? 'https://graph.microsoft.com/v1.0',
   },
 
   // Walmart affiliate product search (fork). Sign up at walmart.io, upload the
