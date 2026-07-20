@@ -1,19 +1,49 @@
 ---
-title: Appearance & dark mode
-description: Choose Light, Dark, or Match system — a warm dark theme that keeps Waffled feeling like Waffled.
+title: Appearance, dark mode & color themes
+description: Light or dark, plus eight color themes — pick a look per device from Settings → Display & Kiosk.
 ---
 
-Waffled ships with a **warm dark theme** alongside the original light one. Pick how it looks
-from **Settings → Appearance**.
+Waffled ships with a **warm dark theme** alongside the original light one, and **eight color
+themes** that re-hue the whole app. Pick how it looks from **Settings → Display & Kiosk** —
+the appearance controls sit at the top of that tab, above the kiosk options. (They used to be
+a standalone *Appearance* tab; old links land in the right place.)
 
-## Choosing a theme
+Everyone in the family can open Display & Kiosk to set the theme — only the kiosk and
+screensaver configuration further down is admin-only.
+
+## Choosing light or dark
 - **Light** — the warm-white canvas Waffled has always had.
 - **Dark** — a *warm* dark: soft charcoals rather than cold black-and-blue.
 - **Match system** — follow your device's own light/dark setting automatically, including when
   it flips on a schedule (e.g. sundown).
+- **Follow the sun** — dark from sunset to sunrise using your household location's sun times
+  (the same ones the weather uses). Great for a kitchen kiosk.
 
-The choice **saves on that device only** and applies **instantly** — no reload, no server
-round-trip. Set it once on the kitchen kiosk and once on your phone; they're independent.
+Every choice on this page **saves on that device only** and applies **instantly** — no reload,
+no server round-trip. Set it once on the kitchen kiosk and once on your phone; they're
+independent.
+
+## Color themes
+Pick a palette under **COLOR THEME**:
+
+| Theme | Feel |
+|---|---|
+| 🧇 Golden Waffle | The classic — warm cream & coral (the default) |
+| 🦩 Flamingo | Playful pink with a rosy glow |
+| 🍒 Cherry Sundae | Bold cherry red, whipped-cream white |
+| 🍯 Honey | Amber and golden toast |
+| 🍵 Matcha | Calm leafy green |
+| 🌊 Tide Pool | Cool teal & sea glass |
+| 🫐 Blueberry | Crisp blue on a cool canvas |
+| 🪻 Lavender | Soft violet, a little dreamy |
+
+A color theme changes the **accent color** (buttons, highlights, the selected state) and gives
+every surface — canvas, rails, panels — a **subtle wash of the hue**, in both light and dark.
+It deliberately does **not** touch each family member's **personal color**, the **gold** stars,
+or the success/warning/danger status colors, so people and states stay recognizable in every
+theme.
+
+Color theme and light/dark are independent: Blueberry-dark, Matcha-light, any combination works.
 
 ## What "warm dark" means
 Dark mode isn't just an inversion. Only two things really change:
@@ -23,9 +53,8 @@ Dark mode isn't just an inversion. Only two things really change:
 - **Pale tints** (the soft backgrounds behind a person's name, a status pill, an AI chip)
   become low-opacity **washes** of the same color instead of solid pastels.
 
-Everything else — the **coral** primary, the **gold** stars, the **violet** AI accent, and each
-family member's **personal color** — stays exactly the same in both themes. That's deliberate:
-keeping the accent hues fixed is what makes the app still feel like Waffled with the lights off.
+Calendar event chips adapt too: their text is mixed toward the theme's ink — richer and darker
+on light, a bright pastel on dark — so every person's events stay readable in both modes.
 
 ## Where it works
 | Surface | Support |
@@ -33,12 +62,11 @@ keeping the accent hues fixed is what makes the app still feel like Waffled with
 | Web / Kiosk | ✅ |
 | iPhone / iPad | 🔜 Planned (parity with web) |
 
-On the web and the kitchen kiosk display, dark mode is available today. The iPhone/iPad app
-mirrors the same warm-dark palette and **Settings → Appearance** control; that parity is in
-progress.
+On the web and the kitchen kiosk display, dark mode and color themes are available today. The
+iPhone/iPad app mirrors the same warm-dark palette; that parity is in progress.
 
 ## Notes
 - **Match system** uses your device/browser's `prefers-color-scheme`; no account setting is
   involved, so each device can differ.
 - Because the preference lives on the device, signing in as a different family member on the
-  same kiosk keeps that kiosk's chosen theme.
+  same kiosk keeps that kiosk's chosen theme and color.

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from '
 import { useSearchParams } from 'react-router'
 import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
-import { useThemePref } from '../lib/theme'
+import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
 import { PersonModal } from './components/PersonModal'
 import { SettingCard } from './components/SettingCard'
@@ -17,7 +17,6 @@ import '../styles/settings.css'
 // account/operator. Account is thin today; it grows with per-member self-service later.
 const NAV = [
   // Account — you
-  { key: 'appearance', icon: '🌗', label: 'Appearance', group: 'account' },
   { key: 'profile', icon: '🙂', label: 'My Profile', group: 'account' },
   { key: 'account', icon: '🔒', label: 'My Account', group: 'account' },
   { key: 'households', icon: '🏠', label: 'Households', group: 'account' },
@@ -28,7 +27,10 @@ const NAV = [
   { key: 'meals', icon: '🍽️', label: 'Meals', admin: true, group: 'family' },
   { key: 'lists', icon: '📝', label: 'Lists', admin: true, group: 'family' },
   { key: 'modules', icon: '🧩', label: 'Modules', admin: true, group: 'family' },
-  { key: 'display', icon: '🖥️', label: 'Display & Kiosk', admin: true, group: 'family' },
+  // Display & Kiosk is NOT admin-gated: it hosts the per-device appearance
+  // (theme + color palette) for everyone; the kiosk/screensaver configuration
+  // inside the panel is still admin-only.
+  { key: 'display', icon: '🖥️', label: 'Display & Kiosk', group: 'family' },
   { key: 'smarthome', icon: '💡', label: 'Smart Home', admin: true, group: 'family' },
   { key: 'notifications', icon: '🔔', label: 'Notifications', admin: true, group: 'family' },
   // System — the self-hosted deployment (admin/operator)
@@ -2860,7 +2862,10 @@ function DisplayKioskPanel() {
   const wx = useWeather()
   const { events } = useEventsToday()
   const { photos } = usePhotos()
-  const { household } = useHousehold()
+  const { household, person } = useHousehold()
+  // Everyone gets the appearance section; the kiosk/screensaver configuration
+  // below it stays admin-only (the tab itself is no longer admin-gated).
+  const isAdmin = person?.isAdmin ?? false
   const nextEvent = events.find((e) => new Date(e.startsAt).getTime() > Date.now()) ?? null
   // Distinct album names (a photo's `memory`), for the "Specific album" picker.
   const albums = useMemo(
@@ -2869,8 +2874,9 @@ function DisplayKioskPanel() {
   )
 
   useEffect(() => {
+    if (!isAdmin) return // non-admins can't read the config — skip the 403
     kioskApi.displayConfig().then((c) => { setCfg(c); setError(false) }).catch(() => setError(true))
-  }, [])
+  }, [isAdmin])
 
   function update(patch: Partial<DisplayConfig>) {
     setCfg((c) => (c ? { ...c, ...patch } : c))
@@ -2919,10 +2925,14 @@ function DisplayKioskPanel() {
       <div className="set-head" style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
         <div className="wf-serif set-head-t">Display &amp; Kiosk</div>
         {savedFlash && <span className="tiny" style={{ color: 'var(--success)', fontWeight: 700 }}>✓ Saved</span>}
-        <span className="tiny muted" style={{ marginLeft: 'auto', fontWeight: 600 }}>Screensaver settings save automatically</span>
+        {isAdmin && <span className="tiny muted" style={{ marginLeft: 'auto', fontWeight: 600 }}>Screensaver settings save automatically</span>}
       </div>
 
-      <SettingCard>
+      <AppearanceSection />
+
+      {isAdmin && (
+        <>
+      <SettingCard style={{ marginTop: 18 }}>
         <SettingRow icon="🖥️" title="Use this browser as the family display" sub={paired ? 'On — this device is paired as a kiosk.' : 'This device only. Enables the screensaver & keeps the screen awake.'}>
           <input type="checkbox" className="set-check" checked={displayOn} disabled={paired} onChange={toggleDisplay} />
         </SettingRow>
@@ -3103,6 +3113,8 @@ function DisplayKioskPanel() {
           onWake={() => setPreview(false)}
         />
       )}
+        </>
+      )}
     </div>
   )
 }
@@ -3261,14 +3273,16 @@ function SmartHomePanel() {
   )
 }
 
-function AppearancePanel() {
-  const { pref, resolved, setPref } = useThemePref()
+// Appearance — per-device theme preference (Light / Dark / Match system / sun)
+// plus the color theme (palette). Lives at the top of Display & Kiosk so every
+// member can reach it; stored in localStorage via the theme store — applies
+// instantly, no server round-trip.
+function AppearanceSection() {
+  const { pref, resolved, palette, setPref, setPalette } = useThemePref()
   const matchSystem = pref === 'system'
   const followSun = pref === 'sun'
   return (
-    <div className="set-panel">
-      <div className="set-head"><div className="wf-serif set-head-t">Appearance</div></div>
-
+    <>
       <div className="flabel" style={{ padding: '0 2px 10px' }}>THEME</div>
       <div className="appr-grid">
         <ThemePreview
@@ -3310,10 +3324,38 @@ function AppearancePanel() {
         </SettingRow>
       </SettingCard>
 
-      <div className="tiny muted" style={{ padding: '12px 2px 0', fontWeight: 600 }}>
-        This choice is saved on this device only.
+      <div className="flabel" style={{ padding: '18px 2px 10px' }}>COLOR THEME</div>
+      <div className="pal-grid">
+        {PALETTES.map((p) => (
+          <PaletteCard key={p.id} def={p} on={palette === p.id} onSelect={() => setPalette(p.id)} />
+        ))}
       </div>
-    </div>
+
+      <div className="tiny muted" style={{ padding: '12px 2px 0', fontWeight: 600 }}>
+        Theme &amp; color choices are saved on this device only.
+      </div>
+    </>
+  )
+}
+
+// One color-theme card: a mini strip depicting the palette — accent dot, light
+// canvas bar washed with the accent, dark canvas chip. Literal colors on purpose
+// (it DEPICTS the palette regardless of the active theme), like ThemePreview.
+function PaletteCard({ def, on, onSelect }: { def: PaletteDef; on: boolean; onSelect: () => void }) {
+  const [primary, canvas, night] = def.swatch
+  return (
+    <button type="button" className={`appr-card${on ? ' pinned' : ''}`} aria-pressed={on} onClick={onSelect} title={def.sub}>
+      <div className="pal-mini" style={{ background: canvas }}>
+        <span className="pal-dot" style={{ background: primary }} />
+        <span className="pal-bar" style={{ background: `${primary}2E` }} />
+        <span className="pal-night" style={{ background: night }} />
+      </div>
+      <div className="appr-card-lbl">
+        {on && <span className="appr-check" aria-hidden="true">✓</span>}
+        <span aria-hidden="true">{def.emoji}</span>
+        <span>{def.label}</span>
+      </div>
+    </button>
   )
 }
 
@@ -3321,7 +3363,10 @@ export function Settings() {
   const { household, person, memberships, pendingInvites } = useHousehold()
   // Tab lives in the URL (?tab=) so a refresh returns to where you were.
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') ?? 'family'
+  const rawTab = params.get('tab') ?? 'family'
+  // The old standalone Appearance tab merged into Display & Kiosk — keep stale
+  // links/bookmarks landing on the right panel.
+  const tab = rawTab === 'appearance' ? 'display' : rawTab
   const setTab = (key: string) => setParams({ tab: key }, { replace: true })
 
   // Your own account, for the self-service Account panels. Only a real personal
@@ -3373,7 +3418,7 @@ export function Settings() {
         </div>
       </div>
       <div className="set-content">
-        {activeTab === 'appearance' ? <AppearancePanel /> : activeTab === 'profile' ? <MyProfilePanel /> : activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'smarthome' ? <SmartHomePanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : activeTab === 'about' ? <AboutPanel /> : <Placeholder tab={activeTab} />}
+        {activeTab === 'profile' ? <MyProfilePanel /> :activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'smarthome' ? <SmartHomePanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : activeTab === 'about' ? <AboutPanel /> : <Placeholder tab={activeTab} />}
       </div>
     </div>
   )

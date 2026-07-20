@@ -111,11 +111,14 @@ describe('countdowns', () => {
   })
 
   it("derives a member's next birthday", async () => {
-    await call('POST', '/api/persons', kevin, { name: 'Wally', memberType: 'kid', birthday: '2016-07-15' })
+    // Relative MM-DD (like the horizon tests) so the next occurrence is always
+    // inside the default 183-day horizon — a fixed date only passes half the year.
+    const birthday = birthdayInDays(30)
+    await call('POST', '/api/persons', kevin, { name: 'Wally', memberType: 'kid', birthday })
     const list = JSON.parse((await call('GET', '/api/countdowns', kevin)).body).countdowns
     const bday = list.find((c: { source: string; title: string }) => c.source === 'birthday' && c.title === "Wally's birthday")
     expect(bday).toBeTruthy()
-    expect(bday.date.endsWith('-07-15')).toBe(true)
+    expect(bday.date.endsWith(birthday.slice(4))).toBe(true) // "-MM-DD"
     expect(bday.daysLeft).toBeGreaterThanOrEqual(0)
   })
 

@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   protections are enabled while preserving camera and photo support.
 
 ### Added
+- **Color themes — pick your palette.** Alongside light and dark, Settings → Display & Kiosk
+  now offers eight color themes: the classic Golden Waffle plus Flamingo, Cherry Sundae, Honey,
+  Matcha, Tide Pool, Blueberry, and Lavender. A theme re-hues buttons and accents and gives the
+  whole canvas a subtle wash of the color — in both light and dark — while per-person colors and
+  status colors stay put. Saved per device, applied instantly.
 - **One-click updates for the fork.** A new `update.ps1` at the repo root is the update
   button: it fast-forwards to the fork's CI-tested `main` and rebuilds the stack from
   source (exiting early when there's nothing new — use `-Force` to rebuild anyway). The
@@ -114,6 +119,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   including on the kitchen kiosk display.
 
 ### Changed
+- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
+  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
+  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
+  looks is in one place. The tab is visible to every member (theme and color are per-device
+  choices); the kiosk & screensaver configuration below it remains admin-only.
 - **New chores now default to a one-off on the day you're viewing, and each day's list is sorted sensibly.** On iPhone/iPad, adding a chore from the Chores tab now starts as "Just once" due on the day currently shown — instead of a recurring daily chore always due today. A day's chores are also ordered unfinished-first, then by due time (earliest first, untimed last), then A–Z.
 - **Cook Mode on iPad now keeps the current step's ingredients in a left sidebar.** Instead of
   the ingredients scrolling away beneath the big instruction, the iPad wall display pins them in
@@ -128,6 +138,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explains the required terminal, initial credentials, success checks, and safe troubleshooting.
 
 ### Fixed
+- **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
+  Today views used the same pale color wash and text in both themes, which went murky with the
+  lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
+  on dark — so every person's events pass accessibility contrast in both modes (and under any
+  color theme).
 - **Upgrades now stop when their safety checks fail.** `./waffled upgrade` aborts after
   a failed repository fast-forward or database backup unless backup skipping is explicit.
 

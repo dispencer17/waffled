@@ -44,8 +44,8 @@ function AgendaRow({ event, past = false, onClick }: { event: AgendaEvent; past?
 function AgendaBigCard({ event, past = false, onClick }: { event: AgendaEvent; past?: boolean; onClick: () => void }) {
   const color = event.personColor ?? '#A6A29B'
   return (
-    <div className={`agenda-bigcard${past ? ' past' : ''}`} onClick={onClick} role="button" tabIndex={0} style={{ borderTop: `3px solid ${color}` }}>
-      <div className="ab-time" style={{ color }}>{formatTime(event)}</div>
+    <div className={`agenda-bigcard${past ? ' past' : ''}`} onClick={onClick} role="button" tabIndex={0} style={{ borderTop: `3px solid ${color}`, '--ev': color } as React.CSSProperties}>
+      <div className="ab-time ev-ink">{formatTime(event)}</div>
       <div className="ab-title">{event.title}</div>
       {event.location && <div className="tiny muted ab-loc">📍 {event.location}</div>}
       <div className="ab-foot">

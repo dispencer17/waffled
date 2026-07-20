@@ -65,7 +65,7 @@ export function DayView({
             {allDay.map((e) => {
               const color = e.personColor ?? '#6B6B70'
               return (
-                <div key={e.id} className="dv-allday-ev" style={{ background: `${color}22`, color }} onClick={() => onOpenEvent(e)}>
+                <div key={e.id} className="dv-allday-ev ev-tint" style={{ '--ev': color } as React.CSSProperties} onClick={() => onOpenEvent(e)}>
                   {e.title}
                 </div>
               )
@@ -101,8 +101,8 @@ export function DayView({
               return (
                 <div
                   key={e.id}
-                  className={`dv-ev ${isMeal ? 'ev-meal' : ''}`}
-                  style={{ top, height, left, width, background: `${color}22`, color, borderLeft: `3px solid ${color}` }}
+                  className={`dv-ev ev-tint ${isMeal ? 'ev-meal' : ''}`}
+                  style={{ top, height, left, width, '--ev': color, borderLeft: `3px solid ${color}` } as React.CSSProperties}
                   title={isMeal ? 'Planned meal' : undefined}
                   onClick={(ev) => { ev.stopPropagation(); onOpenEvent(e) }}
                 >

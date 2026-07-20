@@ -7,9 +7,15 @@ import {
   initTheme,
   setSunTimes,
   sunPrefersDark,
+  readPalette,
+  setPalette,
+  applyPalette,
+  PALETTES,
   THEME_KEY,
   SUN_KEY,
+  PALETTE_KEY,
   type ThemePref,
+  type PaletteId,
 } from './theme'
 
 // A controllable fake of window.matchMedia('(prefers-color-scheme: dark)').
@@ -38,6 +44,7 @@ function installMatchMedia(dark: boolean) {
 beforeEach(() => {
   localStorage.clear()
   document.documentElement.removeAttribute('data-theme')
+  document.documentElement.removeAttribute('data-palette')
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -194,6 +201,79 @@ describe('sun schedule', () => {
   })
 })
 
+describe('color palette store', () => {
+  it('defaults to "waffle" when nothing is stored', () => {
+    expect(readPalette()).toBe('waffle')
+  })
+
+  it('persists a chosen palette and stamps data-palette on the root', () => {
+    setPalette('blueberry')
+    expect(localStorage.getItem(PALETTE_KEY)).toBe('blueberry')
+    expect(readPalette()).toBe('blueberry')
+    expect(document.documentElement.getAttribute('data-palette')).toBe('blueberry')
+  })
+
+  it('ignores a garbage stored value and falls back to "waffle"', () => {
+    localStorage.setItem(PALETTE_KEY, 'chartreuse')
+    expect(readPalette()).toBe('waffle')
+  })
+
+  it('applyPalette stamps data-palette on the document root', () => {
+    applyPalette('matcha')
+    expect(document.documentElement.getAttribute('data-palette')).toBe('matcha')
+    applyPalette('waffle')
+    expect(document.documentElement.getAttribute('data-palette')).toBe('waffle')
+  })
+
+  it('initTheme applies the stored palette on boot', () => {
+    installMatchMedia(false)
+    localStorage.setItem(PALETTE_KEY, 'lavender')
+    initTheme()
+    expect(document.documentElement.getAttribute('data-palette')).toBe('lavender')
+  })
+
+  it('initTheme stamps the default palette when nothing is stored', () => {
+    installMatchMedia(false)
+    initTheme()
+    expect(document.documentElement.getAttribute('data-palette')).toBe('waffle')
+  })
+
+  it('emits a waffled:theme-changed event on setPalette', () => {
+    const spy = vi.fn()
+    window.addEventListener('waffled:theme-changed', spy)
+    setPalette('tidepool')
+    expect(spy).toHaveBeenCalledOnce()
+    window.removeEventListener('waffled:theme-changed', spy)
+  })
+
+  it('the catalog starts with the default and every entry is complete', () => {
+    expect(PALETTES[0].id).toBe('waffle')
+    // Every palette drives a picker card: it needs a label, an emoji, a blurb,
+    // and a three-color swatch preview.
+    for (const p of PALETTES) {
+      expect(p.label.length).toBeGreaterThan(0)
+      expect(p.emoji.length).toBeGreaterThan(0)
+      expect(p.sub.length).toBeGreaterThan(0)
+      expect(p.swatch).toHaveLength(3)
+      for (const c of p.swatch) expect(c).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+    // Ids are unique (they key localStorage + the data-palette attribute).
+    expect(new Set(PALETTES.map((p) => p.id)).size).toBe(PALETTES.length)
+    // "A variety of options" — the default plus at least six colorful themes.
+    expect(PALETTES.length).toBeGreaterThanOrEqual(7)
+  })
+
+  it('every stored palette id round-trips through readPalette', () => {
+    for (const p of PALETTES) {
+      localStorage.setItem(PALETTE_KEY, p.id)
+      expect(readPalette()).toBe(p.id)
+    }
+  })
+})
+
 // Type-only guard: ThemePref is the four-value union we expect.
 const _pref: ThemePref[] = ['light', 'dark', 'system', 'sun']
 void _pref
+// Type-only guard: PaletteId includes the default.
+const _pal: PaletteId = 'waffle'
+void _pal
