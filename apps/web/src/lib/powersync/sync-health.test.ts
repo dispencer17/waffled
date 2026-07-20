@@ -179,7 +179,7 @@ describe('SyncHealthMonitor restarts', () => {
       advance(RESTART_BACKOFF_MAX_MS + 1)
       await m.tick()
     }
-    expect(deps.hardRestart.mock.calls.length).toBeGreaterThanOrEqual(12)
+    expect(vi.mocked(deps.hardRestart).mock.calls.length).toBeGreaterThanOrEqual(12)
   })
 
   it('recovery resets the ladder: the next stall starts soft again', async () => {

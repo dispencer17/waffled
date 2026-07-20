@@ -308,6 +308,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | Offline writes queued + drained on reconnect | 🟡 (calendar) | ✅ | ✅ | ✅ Done (events domain) |
 | Other domains (chores/rewards/goals/lists/meals/photos) | REST | REST | REST | 🟡 REST-only, kept fresh by the in-app refresh bus while online |
 | Offline status + pending-uploads + last-synced indicators | ✅ | ✅ | ✅ | ✅ Done |
+| **Sync watchdog** — auto-restarts a stalled sync engine (soft → full rebuild, backed off); REST fallback so a wedged replica never blanks the calendar; stalled-sync banner | ✅ | ⬜ | ⬜ | ✅ Done (web) |
 | Kiosk **PWA** + cached last-known state | 🚧 | ❌ N/A | ❌ N/A | 🟡 Web partial (7.1); mobile is a native app |
 | Self-host via **Docker Compose** (`./waffled up`) | ✅ | — | — | ✅ Done |
 | In-container **migrations** (one-shot) | ✅ | — | — | ✅ Done |
@@ -323,6 +324,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | Structured **JSON logging** + per-request access log | ✅ | — | — | ✅ Done |
 | Deep **`GET /api/health`** (db, migrations, jobs, calendar backlog, storage) | ✅ | — | — | ✅ Done |
 | **Settings → System Health** admin panel (live, polls /api/health) | ✅ | ⬜ | ⬜ | ✅ Done |
+| **Live Sync (this browser)** card in System Health — sync state · last synced · watchdog restarts · manual **Restart sync** | ✅ | ⬜ | ⬜ | ✅ Done (web) |
 | **`./waffled doctor`** CLI health report (in-container, no token) | ✅ | — | — | ✅ Done |
 | Background-**job run registry** (last-run / duration / error per scheduler) | ✅ | — | — | ✅ Done |
 | Build **provenance** (git sha + build time on /healthz + /api/health) | ✅ | — | — | ✅ Done |
