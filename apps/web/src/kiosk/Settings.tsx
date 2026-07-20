@@ -6,6 +6,8 @@ import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
 import { PersonModal } from './components/PersonModal'
 import { SettingCard } from './components/SettingCard'
+import { useSyncHealth, type SyncHealthStatus } from '../lib/powersync/sync-health'
+import { restartPowerSyncHard } from '../lib/powersync/db'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Screensaver, screensaverPhotos } from './components/Screensaver'
 import '../styles/settings.css'
@@ -516,6 +518,7 @@ function SystemHealthPanel() {
       ) : (
         <>
           <div className="health-grid">
+            <BrowserSyncCard />
             {Object.entries(report.checks).map(([name, check]) => (
               <HealthCheckCard key={name} name={name} check={check} />
             ))}
@@ -526,6 +529,54 @@ function SystemHealthPanel() {
         </>
       )}
     </div>
+  )
+}
+
+// Per-browser PowerSync client health inside System Health — unlike the other
+// cards this one is about THIS device, not the server. Distinguishes an
+// empty-but-stalled local replica from "genuinely no data" (the 2026-07-20
+// blank-calendar incident) and offers the manual rung of the watchdog's
+// restart ladder.
+const SYNC_STATE_LABEL: Record<SyncHealthStatus, string> = {
+  off: 'off — reading over REST',
+  'no-auth': 'waiting for sign-in',
+  offline: 'offline',
+  connecting: 'connecting…',
+  ok: 'live',
+  stalled: 'stalled — auto-restarting',
+}
+
+function BrowserSyncCard() {
+  const health = useSyncHealth()
+  const [restarting, setRestarting] = useState(false)
+  const badge: HealthStatus = health.status === 'ok' ? 'ok' : health.status === 'stalled' ? 'down' : 'degraded'
+  async function restart() {
+    setRestarting(true)
+    try {
+      await restartPowerSyncHard()
+    } finally {
+      setRestarting(false)
+    }
+  }
+  return (
+    <SettingCard className="health-card">
+      <div className="health-card-h">
+        <span className={`health-badge health-${badge}`}>{HEALTH_ICON[badge]}</span>
+        <CardHeader title="Live Sync (this browser)" />
+      </div>
+      <div className="health-fields">
+        <span className="health-chip">state: {SYNC_STATE_LABEL[health.status]}</span>
+        {health.lastSyncedAt != null && (
+          <span className="health-chip">last synced: {new Date(health.lastSyncedAt).toLocaleString()}</span>
+        )}
+        {health.restartCount > 0 && <span className="health-chip">watchdog restarts: {health.restartCount}</span>}
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <button className="btn btn-ghost" disabled={restarting} onClick={() => void restart()}>
+          ⟳ Restart sync
+        </button>
+      </div>
+    </SettingCard>
   )
 }
 

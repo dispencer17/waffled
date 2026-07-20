@@ -2,6 +2,21 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router'
 import { Settings } from './Settings'
 import type { PermissionMatrix } from '../lib/api'
+import { publishSyncHealth, __resetSyncHealthForTests } from '../lib/powersync/sync-health'
+
+// The System Health panel's Live Sync card talks to the PowerSync client —
+// stub the db module (jsdom never runs the real engine anyway).
+const restartHardMock = vi.hoisted(() => vi.fn(async () => {}))
+vi.mock('../lib/powersync/db', () => ({
+  getPowerSyncDb: () => null,
+  connectPowerSync: async () => {},
+  onPowerSyncRecreated: () => () => {},
+  onTablesChange: () => () => {},
+  restartPowerSyncSoft: vi.fn(async () => {}),
+  restartPowerSyncHard: restartHardMock,
+}))
+
+afterEach(() => __resetSyncHealthForTests())
 
 const renderSettings = () => render(<MemoryRouter><Settings /></MemoryRouter>)
 
@@ -255,6 +270,43 @@ describe('Settings screen', () => {
     expect(screen.getByText('Calendar Sync')).toBeInTheDocument()
     expect(screen.getByText(/Build abc123/)).toBeInTheDocument()
     expect(screen.getByText(/DEGRADED/)).toBeInTheDocument()
+  })
+
+  it('shows the per-browser Live Sync card in System Health, with a restart button (admin)', async () => {
+    const report = {
+      status: 'ok',
+      version: { pkg: '0.0.0', sha: 'abc123', buildTime: null },
+      generatedAt: '2026-06-25T20:00:00Z',
+      checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+    }
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/health')) return { ok: true, json: async () => report }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    // The 2026-07-20 failure mode: engine stalled, watchdog already restarted twice.
+    publishSyncHealth({
+      status: 'stalled',
+      hasSynced: true,
+      lastSyncedAt: Date.parse('2026-07-20T18:33:00Z'),
+      restartCount: 2,
+      lastRestartAt: Date.parse('2026-07-20T18:40:00Z'),
+    })
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+
+    expect(await screen.findByText('Live Sync (this browser)')).toBeInTheDocument()
+    expect(screen.getByText(/state: stalled/)).toBeInTheDocument()
+    expect(screen.getByText(/watchdog restarts: 2/)).toBeInTheDocument()
+    expect(screen.getByText(/last synced:/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText(/Restart sync/))
+    await waitFor(() => expect(restartHardMock).toHaveBeenCalledTimes(1))
   })
 
   it('keeps household kiosk controls available when global sign-in config is forbidden', async () => {

@@ -36,6 +36,28 @@ the schema forward:
 ./waffled migrate
 ```
 
+## Live Sync (this browser)
+
+The System Health grid opens with one card that is **about the device you're holding**,
+not the server: the browser's live-sync (PowerSync) engine, which mirrors the calendar
+locally for instant offline reads.
+
+| State | Meaning |
+|---|---|
+| **live** | Connected and fully synced — local reads are authoritative |
+| **connecting…** | Establishing (or re-establishing) the sync stream |
+| **stalled — auto-restarting** | Online + signed in but no sync for several minutes; the watchdog is restarting the engine |
+| **offline** | No network — the local mirror serves the last-known state |
+| **off — reading over REST** | The engine couldn't start; the app reads from the server directly |
+
+A **stalled** engine is self-healing: the watchdog restarts it automatically (a gentle
+reconnect first, then a full client rebuild, with growing pauses between tries), the
+kiosk shows a quiet *"Live sync is reconnecting"* strip, and in the meantime the
+calendar reads **straight from the server** — so a stalled sync never shows an empty
+calendar. The card also lists the last successful sync time and how many watchdog
+restarts have happened this session, and the **Restart sync** button forces a full
+rebuild on the spot if you don't want to wait.
+
 ## Update notifier
 
 Waffled checks GitHub for new releases and shows **"Update available — vX.Y.Z"** in

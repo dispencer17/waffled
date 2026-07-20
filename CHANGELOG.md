@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The web app now watches its own live sync — and heals it.** A sync watchdog keeps an
+  eye on the browser's PowerSync engine: if it silently stops syncing while you're online
+  and signed in, Waffled restarts it automatically (gently first, then a full rebuild,
+  backing off between tries). While that's happening a quiet strip explains the kiosk is
+  "showing data straight from the server", and Settings → System Health gains a
+  **Live Sync (this browser)** card — sync state, last-synced time, watchdog restart
+  count, and a manual **Restart sync** button.
 - **Subscribe to calendar feeds by URL — no sign-in needed.** Settings → Calendars gains a
   **Calendar feeds** section: paste any published ICS link (a school schedule, a sports team,
   a work calendar published from Outlook, `webcal://` links included) and its events appear on
@@ -196,6 +203,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
+- **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
+  sync replica stops updating (or never finished its first sync), the calendar now falls
+  back to reading straight from the server instead of trusting the stale/empty local copy —
+  so an empty screen means there are genuinely no events, not that sync silently died.
+  Previously a stalled engine could leave the kiosk showing a blank calendar while the
+  server had all the data.
 - **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
   Today views used the same pale color wash and text in both themes, which went murky with the
   lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
