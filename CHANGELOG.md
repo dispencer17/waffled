@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Subscribe to calendar feeds by URL — no sign-in needed.** Settings → Calendars gains a
+  **Calendar feeds** section: paste any published ICS link (a school schedule, a sports team,
+  a work calendar published from Outlook, `webcal://` links included) and its events appear on
+  the family calendar, refreshed automatically every 15 minutes. Feeds can be mapped to a
+  person for color and marked private, recurring events expand like any other series, and
+  events removed from the feed disappear on the next refresh. The perfect plan B when a
+  workplace won't approve calendar OAuth access.
 - **Color themes — pick your palette.** Alongside light and dark, Settings → Display & Kiosk
   now offers eight color themes: the classic Golden Waffle plus Flamingo, Cherry Sundae, Honey,
   Matcha, Tide Pool, Blueberry, and Lavender. A theme re-hues buttons and accents and gives the

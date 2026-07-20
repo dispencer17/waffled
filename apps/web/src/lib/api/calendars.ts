@@ -31,12 +31,37 @@ export interface CalendarLink {
   lastSyncedAt: string | null
 }
 
+// A read-only ICS feed subscription (fork): any published .ics URL polled on an
+// interval — the no-OAuth calendar source.
+export interface IcsFeed {
+  id: string
+  url: string
+  name: string | null
+  personId: string | null
+  personName: string | null
+  personColor: string | null
+  visibility: string // 'family' | 'personal'
+  lastSyncedAt: string | null
+  lastError: string | null
+  createdAt: string
+}
+
+export interface IcsFeedSyncResult {
+  feedId: string
+  name: string | null
+  imported: number
+  updated: number
+  deleted: number
+  error?: string
+}
+
 export interface CalendarStatus {
   configured: boolean
   microsoftConfigured?: boolean
   connected: boolean
   accounts: CalendarAccount[]
   calendars: CalendarLink[]
+  feeds?: IcsFeed[]
 }
 
 export interface CalendarSyncCalendarResult {
@@ -70,4 +95,12 @@ export const calendarsApi = {
   disconnectAccount: (accountId: string) => apiDelete(`/api/calendar/google/accounts/${accountId}`),
   syncCalendars: (calendarId?: string) =>
     apiSend<CalendarSyncResult>('POST', '/api/calendar/sync', calendarId ? { calendarId } : {}),
+  // ICS feed subscriptions (admin manage; any member may list).
+  listFeeds: () => apiGet<{ feeds: IcsFeed[] }>('/api/calendar/feeds'),
+  addFeed: (input: { url: string; name?: string; personId?: string | null; visibility?: 'family' | 'personal' }) =>
+    apiSend<{ feed: IcsFeed }>('POST', '/api/calendar/feeds', input),
+  updateFeed: (id: string, patch: { url?: string; name?: string | null; personId?: string | null; visibility?: 'family' | 'personal' }) =>
+    apiSend<{ feed: IcsFeed }>('PATCH', `/api/calendar/feeds/${id}`, patch),
+  removeFeed: (id: string) => apiDelete(`/api/calendar/feeds/${id}`),
+  syncFeed: (id: string) => apiSend<IcsFeedSyncResult>('POST', `/api/calendar/feeds/${id}/sync`, {}),
 }

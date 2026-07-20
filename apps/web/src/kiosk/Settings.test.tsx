@@ -178,6 +178,53 @@ describe('Settings screen', () => {
     await waitFor(() => expect(puts.some((p) => p.birthdayHorizonDays === 92)).toBe(true))
   })
 
+  it('Calendars: lists ICS calendar feeds (with error badge) and adds a new one', async () => {
+    const posts: Array<{ url: string; body: Record<string, unknown> }> = []
+    const feeds = [
+      { id: 'f1', url: 'https://school.example/cal.ics', name: 'School calendar', personId: null, personName: null, personColor: null, visibility: 'family', lastSyncedAt: '2026-07-01T00:00:00Z', lastError: null, createdAt: '2026-06-01T00:00:00Z' },
+      { id: 'f2', url: 'https://broken.example/x.ics', name: null, personId: null, personName: null, personColor: null, visibility: 'family', lastSyncedAt: null, lastError: 'feed returned HTTP 404', createdAt: '2026-06-02T00:00:00Z' },
+    ]
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url)
+      if (u.includes('/api/calendar/feeds')) {
+        if (init?.method === 'POST') {
+          const body = JSON.parse(String(init.body ?? '{}')) as Record<string, unknown>
+          posts.push({ url: u, body })
+          if (u.endsWith('/sync')) return { ok: true, json: async () => ({ feedId: 'f3', name: null, imported: 2, updated: 0, deleted: 0 }) }
+          return { ok: true, json: async () => ({ feed: { ...feeds[0], id: 'f3', url: body.url as string, name: (body.name as string) ?? null } }) }
+        }
+        return { ok: true, json: async () => ({ feeds }) }
+      }
+      if (u.includes('/api/calendar/google/status')) return { ok: true, json: async () => ({ configured: false, connected: false, accounts: [], calendars: [], feeds }) }
+      if (u.includes('/api/countdowns')) return { ok: true, json: async () => ({ countdowns: [], sleeps: false, birthdayHorizonDays: 183 }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('Calendars'))
+
+    // The feeds card renders even with no OAuth provider configured — that
+    // independence is the point of ICS subscriptions.
+    expect(await screen.findByText(/Calendar feeds/)).toBeInTheDocument()
+    expect(screen.getByText('School calendar')).toBeInTheDocument()
+    // The nameless feed falls back to its host; the broken one shows its error.
+    expect(screen.getAllByText(/broken\.example/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/feed returned HTTP 404/)).toBeInTheDocument()
+
+    // Add row: URL + optional name → POST, then an immediate first sync.
+    fireEvent.change(screen.getByPlaceholderText('https://…/calendar.ics'), { target: { value: 'https://team.example/cal.ics' } })
+    fireEvent.change(screen.getByPlaceholderText('School calendar'), { target: { value: 'Soccer' } })
+    fireEvent.click(screen.getByText('Add feed'))
+    await waitFor(() =>
+      expect(posts.some((p) => !p.url.endsWith('/sync') && p.body.url === 'https://team.example/cal.ics' && p.body.name === 'Soccer')).toBe(true)
+    )
+    await waitFor(() => expect(posts.some((p) => p.url.includes('/f3/sync'))).toBe(true))
+  })
+
   it('shows the System Health panel with component cards (admin)', async () => {
     const report = {
       status: 'degraded',
