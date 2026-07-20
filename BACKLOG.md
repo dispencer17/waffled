@@ -29,7 +29,8 @@ one-line result note under it.
 
 ## P1 — Merge upstream v0.8.0 (142 commits)
 
-- [ ] **Merge `upstream/main` (v0.8.0) into fork `main`.**
+- [x] **Merge `upstream/main` (v0.8.0) into fork `main`.**
+  - *Result (2026-07-20): merged as c3e35d2e — 18 conflicts resolved, all fork features intact; upstream also shipped dark mode (web+iOS), fork keeps its superset (sun pref + palettes). Fork api tests migrated to upstream's shared-Postgres harness (full suite now ~50s). Verified: tsc x2, web 418 tests, api 900 tests, migrations clean. NOTE: upstream's ci.yml improvements were withheld from the push (token lacks workflow scope) — see user-blocked list.*
 
 **Why:** upstream has moved 142 commits (bug fixes + features) since the fork
 point; the longer we wait the harder every future merge gets.
@@ -51,7 +52,7 @@ upstream wins on structure, fork wins on features.
 **Verify:** `npx tsc --noEmit` in BOTH apps/api and apps/web; full
 `npm test` in apps/web; in apps/api run at least:
 `npx vitest run test/calendar-sync-msft.integration.test.ts test/calendar-sync.integration.test.ts test/homeassistant.integration.test.ts test/shopping.integration.test.ts test/voice.integration.test.ts test/config-microsoft.unit.test.ts`
-(full API suite if time allows — needs Docker, ~9 min). Check upstream's new
+(full API suite if time allows — needs Docker, ~1 min on the shared-Postgres harness). Check upstream's new
 migrations don't collide with 0100/0101 (`npm run check:migrations`).
 
 **Done when:** merged to `main`, pushed, CI green, and a spot-check of the
@@ -240,6 +241,16 @@ merged + pushed.
 ---
 
 ## Explicitly NOT in this backlog (blocked on the user / other machines)
+
+- **Restore upstream's improved ci.yml** — the v0.8.0 merge deliberately kept the fork's
+  older `.github/workflows/ci.yml` because the gh token can't push workflow files. Upstream's
+  version adds a CLI-test job, splits the slow e2e into its own job, and runs the api suite
+  on the new fast harness. Two ways to fix (either takes ~2 min): run
+  `gh auth refresh -h github.com -s workflow` and tell Claude to push it, OR on github.com
+  open the fork's `.github/workflows/ci.yml` → edit → paste the contents of upstream's
+  version (github.com/kevinpsites/waffled/blob/main/.github/workflows/ci.yml) → commit.
+  Until then CI runs the old layout (no CLI tests, no e2e job in CI; e2e still runnable
+  locally via `npm run test:e2e` in apps/api).
 
 - Outlook work-account connect — waiting on OIT approval; retry is a user click.
 - Google Calendar OAuth client — user is mid-walkthrough in Google Cloud console;
