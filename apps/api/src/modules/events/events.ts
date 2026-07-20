@@ -13,13 +13,7 @@ import { materializeMaster } from '../calendar/expansion.service'
 import { isValidRrule } from '../calendar/recurrence'
 import { recordMatch, WEIGHT } from '../goals/goal-match-memory'
 import { upsertSeriesMeta } from './event-series-meta'
-import {
-  InvalidReferenceError,
-  assertCalendarInHousehold,
-  assertGoalInHousehold,
-  assertGoalStepInHousehold,
-  assertPersonsInHousehold,
-} from '../../platform/household-refs'
+import { registerEventCaptureTarget } from './events-capture'
 
 type Api = ReturnType<typeof createAPI>
 
@@ -111,40 +105,6 @@ export interface CreateEventInput {
   rdate?: string[] | null
   exdate?: string[] | null
   recurrenceEndAt?: string | null
-}
-
-export async function assertEventReferences(
-  householdId: string,
-  input: Record<string, unknown>,
-  existingGoalId?: string | null
-): Promise<void> {
-  const people: string[] = []
-  if (input.personId != null) {
-    if (typeof input.personId !== 'string') throw new InvalidReferenceError('invalid person id')
-    people.push(input.personId)
-  }
-  if (input.participantIds != null) {
-    if (!Array.isArray(input.participantIds) || input.participantIds.some((id) => typeof id !== 'string')) {
-      throw new InvalidReferenceError('invalid participant ids')
-    }
-    people.push(...input.participantIds as string[])
-  }
-  await assertPersonsInHousehold(householdId, people)
-
-  const goalId = input.goalId === undefined ? existingGoalId : input.goalId
-  if (goalId != null) {
-    if (typeof goalId !== 'string') throw new InvalidReferenceError('invalid goal id')
-    await assertGoalInHousehold(householdId, goalId)
-  }
-  if (input.goalStepId != null) {
-    if (typeof input.goalStepId !== 'string') throw new InvalidReferenceError('invalid goal step id')
-    if (!goalId) throw new InvalidReferenceError('goalId is required with goalStepId')
-    await assertGoalStepInHousehold(householdId, input.goalStepId, goalId)
-  }
-  if (input.calendarId != null) {
-    if (typeof input.calendarId !== 'string') throw new InvalidReferenceError('invalid calendar id')
-    await assertCalendarInHousehold(householdId, input.calendarId)
-  }
 }
 
 // Replace an event's participants with the given (deduped) people.
@@ -276,7 +236,7 @@ const OCC_SELECT = `
 // events only to their owner. A null viewer (a bare kiosk device with no profile claimed)
 // sees family only — `owner_person_id = NULL` never matches. `alias` is the events /
 // occurrences table alias; `p` is the param placeholder holding the viewer's person id.
-const visibleTo = (alias: string, p: string) =>
+export const visibleTo = (alias: string, p: string) =>
   `and (${alias}.visibility = 'family' or ${alias}.owner_person_id = ${p})`
 
 export async function todayEvents(householdId: string, date: string, viewerPersonId: string | null): Promise<EventRow[]> {
@@ -616,6 +576,9 @@ function localToday(): string {
 }
 
 export function registerEventRoutes(api: Api): void {
+  // Tier 2 capture: events answer /api/capture/{resolve,commit} for reschedule/delete.
+  registerEventCaptureTarget()
+
   api.post('/api/events', tenantRoute(async (tenant, req: Request, res: Response) => {
     const body = (req.body ?? {}) as Partial<CreateEventInput>
     if (!body.title || !body.title.trim()) {
@@ -627,7 +590,6 @@ export function registerEventRoutes(api: Api): void {
     if (body.rrule && !isValidRrule(body.rrule)) {
       return res.status(400).json({ error: 'BadRequest', message: 'rrule is not a valid RFC5545 recurrence rule' })
     }
-    await assertEventReferences(tenant.householdId, body as Record<string, unknown>)
     const event = await createEvent(tenant, { ...body, title: body.title.trim() } as CreateEventInput)
     return res.status(201).json({ event: presentEvent(event) })
   }))
@@ -680,15 +642,6 @@ export function registerEventRoutes(api: Api): void {
     if (!hasField) {
       return res.status(400).json({ error: 'BadRequest', message: 'no updatable fields provided' })
     }
-    let existingGoalId: string | null | undefined
-    if (patch.goalStepId != null && patch.goalId === undefined) {
-      const current = await query<{ goal_id: string | null }>(
-        `select goal_id from events where household_id = $1 and id = $2 and deleted_at is null`,
-        [tenant.householdId, id]
-      )
-      existingGoalId = current.rows[0]?.goal_id
-    }
-    await assertEventReferences(tenant.householdId, patch, existingGoalId)
     if (scope === 'this' || scope === 'following') {
       if (!occurrenceStart || Number.isNaN(Date.parse(occurrenceStart))) {
         return res.status(400).json({ error: 'BadRequest', message: 'occurrenceStart is required for this/following scope' })

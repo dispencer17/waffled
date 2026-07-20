@@ -3,7 +3,7 @@
 // service-call enforcement — against a real Postgres (Testcontainers) and an
 // in-process HA stub.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { createServer, type Server } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'

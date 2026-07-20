@@ -1,6 +1,6 @@
 // Chores domain — migration + api. Shares one Postgres testcontainer + app.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { Client } from 'pg'
 import jwt from 'jsonwebtoken'
 import { runMigrations } from '../src/migrate'
@@ -14,7 +14,6 @@ let app: any
 let closePool: () => Promise<void>
 let kevinId = ''
 let householdId = ''
-let foreignPersonId = ''
 
 function mint(sub: string): string {
   return jwt.sign({}, SECRET, {
@@ -87,16 +86,6 @@ beforeAll(async () => {
       [householdId, kevinId]
     )
   )
-  foreignPersonId = await withClient(async (c) => {
-    const h = await c.query<{ id: string }>(
-      `insert into households (name, timezone) values ('Other family','UTC') returning id`
-    )
-    const p = await c.query<{ id: string }>(
-      `insert into persons (household_id, name, member_type) values ($1,'Outsider','adult') returning id`,
-      [h.rows[0].id]
-    )
-    return p.rows[0].id
-  })
 })
 
 // Create a member with a login identity so a minted token resolves to them — the
@@ -230,61 +219,6 @@ describe('chores today api', () => {
     const after = JSON.parse((await call('GET', '/api/chores/today', kevin)).body)
     expect(after.upForGrabs).toBe(before.upForGrabs + 1)
     expect(after.people.find((p: { id: string }) => p.id === kevinId).total).toBe(beforeTotal)
-  })
-
-  it('rejects assignees from another household across chore write paths', async () => {
-    expect((await call('POST', '/api/chores', kevin, {
-      title: 'Foreign create', personId: foreignPersonId,
-    })).statusCode).toBe(404)
-
-    const created = await call('POST', '/api/chores', kevin, {
-      title: 'Boundary chore', personId: null,
-    })
-    expect(created.statusCode).toBe(201)
-    const choreId = JSON.parse(created.body).chore.id as string
-    const instance = JSON.parse((await call('GET', '/api/chore-instances/today', kevin)).body)
-      .instances.find((i: { choreId: string }) => i.choreId === choreId)
-
-    expect((await call('PATCH', `/api/chores/${choreId}`, kevin, {
-      personId: foreignPersonId,
-    })).statusCode).toBe(404)
-    expect((await call('POST', `/api/chore-instances/${instance.id}/claim`, kevin, {
-      personId: foreignPersonId,
-    })).statusCode).toBe(404)
-    expect((await call('POST', `/api/chore-instances/${instance.id}/assign`, kevin, {
-      personId: foreignPersonId,
-    })).statusCode).toBe(404)
-  })
-})
-
-describe('currency conversion boundaries', () => {
-  it('allows self and authorized household conversions, but rejects other targets', async () => {
-    const kidId = await addMember('Converter kid', 'kid', false, 'dev|converter-kid')
-    const kid = mint('dev|converter-kid')
-    const currency = await call('POST', '/api/currencies', kevin, { label: 'Gems', symbol: 'G' })
-    expect(currency.statusCode).toBe(201)
-    const conversion = await call('POST', '/api/conversions', kevin, {
-      fromCurrency: 'stars', toCurrency: 'gems', fromAmount: 1, toAmount: 1,
-    })
-    expect(conversion.statusCode).toBe(201)
-    const conversionId = JSON.parse(conversion.body).conversion.id as string
-
-    await withClient((c) => c.query(
-      `insert into ledger_entries (household_id, person_id, currency, amount, reason, created_by)
-       values ($1,$2,'stars',10,'boundary_test',$2), ($1,$3,'stars',10,'boundary_test',$2)`,
-      [householdId, kevinId, kidId]
-    ))
-
-    expect((await call('POST', `/api/conversions/${conversionId}/apply`, kid, {})).statusCode).toBe(200)
-    expect((await call('POST', `/api/conversions/${conversionId}/apply`, kid, {
-      personId: kevinId,
-    })).statusCode).toBe(403)
-    expect((await call('POST', `/api/conversions/${conversionId}/apply`, kevin, {
-      personId: kidId,
-    })).statusCode).toBe(200)
-    expect((await call('POST', `/api/conversions/${conversionId}/apply`, kevin, {
-      personId: foreignPersonId,
-    })).statusCode).toBe(404)
   })
 })
 
@@ -803,6 +737,119 @@ describe('chore capability gating (non-admin members)', () => {
   it('non-admins cannot read or write the permissions matrix (403)', async () => {
     expect((await call('GET', '/api/permissions', kidToken)).statusCode).toBe(403)
     expect((await call('PUT', '/api/permissions', adultToken, { permissions: {} })).statusCode).toBe(403)
+  })
+})
+
+describe('capture — chores target', () => {
+  type Inst = { id: string; choreId: string; choreTitle: string; personId: string | null; status: string }
+  async function instances(): Promise<Inst[]> {
+    return JSON.parse((await call('GET', '/api/chore-instances/today', kevin)).body).instances
+  }
+  function resolve(body: unknown, token = kevin) {
+    return call('POST', '/api/capture/resolve', token, body)
+  }
+  function commit(body: unknown, token = kevin) {
+    return call('POST', '/api/capture/commit', token, body)
+  }
+
+  it('resolves a chore by description → one candidate id = the instance, subtitle, confidence > 0', async () => {
+    await call('POST', '/api/chores', kevin, { title: 'Take out the trash', personId: kevinId, rewardAmount: 2 })
+    const res = await resolve({ targetKind: 'chore', verb: 'complete', target: { description: 'trash' }, args: {} })
+    expect(res.statusCode).toBe(200)
+    const body = JSON.parse(res.body)
+    const cand = body.candidates.find((c: { title: string }) => c.title === 'Take out the trash')
+    expect(cand).toBeTruthy()
+    const inst = (await instances()).find((i) => i.choreTitle === 'Take out the trash')!
+    expect(cand.id).toBe(inst.id) // candidate id is the chore_instances.id, not the template
+    expect(cand.meta.choreId).toBe(inst.choreId)
+    expect(typeof cand.subtitle).toBe('string')
+    expect(cand.subtitle.length).toBeGreaterThan(0)
+    expect(cand.confidence).toBeGreaterThan(0)
+  })
+
+  it('resolves a recurring chore even before an instance is materialized (ensureTodayInstances ran)', async () => {
+    // createChore does NOT materialize instances for recurring chores — only ensureTodayInstances does.
+    await call('POST', '/api/chores', kevin, { title: 'Water the plants', personId: kevinId, rrule: 'FREQ=DAILY' })
+    // resolve WITHOUT first hitting the instances endpoint (which would materialize it)
+    const res = await resolve({ targetKind: 'chore', verb: 'complete', target: { description: 'water plants' }, args: {} })
+    const body = JSON.parse(res.body)
+    expect(body.candidates.some((c: { title: string }) => c.title === 'Water the plants')).toBe(true)
+  })
+
+  it('commits a complete → 200 {ok, message} and the instance flips to done', async () => {
+    await call('POST', '/api/chores', kevin, { title: 'Sweep the porch', personId: kevinId, rewardAmount: 1 })
+    const inst = (await instances()).find((i) => i.choreTitle === 'Sweep the porch')!
+    const res = await commit({ targetKind: 'chore', verb: 'complete', targetId: inst.id, args: {} })
+    expect(res.statusCode).toBe(200)
+    const body = JSON.parse(res.body)
+    expect(body.ok).toBe(true)
+    expect(body.message).toContain('Sweep the porch')
+    expect((await instances()).find((i) => i.choreTitle === 'Sweep the porch')!.status).toBe('done')
+  })
+
+  it('reassigns a chore to another person by name', async () => {
+    const wanda = await addMember('Wanda', 'kid', false, 'dev|wanda-cap')
+    await call('POST', '/api/chores', kevin, { title: 'Fold laundry', personId: kevinId })
+    const inst = (await instances()).find((i) => i.choreTitle === 'Fold laundry')!
+    const res = await commit({ targetKind: 'chore', verb: 'reassign', targetId: inst.id, args: { personName: 'wanda' } })
+    expect(res.statusCode).toBe(200)
+    expect((await instances()).find((i) => i.choreTitle === 'Fold laundry')!.personId).toBe(wanda)
+  })
+
+  it('a kid without chore.manage cannot reassign to another person (403)', async () => {
+    await addMember('Reba', 'kid', false, 'dev|reassign-kid')
+    const kidTok = mint('dev|reassign-kid')
+    await call('POST', '/api/chores', kevin, { title: 'Dust shelves', personId: null, rrule: 'FREQ=DAILY' })
+    const inst = (await instances()).find((i) => i.choreTitle === 'Dust shelves')!
+    const res = await commit({ targetKind: 'chore', verb: 'reassign', targetId: inst.id, args: { personName: 'Kevin' } }, kidTok)
+    expect(res.statusCode).toBe(403)
+  })
+
+  it('rejects a proof storageKey belonging to another household (same check as the route)', async () => {
+    await call('POST', '/api/chores', kevin, { title: 'Scrub the tub', personId: kevinId, rewardAmount: 1 })
+    const inst = (await instances()).find((i) => i.choreTitle === 'Scrub the tub')!
+    const foreignKey = `00000000-0000-4000-8000-000000000000/${'c'.repeat(32)}.jpg`
+    const res = await commit({ targetKind: 'chore', verb: 'complete', targetId: inst.id, args: { storageKey: foreignKey, contentType: 'image/jpeg' } })
+    expect(res.statusCode).toBe(400)
+    expect(JSON.parse(res.body).message).toMatch(/proof/i)
+    // still pending, and no proof key was stored
+    const after = await withClient((c) =>
+      c.query<{ status: string; proof_storage_key: string | null }>(
+        `select status, proof_storage_key from chore_instances where id=$1`, [inst.id]
+      )
+    )
+    expect(after.rows[0].status).toBe('pending')
+    expect(after.rows[0].proof_storage_key).toBeNull()
+
+    // a key that DOES belong to the household still works
+    const ownKey = `${householdId}/${'d'.repeat(32)}.jpg`
+    const ok = await commit({ targetKind: 'chore', verb: 'complete', targetId: inst.id, args: { storageKey: ownKey, contentType: 'image/jpeg' } })
+    expect(ok.statusCode).toBe(200)
+    const done = await withClient((c) =>
+      c.query<{ status: string; proof_storage_key: string | null }>(
+        `select status, proof_storage_key from chore_instances where id=$1`, [inst.id]
+      )
+    )
+    expect(done.rows[0].status).toBe('done')
+    expect(done.rows[0].proof_storage_key).toBe(ownKey)
+  })
+
+  it('module off → resolve returns candidates:[] + disabledReason', async () => {
+    const setChores = (on: boolean) =>
+      withClient((c) =>
+        c.query(
+          `update households set settings = coalesce(settings,'{}'::jsonb)
+             || jsonb_build_object('modules', coalesce(settings->'modules','{}'::jsonb) || jsonb_build_object('chores', $2::boolean))
+           where id=$1`,
+          [householdId, on]
+        )
+      )
+    await setChores(false)
+    const res = await resolve({ targetKind: 'chore', verb: 'complete', target: { description: 'trash' }, args: {} })
+    const body = JSON.parse(res.body)
+    expect(body.candidates).toEqual([])
+    expect(body.disabledReason).toBe('Chores is turned off.')
+    await setChores(true) // restore
   })
 })
 

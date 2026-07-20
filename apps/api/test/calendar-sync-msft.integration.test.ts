@@ -6,7 +6,7 @@
 // refresh token but the newest it issued), the 410 stale-delta full-resync path,
 // and outbound write-back to Graph.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { createServer, type Server } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'

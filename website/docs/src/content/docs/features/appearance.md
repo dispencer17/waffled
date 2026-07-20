@@ -4,9 +4,10 @@ description: Light or dark, plus eight color themes — pick a look per device f
 ---
 
 Waffled ships with a **warm dark theme** alongside the original light one, and **eight color
-themes** that re-hue the whole app. Pick how it looks from **Settings → Display & Kiosk** —
-the appearance controls sit at the top of that tab, above the kiosk options. (They used to be
-a standalone *Appearance* tab; old links land in the right place.)
+themes** that re-hue the whole app. On the web, pick how it looks from **Settings → Display &
+Kiosk** — the appearance controls sit at the top of that tab, above the kiosk options. (They
+used to be a standalone *Appearance* tab; old links land in the right place.) On iPhone/iPad
+the same choice lives under **Settings → Appearance**.
 
 Everyone in the family can open Display & Kiosk to set the theme — only the kiosk and
 screensaver configuration further down is admin-only.
@@ -53,6 +54,10 @@ Dark mode isn't just an inversion. Only two things really change:
 - **Pale tints** (the soft backgrounds behind a person's name, a status pill, an AI chip)
   become low-opacity **washes** of the same color instead of solid pastels.
 
+Everything else — the **coral** primary, the **gold** stars, the **violet** AI accent, and each
+family member's **personal color** — stays exactly the same in both themes. That's deliberate:
+keeping the accent hues fixed is what makes the app still feel like Waffled with the lights off.
+
 Calendar event chips adapt too: their text is mixed toward the theme's ink — richer and darker
 on light, a bright pastel on dark — so every person's events stay readable in both modes.
 
@@ -60,10 +65,12 @@ on light, a bright pastel on dark — so every person's events stay readable in 
 | Surface | Support |
 |---|---|
 | Web / Kiosk | ✅ |
-| iPhone / iPad | 🔜 Planned (parity with web) |
+| iPhone / iPad | ✅ dark mode (color themes are web/kiosk-only for now) |
 
-On the web and the kitchen kiosk display, dark mode and color themes are available today. The
-iPhone/iPad app mirrors the same warm-dark palette; that parity is in progress.
+Dark mode is available on the web, the kitchen kiosk display, and the iPhone/iPad app. The phone
+and iPad mirror the exact same warm-dark palette from their own **Settings → Appearance** control
+(Light / Dark / Match system, saved per device), so a screen reads the same with the lights off on
+your phone as it does on the wall. The color themes currently apply on the web and kiosk only.
 
 ## Notes
 - **Match system** uses your device/browser's `prefers-color-scheme`; no account setting is

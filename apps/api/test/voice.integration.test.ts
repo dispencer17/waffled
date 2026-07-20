@@ -4,7 +4,7 @@
 // added, Home Assistant service call proxied for a PINNED entity only, and
 // calendar-ish commands bounced to the capture flow.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { createServer, type Server } from 'node:http'
 import { randomBytes } from 'node:crypto'
 import jwt from 'jsonwebtoken'

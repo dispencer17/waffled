@@ -32,7 +32,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$ROOT/infra/compose/docker-compose.yml"
 ENV_FILE="$ROOT/infra/compose/.env"
-DC=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
+
+# Optional compose overrides, layered on top of the base file so a deployment can add
+# published ports / mounts without editing tracked files (e.g. the OCI cloud deploy).
+# Opt-in ONLY via explicit `--override <file>` flags (parsed just below) — nothing is
+# auto-loaded, so normal installs are never affected.
+COMPOSE_OVERRIDES=()
 
 # Services we expect to be running, in startup order.
 SERVICES=(postgres api powersync caddy backup)
@@ -100,55 +105,6 @@ ensure_env() {
   [ "$created" -eq 0 ] || echo "${c_grn}Created $ENV_FILE with generated secrets.${c_reset}"
 }
 
-# Upgrade bridge for installs created before PowerSync moved behind Caddy. New
-# `.env` files already carry this value; existing files get the matching listener
-# without overwriting any operator customization.
-ensure_powersync_proxy_env() {
-  [ -n "$(env_val POWERSYNC_CADDY_ADDRESS)" ] && return 0
-  local site host
-  site="$(env_val CADDY_SITE_ADDRESS)"
-  case "$site" in
-    ""|:*) set_env_var POWERSYNC_CADDY_ADDRESS ":8090" ;;
-    *)
-      host="${site#https://}"; host="${host#http://}"; host="${host%%:*}"
-      set_env_var POWERSYNC_CADDY_ADDRESS "https://$host:8090"
-      ;;
-  esac
-}
-
-# Return a replacement only for the exact legacy localhost default. Custom OAuth
-# callbacks belong to the operator because changing one also requires updating the
-# Google Cloud console; those are warned about below, never silently overwritten.
-google_callback_replacement() {
-  local current="$1" public_base="$2" http_port="$3"
-  [ "$current" = "http://localhost:3000/auth/google/calendar/callback" ] || return 1
-  if [ -n "$public_base" ]; then
-    printf '%s/auth/google/calendar/callback' "${public_base%/}"
-  else
-    printf 'http://localhost:%s/auth/google/calendar/callback' "$http_port"
-  fi
-}
-
-ensure_google_callback_env() {
-  local current public_base http_port replacement
-  current="$(env_val GOOGLE_CALENDAR_REDIRECT_URI)"
-  [ -n "$current" ] || return 0
-  public_base="$(env_val PUBLIC_BASE_URL)"
-  http_port="$(env_val HTTP_PORT)"; http_port="${http_port:-8080}"
-  if replacement="$(google_callback_replacement "$current" "$public_base" "$http_port")"; then
-    set_env_var GOOGLE_CALENDAR_REDIRECT_URI "$replacement"
-    echo "${c_grn}Updated Google Calendar callback to Caddy: $replacement${c_reset}"
-    [ -z "$public_base" ] || echo "${c_ylw}Register this exact callback in Google Cloud before reconnecting Calendar.${c_reset}"
-    return 0
-  fi
-  case "$current" in
-    http://*:3000/auth/google/calendar/callback|https://*:3000/auth/google/calendar/callback)
-      echo "${c_ylw}Google Calendar callback still targets direct API port :3000, which is now loopback-only.${c_reset}"
-      echo "${c_ylw}Set GOOGLE_CALENDAR_REDIRECT_URI to your Caddy origin + /auth/google/calendar/callback and register that exact URL in Google Cloud.${c_reset}"
-      ;;
-  esac
-}
-
 status() {
   local any_fail=0
   printf '%-12s %-10s %s\n' "SERVICE" "STATE" "HEALTH"
@@ -191,9 +147,12 @@ services_ready() {
 # checks pass. Wait briefly so first-run users see the settled state, not a false alarm.
 wait_for_services() {
   local remaining="${WAFFLED_HEALTH_ATTEMPTS:-30}"
-  local requested=("$@") targets=() service arg
+  local targets=() service arg
+  # Keep only args that name services (compose flags like --build fall through).
+  # Iterate "$@" directly: copying it into a named array and expanding that crashes
+  # bash < 4.4 (macOS /bin/bash is 3.2) under set -u when no services were named.
   for service in "${SERVICES[@]}"; do
-    for arg in "${requested[@]}"; do
+    for arg in "$@"; do
       if [ "$arg" = "$service" ]; then
         targets+=("$service")
         break
@@ -234,6 +193,22 @@ update_repo_for_upgrade() {
     echo "Resolve the repository state, then re-run './waffled upgrade'. No images were changed."
     return 1
   fi
+}
+
+# The upgrade's fast-forward can replace ./waffled while bash is still executing the
+# OLD copy — which then drives the NEW tree/compose with old logic. That is exactly
+# how upgrading 0.7.0 → 0.8.0 broke: the old ensure_env couldn't backfill the newly
+# required secrets, so compose died on "required variable" mid-upgrade. If the script
+# changed on disk, hand the rest of the upgrade to the new copy exactly once
+# (WAFFLED_UPGRADE_REEXEC breaks the recursion).
+script_checksum() { cksum < "$ROOT/waffled"; }
+maybe_reexec_upgrade() {
+  local before="$1"; shift
+  if [ -n "${WAFFLED_UPGRADE_REEXEC:-}" ] || [ "$(script_checksum)" = "$before" ]; then
+    return 0
+  fi
+  echo "${c_dim}./waffled was updated — restarting the upgrade with the new version…${c_reset}"
+  WAFFLED_UPGRADE_REEXEC=1 exec "$ROOT/waffled" upgrade "$@"
 }
 
 run_pre_upgrade_backup() {
@@ -327,11 +302,29 @@ next_steps() {
   fi
 }
 
+# Pull global `--override <file>` flags out of the args (position-independent) and
+# build the final compose invocation once the full override list is known.
+_wf_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --override)   shift; [ -n "${1:-}" ] || { echo "${c_red}✗ --override needs a file path.${c_reset}"; exit 1; }; COMPOSE_OVERRIDES+=("$1") ;;
+    --override=*) COMPOSE_OVERRIDES+=("${1#--override=}") ;;
+    *)            _wf_args+=("$1") ;;
+  esac
+  shift
+done
+set -- ${_wf_args[@]+"${_wf_args[@]}"}
+
+DC=(docker compose -f "$COMPOSE_FILE")
+for _ovr in ${COMPOSE_OVERRIDES[@]+"${COMPOSE_OVERRIDES[@]}"}; do DC+=(-f "$_ovr"); done
+DC+=(--env-file "$ENV_FILE")
+[ ${#COMPOSE_OVERRIDES[@]} -gt 0 ] && echo "${c_dim}Compose override(s): ${COMPOSE_OVERRIDES[*]}${c_reset}" >&2
+
 cmd="${1:-help}"; shift || true
 case "$cmd" in
   up)
     preflight || exit 1
-    ensure_env; ensure_powersync_proxy_env; ensure_google_callback_env; export_build_meta
+    ensure_env; export_build_meta
     # Default: pull the published images (fast — no local toolchain build) and start.
     # `./waffled up --build [svc]` (dev/bleeding-edge): build the images from source
     # instead, stamping the current git SHA into /healthz + /api/health.
@@ -364,9 +357,11 @@ case "$cmd" in
     done
     preflight || exit 1
     ensure_env
-    ensure_powersync_proxy_env
-    ensure_google_callback_env
+    script_before="$(script_checksum)"
     update_repo_for_upgrade || exit 1
+    # If the update replaced this script, restart the upgrade under the new copy NOW —
+    # before the backup/pin/pull — so ensure_env and compose logic match the new tree.
+    maybe_reexec_upgrade "$script_before" "$@"
     # Snapshot the DB BEFORE changing the version pin or swapping images.
     # Migrations are forward-only, so a missing rollback point is fatal unless
     # the operator explicitly accepts it.
@@ -390,7 +385,7 @@ case "$cmd" in
     ;;
   down)    "${DC[@]}" down "$@" ;;
   restart) "${DC[@]}" restart "$@"; wait_for_services "$@" || true; echo; status || true ;;
-  rebuild) preflight || exit 1; ensure_env; ensure_powersync_proxy_env; ensure_google_callback_env; export_build_meta; "${DC[@]}" up -d --build --force-recreate "$@"; wait_for_services "$@" || true; echo; status || true ;;
+  rebuild) preflight || exit 1; ensure_env; export_build_meta; "${DC[@]}" up -d --build --force-recreate "$@"; wait_for_services "$@" || true; echo; status || true ;;
   logs)    "${DC[@]}" logs -f --tail=120 "$@" ;;
   status|st|ps) status || true ;;
   migrate)
@@ -467,7 +462,6 @@ case "$cmd" in
       1)
         set_env_var PUBLIC_BASE_URL ""
         set_env_var POWERSYNC_PUBLIC_URL "http://localhost:$ps_port"
-        set_env_var POWERSYNC_CADDY_ADDRESS ":8090"
         set_env_var CADDY_SITE_ADDRESS ":80"
         echo "${c_grn}Set for localhost.${c_reset} Run ${c_dim}./waffled up${c_reset}, then open http://localhost:$http_port"
         ;;
@@ -478,7 +472,6 @@ case "$cmd" in
         [ -n "$addr" ] || { echo "${c_red}No address given — aborting.${c_reset}"; exit 1; }
         set_env_var PUBLIC_BASE_URL "http://$addr:$http_port"
         set_env_var POWERSYNC_PUBLIC_URL "http://$addr:$ps_port"
-        set_env_var POWERSYNC_CADDY_ADDRESS ":8090"
         set_env_var CADDY_SITE_ADDRESS ":80"
         echo "${c_grn}Set for your network ($addr).${c_reset} Run ${c_dim}./waffled up${c_reset}, then open http://$addr:$http_port on any device."
         echo "${c_dim}Tip: reserve a static IP for this machine in your router so the address doesn't drift.${c_reset}"
@@ -489,9 +482,8 @@ case "$cmd" in
         set_env_var CADDY_SITE_ADDRESS "$host"
         set_env_var PUBLIC_BASE_URL "https://$host"
         set_env_var POWERSYNC_PUBLIC_URL "https://$host:$ps_port"
-        set_env_var POWERSYNC_CADDY_ADDRESS "https://$host:8090"
         echo "${c_grn}Set for https://$host.${c_reset} Enable the 443 mapping in infra/compose/docker-compose.yml, point DNS at this machine, then run ${c_dim}./waffled up${c_reset}."
-        echo "${c_dim}PowerSync is served through Caddy with TLS on :$ps_port.${c_reset}"
+        echo "${c_ylw}Note: PowerSync serves on :$ps_port — for public HTTPS you'll also need to expose/proxy that port with TLS (see docs/TROUBLESHOOTING.md).${c_reset}"
         ;;
       *) echo "${c_red}Unknown choice — run ./waffled setup again.${c_reset}"; exit 1 ;;
     esac

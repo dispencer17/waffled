@@ -1,7 +1,7 @@
 // Countdowns — merged read (standalone + flagged events + birthdays), CRUD, and the
 // sleeps config, against a real Postgres (Testcontainers).
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import jwt from 'jsonwebtoken'
 import { runMigrations } from '../src/migrate'
 
@@ -111,14 +111,13 @@ describe('countdowns', () => {
   })
 
   it("derives a member's next birthday", async () => {
-    // Relative MM-DD (like the horizon tests) so the next occurrence is always
-    // inside the default 183-day horizon — a fixed date only passes half the year.
+    // Inside the horizon relative to "today" — a fixed date breaks once it rolls a year out.
     const birthday = birthdayInDays(30)
     await call('POST', '/api/persons', kevin, { name: 'Wally', memberType: 'kid', birthday })
     const list = JSON.parse((await call('GET', '/api/countdowns', kevin)).body).countdowns
     const bday = list.find((c: { source: string; title: string }) => c.source === 'birthday' && c.title === "Wally's birthday")
     expect(bday).toBeTruthy()
-    expect(bday.date.endsWith(birthday.slice(4))).toBe(true) // "-MM-DD"
+    expect(bday.date.endsWith(birthday.slice(4))).toBe(true)
     expect(bday.daysLeft).toBeGreaterThanOrEqual(0)
   })
 

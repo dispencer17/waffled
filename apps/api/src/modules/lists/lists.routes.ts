@@ -2,7 +2,7 @@
 // /api/pantry-staples). Logic in lists.service.ts; types in lists.types.ts.
 import createAPI, { type Request, type Response } from 'lambda-api'
 import { moduleRoutes } from '../../platform/route-guards'
-import { assertPersonInHousehold } from '../../platform/household-refs'
+import { registerListItemCaptureTarget } from './lists-capture'
 import type { CreateListInput, PatchItemInput } from './lists.types'
 import {
   getOrCreateGroceryList,
@@ -145,7 +145,6 @@ export function registerListRoutes(api: Api): void {
     if (!body.name || !body.name.trim()) {
       return res.status(400).json({ error: 'BadRequest', message: 'name is required' })
     }
-    if (body.assignedTo != null) await assertPersonInHousehold(tenant.householdId, body.assignedTo)
     const item = await addItem(tenant, id, {
       name: body.name.trim(),
       quantity: body.quantity ?? null,
@@ -189,7 +188,6 @@ export function registerListRoutes(api: Api): void {
     if ('checked' in body && typeof body.checked !== 'boolean') {
       return res.status(400).json({ error: 'BadRequest', message: 'checked must be a boolean' })
     }
-    if (body.assignedTo != null) await assertPersonInHousehold(tenant.householdId, body.assignedTo)
     const item = await patchItem(tenant, id, body)
     if (!item) return res.status(404).json({ error: 'NotFound', message: 'item not found' })
     return { item: presentListItem(item) }
@@ -252,4 +250,8 @@ export function registerListRoutes(api: Api): void {
     if (!ok) return res.status(404).json({ error: 'NotFound', message: 'staple not found' })
     return res.status(204).send('')
   }))
+
+  // Register the listItem capture target (Tier 2 mutate: complete/delete) into the
+  // capture registry so /api/capture/{resolve,commit} can dispatch to it.
+  registerListItemCaptureTarget()
 }

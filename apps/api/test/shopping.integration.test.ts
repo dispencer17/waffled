@@ -4,7 +4,7 @@
 // match cache (second run makes zero API hits), quantity parsing into the cart
 // URL, the unmatched fallback, confirm-pinning, and the unconfigured 501.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { createServer, type Server } from 'node:http'
 import { generateKeyPairSync } from 'node:crypto'
 import jwt from 'jsonwebtoken'
