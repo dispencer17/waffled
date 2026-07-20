@@ -107,7 +107,8 @@ events for the current month in `GET /api/events`.
 
 ## P3 — First-class "Share list" (Walmart-API-free grocery handoff)
 
-- [ ] **Make the grocery handoff work fully without Walmart credentials.**
+- [x] **Make the grocery handoff work fully without Walmart credentials.**
+  - *Result (2026-07-20): shipped as fc72890b — unconfigured Walmart now shows a "Share list" button opening an aisle-grouped share view (copy / navigator.share / QR-of-text), status-fetch failure degrades to share mode, configured Walmart flow untouched. +15 tests (web 434/434), tsc clean.*
 
 **Why:** the user abandoned the Walmart affiliate application. The fallback
 (text share) must be the polished primary path, not an error state.
