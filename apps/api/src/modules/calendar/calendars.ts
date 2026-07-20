@@ -21,6 +21,7 @@ import { encryptSecret, encryptionAvailable } from '../../platform/crypto'
 import { googleConfigured, type GoogleTokens, type GoogleUserinfo, type GoogleCalendarListEntry } from '../../integrations/google'
 import { microsoftConfigured } from '../../integrations/microsoft'
 import { providerFor, type CalendarProviderAdapter, type CalendarProviderName } from './providers/provider'
+import { listIcsFeeds, presentIcsFeed } from './ics-feeds'
 
 type Api = ReturnType<typeof createAPI>
 
@@ -309,9 +310,10 @@ export function registerCalendarRoutes(api: Api): void {
   // the upstream /google/ path (it predates multi-provider) but covers ALL
   // providers; `microsoftConfigured` lets the UI show a Connect Outlook button.
   api.get('/api/calendar/google/status', adminRoute(async (tenant) => {
-    const [accounts, calendars] = await Promise.all([
+    const [accounts, calendars, feeds] = await Promise.all([
       listAccounts(tenant.householdId),
       listHouseholdCalendars(tenant.householdId),
+      listIcsFeeds(tenant.householdId),
     ])
     return {
       configured: googleConfigured(),
@@ -319,6 +321,9 @@ export function registerCalendarRoutes(api: Api): void {
       connected: accounts.length > 0,
       accounts: accounts.map(presentAccount),
       calendars: calendars.map(presentCalendar),
+      // ICS feed subscriptions (fork) — the Calendars panel lists these below
+      // the OAuth accounts.
+      feeds: feeds.map(presentIcsFeed),
     }
   }))
 

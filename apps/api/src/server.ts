@@ -8,6 +8,7 @@ import { log } from './platform/logger'
 import { version } from './platform/version'
 import { startSyncScheduler } from './modules/calendar/calendar-sync.service'
 import { startExpansionScheduler } from './modules/calendar/expansion.service'
+import { startIcsSyncScheduler } from './modules/calendar/ics-feeds'
 import { startProofCleanupScheduler } from './modules/chores/chore-proof-cleanup.service'
 import { startRecipeIngestCleanupScheduler } from './modules/meals/recipe-ingest.service'
 
@@ -47,6 +48,8 @@ server.listen(config.port, () => {
   // Background poll: pull Google calendar changes into Waffled on an interval so
   // edits/deletes made on the Google side appear without a manual sync.
   startSyncScheduler()
+  // Poll subscribed ICS feed URLs (school calendars etc.) — no OAuth needed.
+  startIcsSyncScheduler()
   // Roll the recurring-event occurrence horizon forward (Google-independent).
   startExpansionScheduler()
   // Delete chore photo-proof blobs past their per-household retention window.
