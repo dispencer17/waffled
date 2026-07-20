@@ -4,10 +4,10 @@ import { Icon } from '../icons'
 import { useTopbarFull } from '../topbar-slot'
 import { groceryApi, shoppingApi, useGroceryBoard, type GroceryBoardItem } from '../../lib/api'
 import { StaplesModal } from './StaplesModal'
-import { WalmartHandoff } from './WalmartHandoff'
+import { ShareListModal, WalmartHandoff } from './WalmartHandoff'
+import { AISLE_ORDER } from './share-list'
 import '../../styles/grocery.css'
 
-const AISLE_ORDER = ['Produce', 'Dairy & Chilled', 'Meat & Seafood', 'Pantry', 'Bakery', 'Frozen', 'Other']
 // Aisles offered in the "move to section" picker. 'Other' is omitted — the board
 // treats an 'Other' category as auto-filed anyway, so "Auto (by name)" covers it.
 const AISLE_PICKER = AISLE_ORDER.filter((a) => a !== 'Other')
@@ -168,12 +168,16 @@ export function GroceryBoard({ onBack }: { onBack: () => void }) {
   const [railMeal, setRailMeal] = useState<string>('dinner') // which meal type the rail shows
   const rebuilt = useRef(false)
   const addRef = useRef<HTMLInputElement>(null)
-  // Walmart handoff: the button only lights up when the server has affiliate keys.
-  const [walmartReady, setWalmartReady] = useState(false)
-  const [walmartOpen, setWalmartOpen] = useState(false)
+  // Grocery handoff: "Send to Walmart" (product matching) when the server has
+  // affiliate keys; otherwise the first-class "Share list" (text/QR — always
+  // works, no credentials). null = status unknown, button held disabled.
+  const [walmartReady, setWalmartReady] = useState<boolean | null>(null)
+  const [handoffOpen, setHandoffOpen] = useState(false)
   useEffect(() => {
     let alive = true
-    shoppingApi.walmartStatus().then((s) => alive && setWalmartReady(s.configured)).catch(() => {})
+    shoppingApi.walmartStatus()
+      .then((s) => alive && setWalmartReady(s.configured))
+      .catch(() => alive && setWalmartReady(false)) // can't reach the api → sharing still works
     return () => { alive = false }
   }, [])
 
@@ -192,15 +196,16 @@ export function GroceryBoard({ onBack }: { onBack: () => void }) {
       <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 14 }}>
         <button className="pill" style={{ cursor: 'pointer' }} onClick={onBack}>‹ Lists</button>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          <button className="pill" style={{ cursor: 'pointer' }} title="Coming soon">⬆ Send to phone</button>
           <button
             className="pill"
             style={{ cursor: 'pointer' }}
-            title={walmartReady ? 'Match the list to Walmart products and open a pre-filled cart' : 'Set WALMART_CONSUMER_ID / WALMART_PRIVATE_KEY on the server to enable'}
-            disabled={!walmartReady}
-            onClick={() => setWalmartOpen(true)}
+            title={walmartReady
+              ? 'Match the list to Walmart products and open a pre-filled cart'
+              : 'Copy, share, or QR the list to any phone'}
+            disabled={walmartReady == null}
+            onClick={() => setHandoffOpen(true)}
           >
-            🛒 Send to Walmart
+            {walmartReady ? '🛒 Send to Walmart' : '📤 Share list'}
           </button>
         </div>
       </div>
@@ -501,7 +506,9 @@ export function GroceryBoard({ onBack }: { onBack: () => void }) {
       </div>
 
       {editStaples && <StaplesModal staples={board.staples} onClose={() => setEditStaples(false)} onChanged={refetch} />}
-      {walmartOpen && <WalmartHandoff onClose={() => setWalmartOpen(false)} />}
+      {handoffOpen && (walmartReady
+        ? <WalmartHandoff onClose={() => setHandoffOpen(false)} />
+        : <ShareListModal items={board.items} onClose={() => setHandoffOpen(false)} />)}
     </div>
   )
 }

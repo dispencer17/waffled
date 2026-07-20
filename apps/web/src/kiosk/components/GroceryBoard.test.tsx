@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { GroceryBoard } from './GroceryBoard'
-import { TopbarSlotProvider } from '../topbar-slot'
+import { TopbarSlotProvider, useTopbarSlots } from '../topbar-slot'
 
 const kelly = { personId: 'p2', name: 'Kelly', avatarEmoji: '🦊', colorHex: '#EC6049' }
 
@@ -164,6 +164,78 @@ describe('GroceryBoard unscheduled recipes (By meal view)', () => {
     const guac = screen.getAllByText('Guacamole').map((el) => el.closest('.grocery-section')).find(Boolean) as HTMLElement
     expect(guac.textContent).not.toContain('Limes')
     expect(guac.textContent).toContain('Avocados')
+  })
+})
+
+// The topbar handoff button: "Send to Walmart" only when the server has
+// affiliate credentials; otherwise the first-class "Share list" (text/QR) view.
+describe('GroceryBoard shopping handoff entry', () => {
+  // The board fills the topbar via the slot context; the kiosk shell normally
+  // renders it — stand in for the shell here.
+  function TopbarOutlet() {
+    const { full } = useTopbarSlots()
+    return <div>{full}</div>
+  }
+  function renderBoardWithTopbar() {
+    return render(
+      <MemoryRouter>
+        <TopbarSlotProvider>
+          <TopbarOutlet />
+          <GroceryBoard onBack={() => {}} />
+        </TopbarSlotProvider>
+      </MemoryRouter>
+    )
+  }
+
+  function mockBoardWithStatus(configured: boolean) {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/shopping/walmart/status')) return ok({ configured })
+      if (u.includes('/api/lists/grocery/board')) {
+        return ok({
+          list: { id: 'g', name: 'Grocery', emoji: '🛒', listType: 'grocery', isAutoBuilt: true, sortMode: 'manual', itemCount: 2 },
+          weekStart: '2026-06-07',
+          meals: [{ date: '2026-06-08', mealType: 'dinner', recipeId: 'r1', title: 'Pasta', emoji: '🍝', color: '#1f5fd0' }],
+          items: [
+            { ...autoItem, id: 'p1', name: 'Asparagus', quantity: '2 bunch', aisle: 'Produce' },
+            { ...autoItem, id: 'p2', name: 'Tomatoes', quantity: '2', aisle: 'Produce' },
+            { ...manualItem, id: 'o1', name: 'Cookies' },
+          ],
+          staples: [],
+        })
+      }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+  }
+
+  it('unconfigured: the button reads "Share list" and opens straight to the share view', async () => {
+    mockBoardWithStatus(false)
+    renderBoardWithTopbar()
+    await screen.findByText('Asparagus')
+    const btn = await screen.findByRole('button', { name: /Share list/ })
+    await waitFor(() => expect(btn).toBeEnabled())
+    expect(screen.queryByText(/Send to Walmart/)).not.toBeInTheDocument()
+
+    fireEvent.click(btn)
+    expect(screen.getByText('Share list', { selector: '.modal-card *' })).toBeInTheDocument()
+    const block = document.querySelector('.share-list-text') as HTMLElement
+    expect(block.textContent).toBe(
+      ['PRODUCE', '- Asparagus (2 bunch)', '- Tomatoes (2)', '', 'OTHER', '- Cookies'].join('\n')
+    )
+  })
+
+  it('configured: the existing "Send to Walmart" matching flow is unchanged', async () => {
+    mockBoardWithStatus(true)
+    renderBoardWithTopbar()
+    await screen.findByText('Asparagus')
+    const btn = await screen.findByRole('button', { name: /Send to Walmart/ })
+    await waitFor(() => expect(btn).toBeEnabled())
+    expect(screen.queryByText(/Share list/)).not.toBeInTheDocument()
+
+    fireEvent.click(btn)
+    // the Walmart modal opens and kicks off the product match (mock 404s it)
+    expect(screen.getByText('Send to Walmart', { selector: '.modal-card *' })).toBeInTheDocument()
+    expect(await screen.findByText(/Couldn’t match the list/)).toBeInTheDocument()
   })
 })
 

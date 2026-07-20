@@ -51,10 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Waffled to your own Home Assistant. Admins pin the entities that matter — lights, scenes,
   switches — and a Smart Home card on Today gives everyone one-tap control of exactly those
   devices and nothing else. The HA token stays on the server, encrypted at rest.
-- **Send your grocery list to Walmart.** The grocery board's **Send to Walmart** button matches
-  your items to Walmart products and shows a QR code — scan it with your phone and the Walmart
-  app opens with a pre-filled cart, ready to check out with Walmart+. Items it can't match fall
-  back to a shareable text list, and a "right product" pin teaches it your brands over time.
+- **Share the grocery list to any phone.** The grocery board's **Share list** button turns the
+  unchecked items into a clean text list grouped by aisle (quantities included) — copy it, send
+  it through your phone's share sheet, or just point a phone camera at the QR code to grab the
+  list on the way to the store. No app, no account, nothing to configure. If you add Walmart
+  affiliate credentials on the server, the same button becomes **Send to Walmart** and goes one
+  further: it matches your items to Walmart products and the QR opens a pre-filled cart ready to
+  check out with Walmart+, with a "right product" pin that teaches it your brands over time.
 - **Talk to the kiosk.** The capture bar's microphone now works: hold it and say "set a timer
   for 10 minutes", "add milk to the grocery list", or "turn off the kitchen lights" — timers ring
   on the kiosk, groceries land on the list, pinned smart-home devices respond, and questions get
