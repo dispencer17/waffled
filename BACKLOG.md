@@ -318,6 +318,37 @@ merged + pushed.
 
 ---
 
+## P8 — Merge upstream v0.9.0 (discovered 2026-07-21)
+
+- [ ] **Merge `upstream/main` (v0.9.0, published 2026-07-20) into fork `main`.**
+
+**Why:** the update checker's very first run against upstream (P4.5) found
+v0.9.0, published hours after our v0.8.0 merge landed. Same rationale as P1 —
+the sooner it's merged the cheaper it is. NOTE: sequenced after P5–P7 because
+the docs sweep (P5) is fork-state cleanup that predates this, but the USER may
+prefer to bump this ahead — ask if unsure, or bump it if P6/P7 look likely to
+conflict with upstream's changes.
+
+**How:** the P1 playbook verbatim (fetch upstream, branch `merge/upstream-v0.9.0`,
+expected conflict hotspots listed under P1 — plus the new fork surfaces since:
+`apps/api/src/modules/updates/updates.ts` (/api/version route + fork field),
+`apps/web/src/kiosk/components/UpdateModal.tsx` (fork-aware copy),
+`apps/web/src/lib/powersync/*` + Settings System Health (sync watchdog),
+`apps/api/src/modules/calendar/ics-feeds.ts` + migration 0102 (check upstream
+didn't claim 0102). Read upstream's v0.9.0 release notes/changelog FIRST and
+scan for: renamed calendar internals, new migrations, UpdateModal/version
+changes (upstream may have built its own /api/version — reconcile, upstream
+wins on structure).
+
+**Verify:** P1's verify list (tsc both apps, full web + api suites, migration
+hygiene check) + the fork smoke: Appearance tab, Smart Home in Modules, Connect
+Outlook button, Calendar feeds section, About fork version, Share list.
+
+**Done when:** merged, pushed, CI green, `.\update.ps1 -Force` spot-check shows
+the fork features + About now reads `v0.9.0-<n>-g<sha>`.
+
+---
+
 ## Explicitly NOT in this backlog (blocked on the user / other machines)
 
 - **Restore upstream's improved ci.yml** — the v0.8.0 merge deliberately kept the fork's
