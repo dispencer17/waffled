@@ -283,8 +283,23 @@ the local build IS the gate.)
 
 ## P6 (stretch) — openWakeWord spike: wake word without Picovoice
 
-- [ ] **Prototype "always listening" using openWakeWord in the kiosk, behind the
+- [x] **Prototype "always listening" using openWakeWord in the kiosk, behind the
   existing voice settings toggle.**
+  - *Result (2026-07-21): spike SUCCEEDED and graduated to a merged experimental
+    implementation (3aa224e9). Headless feasibility probe: all three ONNX models
+    (melspectrogram/embedding/hey_jarvis, Apache-2.0, v0.5.1) run on
+    onnxruntime-web WASM at mel≈1ms per 80ms chunk, emb≈7ms, head≈3ms — ~5% of
+    real time. Shipped: OwwDetector pipeline (6 unit tests, runners injected),
+    engine switch in startWakeWord (no Picovoice key → "Hey Jarvis" via oww;
+    key → Porcupine unchanged), models committed (3.6MB public/models/oww),
+    ort wasm (13MB) emitted from node_modules at build via a vite plugin —
+    fully self-hosted, all lazy-loaded behind the toggle. Settings copy +
+    voice.md + roadmap + changelog updated (experimental framing). web
+    480/480, tsc + build + docs build green, CI green.
+    ⚠ REAL-MIC VERIFICATION PENDING — headless can't test a microphone; user:
+    flip Settings → Display & Kiosk → Wake word ON (leave AccessKey empty),
+    say "Hey Jarvis" near the kiosk, confirm the HUD wakes. Also note the
+    kiosk tablet needs HTTPS for mic access (see user-blocked list).*
 
 **Why:** Picovoice's signup wants a company email; user deferred. openWakeWord
 is Apache-2.0, no account, runs locally.
