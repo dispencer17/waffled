@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from '
 import { useSearchParams } from 'react-router'
 import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
+import { testWakeWord, BUILTIN_KEYWORDS } from '../lib/voice/wakeword'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
 import { PersonModal } from './components/PersonModal'
@@ -1219,6 +1220,8 @@ function AiPanel() {
 
       <VoiceSttCard />
 
+      <WakeWordCard />
+
       <LearnedMatches />
     </div>
   )
@@ -1252,6 +1255,127 @@ function VoiceSttCard() {
           {stt === 'local' ? '🖥 local Whisper' : stt === 'openai' ? '☁️ OpenAI' : 'off'}
         </span>
       </SettingRow>
+    </SettingCard>
+  )
+}
+
+// Wake word — lives beside the other voice settings (moved here from Display &
+// Kiosk 2026-07-21: it was the bottom-most card there and nobody found it). The
+// setting itself is unchanged: household-wide, stored in kiosk display config.
+type VoiceCfg = NonNullable<DisplayConfig['voice']>
+const VOICE_DEFAULTS: VoiceCfg = { wakeWord: false, picovoiceKey: null, keyword: 'Computer' }
+
+type WakeTest =
+  | { phase: 'idle' }
+  | { phase: 'listening'; level: number }
+  | { phase: 'detected' }
+  | { phase: 'timeout' }
+  | { phase: 'error'; message: string }
+
+function WakeWordCard() {
+  const [cfg, setCfg] = useState<DisplayConfig | null>(null)
+  const [test, setTest] = useState<WakeTest>({ phase: 'idle' })
+  const dirtyRef = useRef(false)
+
+  useEffect(() => {
+    kioskApi.displayConfig().then(setCfg).catch(() => {})
+  }, [])
+
+  // Debounced auto-save, same shape as the Display & Kiosk panel's.
+  useEffect(() => {
+    if (!cfg || !dirtyRef.current) return
+    const t = setTimeout(async () => {
+      try {
+        const s = await kioskApi.setDisplayConfig(cfg)
+        dirtyRef.current = false
+        setCfg(s)
+      } catch {
+        /* leave the local state; the next change retries */
+      }
+    }, 600)
+    return () => clearTimeout(t)
+  }, [cfg])
+
+  if (!cfg) return null
+  const voice = cfg.voice ?? VOICE_DEFAULTS
+  const phrase = voice.picovoiceKey ? voice.keyword || 'Computer' : 'Hey Jarvis'
+
+  function updateVoice(patch: Partial<VoiceCfg>) {
+    dirtyRef.current = true
+    setCfg((c) => (c ? { ...c, voice: { ...VOICE_DEFAULTS, ...(c.voice ?? {}), ...patch } } : c))
+  }
+
+  async function runTest() {
+    setTest({ phase: 'listening', level: 0 })
+    try {
+      const result = await testWakeWord({
+        accessKey: voice.picovoiceKey ?? null,
+        keyword: voice.keyword || 'Computer',
+        onLevel: (rms) => setTest((t) => (t.phase === 'listening' ? { phase: 'listening', level: rms } : t)),
+      })
+      setTest({ phase: result })
+    } catch (err) {
+      setTest({ phase: 'error', message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  return (
+    <SettingCard style={{ marginTop: 16 }}>
+      <SettingRow
+        icon="🎙️"
+        title="Wake word"
+        sub={`Hands-free voice, everywhere this household's Waffled runs (experimental). When on, the device listens for “${phrase}”; hearing it, the kiosk answers “Yes?” and starts a voice command — timers, groceries, lights, your day — exactly like holding the mic button. Detection runs entirely on this device: no audio is recorded or sent anywhere until after the wake word is heard. Needs a microphone.`}
+      >
+        <button
+          type="button"
+          role="switch"
+          aria-checked={voice.wakeWord}
+          aria-label="Enable wake word"
+          className={`toggle ${voice.wakeWord ? 'on' : ''}`}
+          onClick={() => updateVoice({ wakeWord: !voice.wakeWord })}
+        />
+      </SettingRow>
+      {voice.wakeWord && (
+        <>
+          <SettingRow icon="🔑" title="Picovoice AccessKey (optional)" sub="Leave empty to use the built-in account-free engine (“Hey Jarvis”). A key from console.picovoice.ai (free personal tier) unlocks the phrase picker below.">
+            <input
+              type="password"
+              className="set-inline-input"
+              style={{ width: 220 }}
+              placeholder={voice.picovoiceKey ? '•••••• (saved)' : 'AccessKey'}
+              onChange={(e) => updateVoice({ picovoiceKey: e.target.value })}
+              aria-label="Picovoice AccessKey"
+            />
+          </SettingRow>
+          <SettingRow icon="🗣️" title="Wake word phrase" sub="With a Picovoice key: built-in Porcupine keywords (a custom phrase needs a model trained on the Picovoice console). Without one, the phrase is “Hey Jarvis”.">
+            <select className="sel" value={voice.keyword} onChange={(e) => updateVoice({ keyword: e.target.value })} aria-label="Wake word phrase">
+              {BUILTIN_KEYWORDS.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+          </SettingRow>
+          <SettingRow icon="🧪" title="Try it" sub="Runs a 12-second listen on THIS device so you can check the microphone and the engine without guessing — the meter shows the mic hearing you.">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {test.phase === 'listening' && (
+                <span aria-label="Microphone level" style={{ width: 90, height: 8, borderRadius: 4, background: 'var(--line, #e5e0d8)', overflow: 'hidden', display: 'inline-block' }}>
+                  <span style={{ display: 'block', height: '100%', width: `${Math.round(Math.min(1, test.level * 3) * 100)}%`, background: 'var(--primary)', transition: 'width 80ms linear' }} />
+                </span>
+              )}
+              <button type="button" className="btn btn-ghost" disabled={test.phase === 'listening'} onClick={() => void runTest()}>
+                {test.phase === 'listening' ? 'Listening…' : 'Test wake word'}
+              </button>
+            </div>
+          </SettingRow>
+          {test.phase !== 'idle' && (
+            <div className="tiny" style={{ fontWeight: 700, margin: '2px 0 4px 46px', color: test.phase === 'detected' ? 'var(--success)' : test.phase === 'error' ? 'var(--primary)' : undefined }}>
+              {test.phase === 'listening' && <>Listening — say “{phrase}”…</>}
+              {test.phase === 'detected' && <>✓ Heard it! The wake word works on this device.</>}
+              {test.phase === 'timeout' && <>Didn’t hear it — check the mic level above moved while you spoke, then try again closer to the microphone.</>}
+              {test.phase === 'error' && <>{test.message}</>}
+            </div>
+          )}
+        </>
+      )}
     </SettingCard>
   )
 }
@@ -3135,13 +3259,6 @@ function DisplayKioskPanel() {
     setCfg((c) => (c ? { ...c, ...patch } : c))
     dirtyRef.current = true
   }
-  // Older servers / test fixtures may lack the voice block — default it.
-  type VoiceCfg = NonNullable<DisplayConfig['voice']>
-  const VOICE_DEFAULTS: VoiceCfg = { wakeWord: false, picovoiceKey: null, keyword: 'Computer' }
-  function updateVoice(patch: Partial<VoiceCfg>) {
-    dirtyRef.current = true
-    setCfg((c) => (c ? { ...c, voice: { ...VOICE_DEFAULTS, ...(c.voice ?? {}), ...patch } } : c))
-  }
   function updateDim(patch: Partial<DisplayConfig['nightDim']>) {
     setCfg((c) => (c ? { ...c, nightDim: { ...c.nightDim, ...patch } } : c))
     dirtyRef.current = true
@@ -3319,39 +3436,6 @@ function DisplayKioskPanel() {
             )}
           </SettingCard>
 
-          <SettingCard style={{ marginTop: 16 }}>
-            <SettingRow icon="🎙️" title="Wake word" sub="Hands-free voice on this kiosk (experimental) — say the wake word, then ask for timers, groceries, lights, or your day. Works out of the box with the built-in “Hey Jarvis” (no account); add a free Picovoice AccessKey for more phrases. Needs a microphone.">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={(cfg.voice ?? VOICE_DEFAULTS).wakeWord}
-                aria-label="Enable wake word"
-                className={`toggle ${(cfg.voice ?? VOICE_DEFAULTS).wakeWord ? 'on' : ''}`}
-                onClick={() => updateVoice({ wakeWord: !(cfg.voice ?? VOICE_DEFAULTS).wakeWord })}
-              />
-            </SettingRow>
-            {(cfg.voice ?? VOICE_DEFAULTS).wakeWord && (
-              <>
-                <SettingRow icon="🔑" title="Picovoice AccessKey (optional)" sub="Leave empty to use the built-in account-free engine (“Hey Jarvis”). A key from console.picovoice.ai (free personal tier) unlocks the phrase picker below.">
-                  <input
-                    type="password"
-                    className="set-inline-input"
-                    style={{ width: 220 }}
-                    placeholder={cfg.voice?.picovoiceKey ? '•••••• (saved)' : 'AccessKey'}
-                    onChange={(e) => updateVoice({ picovoiceKey: e.target.value })}
-                    aria-label="Picovoice AccessKey"
-                  />
-                </SettingRow>
-                <SettingRow icon="🗣️" title="Wake word phrase" sub="With a Picovoice key: built-in Porcupine keywords (a custom phrase needs a model trained on the Picovoice console). Without one, the phrase is “Hey Jarvis”.">
-                  <select className="sel" value={(cfg.voice ?? VOICE_DEFAULTS).keyword} onChange={(e) => updateVoice({ keyword: e.target.value })} aria-label="Wake word phrase">
-                    {['Computer', 'Jarvis', 'Bumblebee', 'Porcupine', 'Blueberry', 'Grasshopper', 'Terminator'].map((k) => (
-                      <option key={k} value={k}>{k}</option>
-                    ))}
-                  </select>
-                </SettingRow>
-              </>
-            )}
-          </SettingCard>
         </>
       )}
 

@@ -365,7 +365,7 @@ fork on top of the upstream feature set above:
 - **Shared album import** for Photos (Google Photos / iCloud).
 - **Server-side fuzzy person resolution** for capture (nicknames/aliases).
 - **Kiosk wake word — verify + harden the experimental engine (fork).** The openWakeWord
-  spike shipped (2026-07-21): flipping the Display & Kiosk toggle with no Picovoice key now
+  spike shipped (2026-07-21): flipping the AI & Capture toggle (moved from Display & Kiosk 2026-07-21, with a mic-meter Test button) with no Picovoice key now
   runs "Hey Jarvis" detection fully in-browser (Apache-2.0 ONNX models via
   `onnxruntime-web`, no account, ~1 ms per 80 ms audio chunk). What remains: real-microphone
   verification on the kitchen tablet (headless dev can't test a mic), threshold tuning on

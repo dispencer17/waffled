@@ -24,6 +24,8 @@ export const voiceApi = {
 export const VOICE_START = 'waffled:voice-start'
 export const TIMER_ADD = 'waffled:timer-add'
 export const CAPTURE_PREFILL = 'waffled:capture-prefill'
+// Fired when a Settings wake-word test finishes so VoiceHud re-arms its session.
+export const WAKEWORD_REARM = 'waffled:wakeword-rearm'
 
 export function requestVoiceCapture(): void {
   window.dispatchEvent(new CustomEvent(VOICE_START))

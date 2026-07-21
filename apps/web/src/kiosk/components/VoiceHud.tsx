@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { voiceApi, addTimer, prefillCapture, kioskApi, VOICE_START, type VoiceAction } from '../../lib/api'
+import { voiceApi, addTimer, prefillCapture, kioskApi, VOICE_START, WAKEWORD_REARM, type VoiceAction } from '../../lib/api'
 import { startRecording, type ActiveRecording } from '../../lib/voice/recorder'
 import { speak } from '../../lib/voice/tts'
 import { startWakeWord, stopWakeWord } from '../../lib/voice/wakeword'
@@ -73,21 +73,28 @@ export function VoiceHud() {
   }, [])
 
   // Wake word — armed from kiosk display settings (admin-set, device-served).
+  // Re-arms after a Settings "Test wake word" run releases the mic (the test
+  // stops any live session first and fires WAKEWORD_REARM when done).
   useEffect(() => {
     let alive = true
-    kioskApi
-      .displayConfig()
-      .then((cfg) => {
-        if (!alive || !cfg.voice?.wakeWord) return
-        // No Picovoice key → the account-free openWakeWord engine ("Hey Jarvis").
-        void startWakeWord(cfg.voice.picovoiceKey ?? null, cfg.voice.keyword || 'Computer', () => {
-          speak('Yes?')
-          void runOnce()
+    const arm = () => {
+      kioskApi
+        .displayConfig()
+        .then((cfg) => {
+          if (!alive || !cfg.voice?.wakeWord) return
+          // No Picovoice key → the account-free openWakeWord engine ("Hey Jarvis").
+          void startWakeWord(cfg.voice.picovoiceKey ?? null, cfg.voice.keyword || 'Computer', () => {
+            speak('Yes?')
+            void runOnce()
+          })
         })
-      })
-      .catch(() => {})
+        .catch(() => {})
+    }
+    arm()
+    window.addEventListener(WAKEWORD_REARM, arm)
     return () => {
       alive = false
+      window.removeEventListener(WAKEWORD_REARM, arm)
       void stopWakeWord()
     }
   }, [])

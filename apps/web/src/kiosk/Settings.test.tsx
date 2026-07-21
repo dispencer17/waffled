@@ -7,6 +7,16 @@ import { publishSyncHealth, __resetSyncHealthForTests } from '../lib/powersync/s
 // The System Health panel's Live Sync card talks to the PowerSync client —
 // stub the db module (jsdom never runs the real engine anyway).
 const restartHardMock = vi.hoisted(() => vi.fn(async () => {}))
+// The AI & Capture wake-word card drives the real mic/engines — stub the lib.
+const testWakeWordMock = vi.hoisted(() => vi.fn<() => Promise<'detected' | 'timeout'>>(async () => 'detected'))
+vi.mock('../lib/voice/wakeword', () => ({
+  testWakeWord: testWakeWordMock,
+  frameRms: () => 0,
+  startWakeWord: vi.fn(async () => true),
+  stopWakeWord: vi.fn(async () => {}),
+  wakeWordRunning: () => false,
+  BUILTIN_KEYWORDS: ['Computer', 'Jarvis'],
+}))
 vi.mock('../lib/powersync/db', () => ({
   getPowerSyncDb: () => null,
   connectPowerSync: async () => {},
@@ -277,6 +287,75 @@ describe('Settings screen', () => {
     // Manual refresh → POST /feeds/:id/sync.
     fireEvent.click(screen.getByLabelText('Sync feed School calendar'))
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.includes('/f1/sync'))).toBe(true))
+  })
+
+  it('AI & Capture hosts the Wake word card: toggle saves, Test button walks listening → heard', async () => {
+    const puts: Array<Record<string, unknown>> = []
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url)
+      if (u.includes('/api/kiosk/display')) {
+        if (init?.method === 'PUT') {
+          const body = JSON.parse(String(init.body ?? '{}')) as Record<string, unknown>
+          puts.push(body)
+          return { ok: true, json: async () => body }
+        }
+        return { ok: true, json: async () => ({ ...displayConfig, voice: { wakeWord: false, picovoiceKey: null, keyword: 'Computer' } }) }
+      }
+      if (u.includes('/api/voice/status')) return { ok: true, json: async () => ({ stt: 'local' }) }
+      if (u.includes('/api/capture/config')) return { ok: true, json: async () => ({ provider: 'heuristic', model: null, available: { heuristic: true, anthropic: false, openai: false, ollama: false }, defaultModels: { anthropic: 'a', openai: 'o', ollama: 'l' } }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    let resolveTest!: (v: 'detected' | 'timeout') => void
+    testWakeWordMock.mockImplementation(() => new Promise((r) => { resolveTest = r }))
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('AI & Capture'))
+
+    // The card lives here now, with behavior copy beside the toggle.
+    expect(await screen.findByText('Wake word')).toBeInTheDocument()
+    expect(screen.getByText(/answers .Yes\?. and starts a voice command/)).toBeInTheDocument()
+
+    // Toggle on → PUT /api/kiosk/display with voice.wakeWord true (debounced).
+    fireEvent.click(screen.getByLabelText('Enable wake word'))
+    await waitFor(() => {
+      const v = puts.at(-1)?.voice as { wakeWord?: boolean } | undefined
+      expect(v?.wakeWord).toBe(true)
+    }, { timeout: 3000 })
+
+    // Test button: listening state, then success on detection.
+    fireEvent.click(screen.getByText(/Test wake word/))
+    expect(await screen.findByText(/Listening — say/)).toBeInTheDocument()
+    resolveTest('detected')
+    expect(await screen.findByText(/Heard it!/)).toBeInTheDocument()
+  })
+
+  it('Wake word test reports a timeout and a mic error honestly', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/kiosk/display')) return { ok: true, json: async () => ({ ...displayConfig, voice: { wakeWord: true, picovoiceKey: null, keyword: 'Computer' } }) }
+      if (u.includes('/api/voice/status')) return { ok: true, json: async () => ({ stt: 'local' }) }
+      if (u.includes('/api/capture/config')) return { ok: true, json: async () => ({ provider: 'heuristic', model: null, available: { heuristic: true, anthropic: false, openai: false, ollama: false }, defaultModels: { anthropic: 'a', openai: 'o', ollama: 'l' } }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    testWakeWordMock.mockImplementationOnce(async () => 'timeout')
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('AI & Capture'))
+    fireEvent.click(await screen.findByText(/Test wake word/))
+    expect(await screen.findByText(/Didn.t hear it/)).toBeInTheDocument()
+
+    testWakeWordMock.mockImplementationOnce(async () => { throw new Error('Permission denied') })
+    fireEvent.click(screen.getByText(/Test wake word/))
+    expect(await screen.findByText(/Permission denied/)).toBeInTheDocument()
   })
 
   it('AI & Capture shows which voice transcription backend is active', async () => {

@@ -60,12 +60,17 @@ Grocery and smart-home commands respect their modules: with [Lists](/features/li
 ## Wake word: experimental 🧪
 
 Hands-free "always listening" is **experimental**. Flip the **Wake word** toggle in
-**Settings → Display & Kiosk** and the kiosk listens for **"Hey Jarvis"** using
+**Settings → AI & Capture** and the kiosk listens for **"Hey Jarvis"** using
 **openWakeWord** (Apache-2.0) — ONNX models running in the browser via `onnxruntime-web`,
 **no account or key needed**, and nothing leaves the device: the engine (~13 MB) and
 models (~3.6 MB) are served by your own Waffled and load only when the toggle is on.
 Adding a free Picovoice AccessKey switches to the Porcupine engine instead, which unlocks
 a picker of other phrases ("Computer", "Bumblebee", …).
+
+The card's **Test wake word** button runs a 12-second listen on the current device — a
+live mic-level meter shows the microphone hearing you, and it reports "Heard it!", a
+timeout, or the exact permission/engine error. Use it before trusting the kiosk to
+listen hands-free.
 
 Treat it as a preview: detection quality on real kitchen audio hasn't been broadly
 verified yet, and there's no custom "Hey Waffled" phrase. If it misbehaves, turn the
