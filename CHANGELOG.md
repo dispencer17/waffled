@@ -95,6 +95,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PWA in portrait — install it from Chrome's menu (or the new prompt in Settings → About), get
   home-screen shortcuts for Today, the grocery list, and the calendar, and an offline page when the server is
   unreachable. For a no-URL-bar experience, `apps/android-twa/` builds a sideloadable APK.
+
+### Changed
+- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
+  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
+  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
+  looks is in one place. The tab is visible to every member (theme and color are per-device
+  choices); the kiosk & screensaver configuration below it remains admin-only.
+
+### Fixed
+- **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
+  sync replica stops updating (or never finished its first sync), the calendar now falls
+  back to reading straight from the server instead of trusting the stale/empty local copy —
+  so an empty screen means there are genuinely no events, not that sync silently died.
+  Previously a stalled engine could leave the kiosk showing a blank calendar while the
+  server had all the data.
+- **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
+  Today views used the same pale color wash and text in both themes, which went murky with the
+  lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
+  on dark — so every person's events pass accessibility contrast in both modes (and under any
+  color theme).
+
+## [0.9.0] - 2026-07-20
+
+### Added
+- **See a goal's progress your way, not just as a number.** Every goal's detail page now
+  offers a switcher of visualizations tailored to what you're tracking: a week or month
+  heatmap strip, a GitHub-style year grid, a pace chart showing where you need to be to hit
+  your target on time, a radial "year in a ring," and stacked by-person bars for family
+  goals — plus a fill-up collection grid for count goals and a hit/miss dot calendar for
+  habits. Only the views that make sense for the goal's type and timeframe are offered, your
+  last pick is remembered per goal, and tapping any day or month opens who logged what.
+  Shipped on web and iPhone/iPad together.
 - **Add any recipe's ingredients to the grocery list — no meal plan needed.** Every recipe
   page (web and iOS) now has a first-class "Add to grocery" action, so a one-off dinner, a
   side, or a snack goes straight to the list: staples you already have are skipped, quantities
@@ -216,24 +248,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   range of wording and matching dependable.
 
 ### Changed
-- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
-  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
-  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
-  looks is in one place. The tab is visible to every member (theme and color are per-device
-  choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
-- **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
-  sync replica stops updating (or never finished its first sync), the calendar now falls
-  back to reading straight from the server instead of trusting the stale/empty local copy —
-  so an empty screen means there are genuinely no events, not that sync silently died.
-  Previously a stalled engine could leave the kiosk showing a blank calendar while the
-  server had all the data.
-- **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
-  Today views used the same pale color wash and text in both themes, which went murky with the
-  lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
-  on dark — so every person's events pass accessibility contrast in both modes (and under any
-  color theme).
+- **The iPad calendar is much snappier.** Opening the Calendar tab and tapping days in the
+  month view used to re-scan and re-bucket every synced event (including every occurrence of
+  recurring events) on each tap, which felt sluggish on a busy household calendar. The app
+  now indexes events by day once when the data actually changes, so switching to the
+  calendar, picking a day, and flipping between Month/Week/Day are simple lookups. The
+  Today screen's "This week" agenda uses the same index.
+- **Tapping the Family Goal card on the iPad Today screen now opens that goal.** The card
+  only responded on its little arrow (which went to the Goals index) and the Log button —
+  tapping the goal itself did nothing. Tapping anywhere else on the card now lands directly
+  on that goal's detail page; the arrow and Log button keep doing what they did.
+- **The Today screen's grocery quick-add no longer hides under the iPad keyboard.** The same
+  sideways-keyboard quirk fixed on the Lists page also buried the "Add an item" row on the
+  Today grocery card. It now lifts itself clear of the keyboard while you type, and the last
+  few items stay scrollable above it.
+- **The iPad nav always shows where you are.** Opening a page from the **More** grid —
+  like Goals, Lists, or Photos when they aren't pinned to the rail — used to leave the
+  side rail (and the portrait bottom bar) with nothing highlighted. The More tile now
+  lights up whenever the current page doesn't have a tile of its own.
 - **The iOS login screen now offers only the sign-in methods your server allows.** If an
   admin turns off password login (SSO-only), the iPhone/iPad login hides the email and
   password fields and shows just the SSO button — matching the web, which already did
@@ -1192,7 +1226,8 @@ fixes bump **PATCH**. Pre-1.0, expect **MINOR** to carry the weight of feature w
 \* Most `chore`/`refactor`/`test`/`docs` commits are omitted; include one only when a
 user or operator would notice the result.
 
-[Unreleased]: https://github.com/kevinpsites/waffled/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/kevinpsites/waffled/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/kevinpsites/waffled/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/kevinpsites/waffled/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/kevinpsites/waffled/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/kevinpsites/waffled/compare/v0.6.0...v0.6.1
