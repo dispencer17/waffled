@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { AgendaCard } from './components/AgendaCard'
+import { WeekCalendarCard } from './components/WeekCalendarCard'
 import { TonightCardSlot, WeekDinnersCard } from './components/MealsColumn'
 import { ChoresCard } from './components/ChoresCard'
 import { GroceryCard } from './components/GroceryCard'
@@ -34,6 +35,7 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
   goals: { label: 'Goals', node: <GoalSpotlightCard /> },
   pantry: { label: 'Pantry', node: <PantryCard /> },
   smartHome: { label: 'Smart Home', node: <QuickControlsCard /> },
+  weekCalendar: { label: 'Week calendar', node: <WeekCalendarCard />, fill: true },
 }
 
 // Pure layout helpers + drop-target math live in today-layout-utils.ts (tested).

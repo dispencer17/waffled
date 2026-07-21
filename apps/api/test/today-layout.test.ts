@@ -30,9 +30,18 @@ describe('reconcileLayout', () => {
 
   it('merges overflow columns (past the 3rd) into the last column', () => {
     const out = reconcileLayout([['agenda'], ['tonight'], ['week'], ['chores'], ['grocery']])
-    // cols past the 3rd merge in; unplaced cards (countdowns, pantry, familyNight, goals — in
-    // TODAY_CARDS order) are appended to the last column.
-    expect(out.cols[2]).toEqual(['week', 'chores', 'grocery', 'countdowns', 'pantry', 'familyNight', 'goals'])
+    // cols past the 3rd merge in; unplaced cards (in TODAY_CARDS order) are
+    // appended to the last column.
+    expect(out.cols[2]).toEqual(['week', 'chores', 'grocery', 'countdowns', 'pantry', 'familyNight', 'goals', 'smartHome', 'weekCalendar'])
+  })
+
+  it('accepts every card the kiosk registry can place (smartHome, weekCalendar)', () => {
+    // These 400'd (smartHome) or predate (weekCalendar) the client CARDS map —
+    // the server allowlist must match or saving a Customize layout breaks.
+    expect(TODAY_CARDS).toContain('smartHome')
+    expect(TODAY_CARDS).toContain('weekCalendar')
+    const out = reconcileLayout({ cols: [['weekCalendar', 'smartHome'], [], []], hidden: [] })
+    expect(out.cols[0]).toEqual(['weekCalendar', 'smartHome'])
   })
 
   // --- Hidden cards -------------------------------------------------------
