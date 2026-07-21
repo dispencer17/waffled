@@ -55,7 +55,13 @@ export async function startRecording(): Promise<ActiveRecording | null> {
       finished = true
       clearInterval(meter)
       clearTimeout(cap)
-      if (rec.state !== 'inactive') rec.stop()
+      // ORDER MATTERS. MediaRecorder.stop() flips state to 'inactive'
+      // synchronously, but the recorded bytes arrive in LATER dataavailable
+      // tasks, before the native stop event. Snapshot the state first and only
+      // invoke onstop by hand when the recorder had already stopped on its own —
+      // calling it right after our own stop() built the blob from an empty
+      // chunks array and made every clip null (the "listens then ignores" bug).
+      const wasInactive = rec.state === 'inactive'
       rec.onstop = () => {
         stream.getTracks().forEach((t) => t.stop())
         void ctx.close().catch(() => {})
@@ -69,8 +75,8 @@ export async function startRecording(): Promise<ActiveRecording | null> {
         }
         reader.readAsDataURL(blob)
       }
-      // If stop() already fired before onstop was assigned, trigger manually.
-      if (rec.state === 'inactive') rec.onstop?.(new Event('stop'))
+      if (!wasInactive) rec.stop()
+      else rec.onstop(new Event('stop'))
     }
     const cap = setTimeout(() => finish(), MAX_MS)
     const meter = setInterval(() => {

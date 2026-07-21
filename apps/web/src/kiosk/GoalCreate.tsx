@@ -3,8 +3,20 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTopbarFull } from './topbar-slot'
 import { api, useGoalLists, useGoalDetail, useHousehold, can, type GoalList } from '../lib/api'
 import { CATEGORIES, CATEGORY_KEYS } from './categories'
-import { availableViews, classifyTimeframe } from '../lib/goalStats'
+import { availableViews, classifyTimeframe, type ViewKey } from '../lib/goalStats'
 import { VIEW_LABEL } from './goalViews/GoalDataViews'
+
+// Tiny glyphs for the preview's view pills (labels come from VIEW_LABEL).
+const VIEW_GLYPH: Record<ViewKey, string> = {
+  week: '📅',
+  month: '🗓️',
+  year: '🧮',
+  pace: '📈',
+  yearRing: '⭕',
+  byPerson: '👪',
+  collection: '🎯',
+  consistency: '✅',
+}
 import { ListModal } from './components/ListModal'
 import './../styles/goals.css'
 
@@ -378,6 +390,13 @@ export function GoalCreate() {
 
   // ── live-preview helpers ─────────────────────────────────────────────────
   const previewName = form.title.trim() || 'Your goal'
+  // Which data views the goal page will offer for this shape of goal — the same
+  // gating GoalDataViews applies (type × timeframe). New goals start today, so
+  // today-vs-deadline approximates the window.
+  const previewViews = availableViews(
+    form.goalType,
+    classifyTimeframe(new Date().toISOString().slice(0, 10), form.deadline || null)
+  )
   const unit = (form.unit || '').trim()
 
   // Shared-vs-each and the measure-aware count sub-choice are DERIVED from the backend
@@ -486,18 +505,6 @@ export function GoalCreate() {
               ))}
             </div>
 
-            {/* Which data views the detail page will offer for this shape of goal —
-                the same gating GoalDataViews applies (type × timeframe), so nobody
-                wonders where the Year ring went on a two-week habit. New goals
-                start today, so today-vs-deadline approximates the window. */}
-            {!isChecklist && (
-              <div className="ge-sec-h" style={{ marginTop: 10 }}>
-                Progress views:{' '}
-                {availableViews(form.goalType, classifyTimeframe(new Date().toISOString().slice(0, 10), form.deadline || null))
-                  .map((v) => VIEW_LABEL[v])
-                  .join(' · ')}
-              </div>
-            )}
 
             {isChecklist ? (
               // Checklist: three EMPTY step fields — nothing prefilled.
@@ -718,6 +725,24 @@ export function GoalCreate() {
               </div>
             </div>
           )}
+
+          {/* Progress views — the visualizations the goal page will offer for this
+              type + window, updating live so nobody wonders where the Year ring
+              went on a two-week habit. */}
+          <div className="ge-pv-views">
+            <div className="vh">Progress views on the goal page</div>
+            {isChecklist ? (
+              <div className="vnote">Tracked by its steps — tick them off on the goal page.</div>
+            ) : (
+              <div className="vrow">
+                {previewViews.map((v) => (
+                  <span key={v} className="vpill">
+                    {VIEW_GLYPH[v]} {VIEW_LABEL[v]}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="ge-pv-where">
             <svg viewBox="0 0 24 24"><rect x={3} y={4} width={18} height={14} rx={2} /><path d="M8 20h8M12 18v2" /></svg>

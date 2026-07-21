@@ -45,10 +45,12 @@ locally for instant offline reads.
 | State | Meaning |
 |---|---|
 | **live** | Connected and fully synced — local reads are authoritative |
+| **starting…** | The engine is booting (a few seconds on every page load) |
 | **connecting…** | Establishing (or re-establishing) the sync stream |
 | **stalled — auto-restarting** | Online + signed in but no sync for several minutes; the watchdog is restarting the engine |
 | **offline** | No network — the local mirror serves the last-known state |
-| **off — reading over REST** | The engine couldn't start; the app reads from the server directly |
+| **failed to start — reading over REST** | The engine crashed on boot; the card shows the error, and the app reads from the server directly |
+| **off — reading over REST** | The engine is not running; the app reads from the server directly |
 
 A **stalled** engine is self-healing: the watchdog restarts it automatically (a gentle
 reconnect first, then a full client rebuild, with growing pauses between tries), the
@@ -56,7 +58,11 @@ kiosk shows a quiet *"Live sync is reconnecting"* strip, and in the meantime the
 calendar reads **straight from the server** — so a stalled sync never shows an empty
 calendar. The card also lists the last successful sync time and how many watchdog
 restarts have happened this session, and the **Restart sync** button forces a full
-rebuild on the spot if you don't want to wait.
+rebuild on the spot if you don't want to wait. The ladder's last rung wipes the local
+mirror and re-downloads it — a wedged or corrupted local copy can't survive restarts
+forever — and while stalled the card also offers **Reset local copy** to do that wipe
+immediately (skipped automatically if unsent local changes are still queued, so family
+data is never destroyed).
 
 ## Update notifier
 

@@ -578,10 +578,23 @@ function BrowserSyncCard() {
           <span className="health-chip">error: {health.lastError}</span>
         )}
       </div>
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button className="btn btn-ghost" disabled={restarting} onClick={() => void restart()}>
           ⟳ Restart sync
         </button>
+        {health.status === 'stalled' && (
+          <button
+            className="btn btn-ghost"
+            disabled={restarting}
+            title="Wipes this browser's local copy and re-downloads everything from the server. Skipped automatically if unsent changes are still queued."
+            onClick={() => {
+              setRestarting(true)
+              void restartPowerSyncHard({ clear: true }).finally(() => setRestarting(false))
+            }}
+          >
+            🧹 Reset local copy
+          </button>
+        )}
       </div>
     </SettingCard>
   )

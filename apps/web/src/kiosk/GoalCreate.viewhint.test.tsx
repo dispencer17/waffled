@@ -1,7 +1,7 @@
-// The goal editor tells you up front which progress views this goal will offer
-// (user request 2026-07-21: the changelog promised swappable views, but which
-// ones appear depends on type + timeframe — say so where the goal is made).
-import { render, screen, fireEvent } from '@testing-library/react'
+// The Live preview pane tells you up front which progress views this goal will
+// offer (round 2 of the 2026-07-21 request: pills in the preview, where the
+// user actually looks, instead of a text line under the measure picker).
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { GoalCreate } from './GoalCreate'
 
@@ -31,40 +31,42 @@ const renderNew = () =>
     </MemoryRouter>
   )
 
-describe('GoalCreate progress-view hint', () => {
-  it('lists the views a total goal will offer, and updates when the type changes', async () => {
+const pane = () => within(document.querySelector('.ge-pv-views') as HTMLElement)
+// Pill text is "<glyph> <label>" — strip the leading glyph token.
+const pillLabels = () =>
+  [...document.querySelectorAll('.ge-pv-views .vpill')].map((p) => (p.textContent ?? '').replace(/^\S+\s/, ''))
+
+describe('GoalCreate progress-view pills in the Live preview', () => {
+  it('shows the full six-view strip for a total goal, updating when the type changes', async () => {
     mockApi()
     renderNew()
-    // Default type is total, no deadline → the full six-view line.
-    expect(await screen.findByText(/Progress views:/)).toBeInTheDocument()
-    expect(screen.getByText(/Week · Month · Year · Pace · Year ring · By person/)).toBeInTheDocument()
+    expect(await screen.findByText(/Progress views on the goal page/)).toBeInTheDocument()
+    expect(pillLabels()).toEqual(['Week', 'Month', 'Year', 'Pace', 'Year ring', 'By person'])
 
     fireEvent.click(screen.getByText('Habit'))
-    expect(screen.getByText(/Consistency · Week/)).toBeInTheDocument()
+    expect(pillLabels()).toEqual(['Consistency', 'Week'])
 
     fireEvent.click(screen.getByText('Count'))
-    expect(screen.getByText(/Month · Pace · Collection/)).toBeInTheDocument()
+    expect(pillLabels()).toEqual(['Month', 'Pace', 'Collection'])
   })
 
   it('a short deadline drops the calendar-scale views', async () => {
     mockApi()
     renderNew()
-    await screen.findByText(/Progress views:/)
-    // Open the deadline (the Toggle button sits beside the label) and pick a
-    // date ~2 weeks out.
+    await screen.findByText(/Progress views on the goal page/)
     const dlToggle = screen.getByText('Set a deadline').closest('.ge-deadline')?.querySelector('[role="switch"]')
     fireEvent.click(dlToggle as HTMLElement)
     const soon = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10)
     fireEvent.change(document.querySelector('.ge-date-input') as HTMLInputElement, { target: { value: soon } })
-    expect(screen.getByText(/Week · Pace · By person/)).toBeInTheDocument()
-    expect(screen.queryByText(/Year ring/)).not.toBeInTheDocument()
+    expect(pillLabels()).toEqual(['Week', 'Pace', 'By person'])
   })
 
-  it('a checklist shows its steps note instead of a view list', async () => {
+  it('a checklist explains it tracks by steps instead of showing pills', async () => {
     mockApi()
     renderNew()
-    await screen.findByText(/Progress views:/)
+    await screen.findByText(/Progress views on the goal page/)
     fireEvent.click(screen.getByText('Checklist'))
-    expect(screen.queryByText(/Progress views:/)).not.toBeInTheDocument()
+    expect(document.querySelectorAll('.ge-pv-views .vpill')).toHaveLength(0)
+    expect(pane().getByText(/Tracked by its steps/)).toBeInTheDocument()
   })
 })

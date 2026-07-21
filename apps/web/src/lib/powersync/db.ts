@@ -26,7 +26,7 @@ const monitor = new SyncHealthMonitor({
   isOnline: () => typeof navigator === 'undefined' || navigator.onLine,
   isAuthenticated: () => !!getAccessToken(),
   softRestart: () => restartPowerSyncSoft(),
-  hardRestart: () => restartPowerSyncHard(),
+  hardRestart: (opts) => restartPowerSyncHard(opts),
 })
 
 export function getPowerSyncDb(): PowerSyncDatabase | null {
@@ -92,21 +92,39 @@ export async function restartPowerSyncSoft(): Promise<void> {
 // also what the Settings "Restart sync" button calls. Concurrent calls share
 // one restart. Never throws.
 let hardRestarting: Promise<void> | null = null
-export function restartPowerSyncHard(): Promise<void> {
+export function restartPowerSyncHard(opts: { clear?: boolean } = {}): Promise<void> {
   if (!hardRestarting) {
-    hardRestarting = doHardRestart().finally(() => {
+    hardRestarting = doHardRestart(opts).finally(() => {
       hardRestarting = null
     })
   }
   return hardRestarting
 }
 
-async function doHardRestart(): Promise<void> {
+async function doHardRestart({ clear = false }: { clear?: boolean } = {}): Promise<void> {
   const old = db
   db = null
   unlistenStatus?.()
   unlistenStatus = null
   if (old) {
+    if (clear) {
+      // Escalation rung for a wedged/corrupt replica (it survives plain hard
+      // restarts — same local db file). Wipe + full re-download is cheap, BUT
+      // never while local writes still await upload: family data beats replica.
+      let pending: unknown = null
+      try {
+        pending = await old.getNextCrudTransaction()
+      } catch {
+        /* can't read the queue from a wedged client — treat as empty */
+      }
+      if (pending == null) {
+        try {
+          await old.disconnectAndClear()
+        } catch {
+          /* clearing failed — the close + rebuild below still runs */
+        }
+      }
+    }
     try {
       await old.close()
     } catch {

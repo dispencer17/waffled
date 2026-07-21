@@ -113,6 +113,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
+- **Voice commands actually run now.** A recorder bug made every spoken clip come back
+  empty — the kiosk would hear the wake word (or the mic button), listen, and then
+  silently do nothing. The recording is captured correctly now, and if the mic truly
+  hears nothing the kiosk says "I didn't catch that" instead of going quiet.
+- **A wedged local sync copy can no longer stall forever.** The watchdog's restart
+  ladder gains a final rung: after a gentle reconnect and a full rebuild both fail, it
+  wipes this browser's local mirror and re-downloads it fresh (skipped if unsent local
+  changes are queued — family data is never destroyed). While stalled, System Health
+  also offers a one-click **Reset local copy**.
 - **The Live Sync card no longer reads "off" while the engine is just booting.** The
   sync engine takes a few seconds to start on every page load, and the System Health
   card used to call that window "off — reading over REST" — indistinguishable from a

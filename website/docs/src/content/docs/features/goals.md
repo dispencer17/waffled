@@ -23,8 +23,8 @@ Goals turn intentions into visible progress. Track **count**, **total**, **habit
   full set — Week · Month · Year · Pace · **Year ring** · By person; a *count* goal gets
   Month · Pace · Collection; a *habit* gets Consistency · Week; a checklist tracks by its
   steps instead. Goals with a window under ~a month drop the calendar-scale views. The
-  goal editor shows a **"Progress views:"** line as you pick the type and deadline, so you
-  know up front which views that goal will offer — if you want the Year ring, make it a
+  goal editor's **Live preview** shows a "Progress views" pill strip that updates as you
+  pick the type and deadline, so you know up front which views that goal will offer — if you want the Year ring, make it a
   total-type goal with a long (or no) deadline.
 - 👤 **Person profile + Family overview** — see one person's goals or the whole household at a glance.
 - 📅 **Calendar auto-count** — a single-event recap, smart **"might count toward a goal"** suggestions that learn over time, and recurring-event counting (via Calendar's **"counts toward a goal"** tag).

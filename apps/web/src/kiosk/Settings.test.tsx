@@ -460,6 +460,35 @@ describe('Settings screen', () => {
 
     fireEvent.click(screen.getByText(/Restart sync/))
     await waitFor(() => expect(restartHardMock).toHaveBeenCalledTimes(1))
+
+    // A stalled engine also offers the nuclear rung: wipe the local copy and
+    // re-download (the manual version of the watchdog's clear escalation).
+    fireEvent.click(screen.getByText(/Reset local copy/))
+    await waitFor(() => expect(restartHardMock).toHaveBeenLastCalledWith({ clear: true }))
+  })
+
+  it('hides Reset local copy when sync is healthy', async () => {
+    const report = {
+      status: 'ok',
+      version: { pkg: '0.0.0', sha: 'abc123', fork: 'dev', buildTime: null },
+      generatedAt: '2026-06-25T20:00:00Z',
+      checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+    }
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/health')) return { ok: true, json: async () => report }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    publishSyncHealth({ status: 'ok', hasSynced: true, lastSyncedAt: 1, restartCount: 0, lastRestartAt: null })
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+    expect(await screen.findByText(/Restart sync/)).toBeInTheDocument()
+    expect(screen.queryByText(/Reset local copy/)).not.toBeInTheDocument()
   })
 
   it('Live Sync card distinguishes a failed engine boot (with the error) from off', async () => {

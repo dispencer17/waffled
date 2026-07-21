@@ -288,3 +288,31 @@ describe('starting / failed states', () => {
     expect(isReplicaTrusted()).toBe(false)
   })
 })
+
+// Restart ladder escalation: soft → hard → hard+CLEAR. A wedged local replica
+// survives plain hard restarts (same db file), so from the third attempt the
+// watchdog asks the hard restart to wipe the replica and re-download.
+describe('restart ladder escalates to a clearing hard restart', () => {
+  it('third and later stall restarts pass { clear: true }', async () => {
+    const { m, deps, advance } = makeMonitor()
+    m.engineStarted()
+    advance(STALL_AFTER_MS + 1)
+    await m.tick() // attempt 1: soft
+    expect(deps.softRestart).toHaveBeenCalledTimes(1)
+    expect(deps.hardRestart).not.toHaveBeenCalled()
+
+    advance(RESTART_BACKOFF_BASE_MS + 1)
+    await m.tick() // attempt 2: hard, no clear
+    expect(deps.hardRestart).toHaveBeenCalledTimes(1)
+    expect(deps.hardRestart).toHaveBeenLastCalledWith({ clear: false })
+
+    advance(RESTART_BACKOFF_BASE_MS * 2 + 1)
+    await m.tick() // attempt 3: hard + clear
+    expect(deps.hardRestart).toHaveBeenCalledTimes(2)
+    expect(deps.hardRestart).toHaveBeenLastCalledWith({ clear: true })
+
+    advance(RESTART_BACKOFF_BASE_MS * 4 + 1)
+    await m.tick() // attempt 4: still clearing
+    expect(deps.hardRestart).toHaveBeenLastCalledWith({ clear: true })
+  })
+})

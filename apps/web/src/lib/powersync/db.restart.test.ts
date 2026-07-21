@@ -12,6 +12,8 @@ class FakePowerSyncDatabase {
   connect = vi.fn(async () => {})
   disconnect = vi.fn(async () => {})
   close = vi.fn(async () => {})
+  disconnectAndClear = vi.fn(async () => {})
+  getNextCrudTransaction = vi.fn(async (): Promise<unknown> => null)
   currentStatus = { connected: false, connecting: true, hasSynced: false, lastSyncedAt: undefined }
   getOptional = vi.fn(async () => null)
   registerListener(l: { statusChanged?: (s: unknown) => void }) {
@@ -134,6 +136,41 @@ describe('restartPowerSyncHard', () => {
     dispose()
     await db.restartPowerSyncHard()
     expect(fakes.instances[2].onChangeCalls).toHaveLength(0)
+  })
+})
+
+// The 2026-07-21 stall report: a wedged/corrupt local replica survives every
+// plain hard restart (same dbFilename), so the watchdog could never heal it.
+// clear:true wipes the replica for a fresh full re-download — unless local
+// writes are still queued for upload (never destroy un-uploaded family data).
+describe('restartPowerSyncHard({ clear: true })', () => {
+  it('wipes the old replica via disconnectAndClear before rebuilding', async () => {
+    const db = await freshDbModule()
+    await db.connectPowerSync()
+    const old = fakes.instances[0]
+    await db.restartPowerSyncHard({ clear: true })
+    expect(old.disconnectAndClear).toHaveBeenCalledTimes(1)
+    expect(fakes.instances).toHaveLength(2)
+    expect(fakes.instances[1].connect).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips the wipe when local writes are still queued (plain hard restart instead)', async () => {
+    const db = await freshDbModule()
+    await db.connectPowerSync()
+    const old = fakes.instances[0]
+    old.getNextCrudTransaction = vi.fn(async () => ({ crud: [{}] }))
+    await db.restartPowerSyncHard({ clear: true })
+    expect(old.disconnectAndClear).not.toHaveBeenCalled()
+    expect(old.close).toHaveBeenCalledTimes(1)
+    expect(fakes.instances).toHaveLength(2)
+  })
+
+  it('a plain hard restart never clears', async () => {
+    const db = await freshDbModule()
+    await db.connectPowerSync()
+    const old = fakes.instances[0]
+    await db.restartPowerSyncHard()
+    expect(old.disconnectAndClear).not.toHaveBeenCalled()
   })
 })
 

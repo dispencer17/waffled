@@ -37,7 +37,9 @@ export function VoiceHud() {
       const clip = await rec.done
       active.current = null
       if (!clip) {
-        setState({ phase: 'idle' })
+        // Never ignore silently — an empty clip means the mic heard nothing.
+        setState({ phase: 'reply', text: "I didn't catch that." })
+        speak("I didn't catch that.")
         return
       }
       setState({ phase: 'thinking' })

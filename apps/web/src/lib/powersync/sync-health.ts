@@ -102,7 +102,9 @@ export interface SyncHealthMonitorDeps {
   isOnline(): boolean
   isAuthenticated(): boolean
   softRestart(): Promise<void> // disconnect + reconnect the existing client
-  hardRestart(): Promise<void> // tear down and rebuild the client/worker
+  // Tear down and rebuild the client/worker; clear=true also wipes the local
+  // replica (the wedged-replica escalation rung — see maybeRestart).
+  hardRestart(opts: { clear: boolean }): Promise<void>
   now?(): number
 }
 
@@ -210,11 +212,14 @@ export class SyncHealthMonitor {
       if (this.lastRestartAt !== null && now - this.lastRestartAt < backoff) return
     }
     const hard = this.attempts >= 1 // soft first; escalate when it didn't take
+    // Two failed restarts (one soft, one hard) mean the replica itself is the
+    // suspect — from here, ask the hard restart to wipe it and re-download.
+    const clear = this.attempts >= 2
     this.attempts++
     this.restartCount++
     this.lastRestartAt = now
     try {
-      await (hard ? this.deps.hardRestart() : this.deps.softRestart())
+      await (hard ? this.deps.hardRestart({ clear }) : this.deps.softRestart())
     } catch {
       /* restart itself failed — the backoff paces the next try */
     }
