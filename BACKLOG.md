@@ -328,8 +328,13 @@ counts — this is a spike.
 
 ## P7 (stretch) — Home Assistant container, ready-to-onboard
 
-- [ ] **Add an optional `homeassistant` compose profile so the bridge is one
+- [x] **Add an optional `homeassistant` compose profile so the bridge is one
   command away once device brands are known.**
+  - *Result (2026-07-21): shipped as d8206fdc — profile-gated service (image
+    ghcr.io/home-assistant/home-assistant:stable, ha_config volume, :8123,
+    restart unless-stopped) + compose-ha-profile.test.ts (TDD), README +
+    smart-home.md + changelog. Live-verified: `--profile homeassistant up` →
+    onboarding page served on :8123 → stopped/removed again. api 913/913.*
 
 **How:** service in `infra/compose/docker-compose.yml` under
 `profiles: ["homeassistant"]`: image `ghcr.io/home-assistant/home-assistant:stable`,
