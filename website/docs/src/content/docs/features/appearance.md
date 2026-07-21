@@ -32,10 +32,11 @@ household location's sun times instead of fixed hours — so it tracks the seaso
 Turn the toggle off to go back to a fixed from → to window. Until the first weather fetch
 delivers sun times, the window falls back to fixed overnight hours.
 
-Waffled's dim is an on-screen overlay — a web page can't turn down a tablet's actual
-backlight. If you want **real screen-backlight dimming**, run the kiosk in **Fully Kiosk
-Browser** on the tablet (Android/Fire tablets; its PLUS license with the JavaScript interface
-enabled is what exposes true brightness control to a web app).
+Waffled's dim is an on-screen overlay in a normal browser — a web page can't turn down a
+tablet's actual backlight. Run the kiosk in **Fully Kiosk Browser** (Android/Fire tablets;
+its PLUS license with the JavaScript interface enabled) and the same dim schedule **also
+drops the real screen backlight**, then restores your daytime brightness when the window
+ends.
 
 ## Color themes
 Pick a palette under **COLOR THEME**:

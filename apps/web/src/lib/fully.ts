@@ -44,3 +44,33 @@ export function fullySpeak(text: string): boolean {
   f.textToSpeech(text)
   return true
 }
+
+// ── Night-dim backlight bridge ───────────────────────────────────────────────
+// The kiosk's night dim is a CSS overlay everywhere; inside Fully it can also
+// drop the REAL backlight. Remembers the daytime level across the night and
+// restores it on wake (255 if it was unreadable). Module-level state is fine:
+// one display, one schedule.
+export const NIGHT_BACKLIGHT = 32
+let dayLevel: number | null = null
+let backlightDimmed = false
+
+export function applyNightBacklight(dim: boolean): boolean {
+  const f = fully()
+  if (!f?.setScreenBrightness) {
+    backlightDimmed = false
+    dayLevel = null
+    return false
+  }
+  if (dim) {
+    if (!backlightDimmed) {
+      dayLevel = getScreenBrightness()
+      backlightDimmed = true
+    }
+    setScreenBrightness(NIGHT_BACKLIGHT)
+  } else if (backlightDimmed) {
+    setScreenBrightness(dayLevel ?? 255)
+    backlightDimmed = false
+    dayLevel = null
+  }
+  return true
+}

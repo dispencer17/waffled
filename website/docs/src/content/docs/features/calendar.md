@@ -64,10 +64,11 @@ plan B when a workplace won't approve calendar OAuth access.
 - **Add one in Settings → Calendars → Calendar feeds** (admins): paste an `.ics`
   or `webcal://` URL (webcal links are fetched over HTTPS) and optionally name it.
   The first refresh runs as soon as you add the feed; after that every feed is
-  polled **every 15 minutes** (`ICS_SYNC_INTERVAL_MS`, `0` disables).
-- **Person mapping & privacy** — map a feed to a person to color its events; a
-  feed can also be marked **personal** so its events are private to that person
-  (the same family/personal visibility model as synced calendars).
+  polled **every 15 minutes** (`ICS_SYNC_INTERVAL_MS`, `0` disables), and each
+  feed row has an **↻ Sync** button when you don't want to wait for the cycle.
+- **Person mapping & privacy** — map a feed to a person to color its events, and
+  tick the row's **Private** checkbox to keep its events visible only to that
+  person (the same family/personal visibility model as synced calendars).
 - **Recurring events** expand like any native series. One known limitation: a
   single moved/edited occurrence in the feed (an ICS `RECURRENCE-ID` exception)
   isn't applied — the base series renders as published.

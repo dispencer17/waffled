@@ -37,7 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Calendar feeds** section: paste any published ICS link (a school schedule, a sports team,
   a work calendar published from Outlook, `webcal://` links included) and its events appear on
   the family calendar, refreshed automatically every 15 minutes. Feeds can be mapped to a
-  person for color and marked private, recurring events expand like any other series, and
+  person for color, marked **Private** (visible only to that person), or refreshed on the
+  spot with each row's **↻ Sync** button; recurring events expand like any other series, and
   events removed from the feed disappear on the next refresh. The perfect plan B when a
   workplace won't approve calendar OAuth access.
 - **Color themes — pick your palette.** Alongside light and dark, Settings → Display & Kiosk
@@ -61,8 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Appearance switches to the dark theme at your local sunset and back at sunrise, using the
   household location already set for weather — no schedule to maintain. Kiosk night dimming
   gained the same trick: flip **"Sunset to sunrise"** in Display & Kiosk and the dim window
-  tracks the seasons. (Dimming is an on-screen overlay; on tablets running Fully Kiosk the
-  app can talk to the real backlight, but that wiring is still on the backlog.)
+  tracks the seasons — and on tablets running Fully Kiosk the same schedule also drops the
+  real screen backlight, restoring your daytime brightness when the window ends.
 - **Outlook and Microsoft 365 calendars now sync, right beside Google.** Settings → Calendars
   gains a **Connect Outlook** button; connected accounts show a provider badge and behave
   exactly like Google ones — two-way sync, per-person calendar mapping, write targets, and the
@@ -83,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for 10 minutes", "add milk to the grocery list", or "turn off the kitchen lights" — timers ring
   on the kiosk, groceries land on the list, pinned smart-home devices respond, and questions get
   short spoken answers. Speech-to-text runs through your own Whisper container or OpenAI —
-  your choice, set on the server.
+  your choice, set on the server and shown read-only in Settings → AI & Capture.
 - **Hands-free "Hey Jarvis" — no account needed (experimental).** The Display & Kiosk
   **Wake word** toggle now works out of the box: with no Picovoice key set, the kiosk
   listens for "Hey Jarvis" using openWakeWord — open-source ONNX models running inside the

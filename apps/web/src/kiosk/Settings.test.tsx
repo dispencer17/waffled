@@ -240,6 +240,63 @@ describe('Settings screen', () => {
     await waitFor(() => expect(posts.some((p) => p.url.includes('/f3/sync'))).toBe(true))
   })
 
+  it('Calendars: feed rows expose a Private toggle and a manual Sync now', async () => {
+    const calls: Array<{ url: string; method: string; body: Record<string, unknown> }> = []
+    const feeds = [
+      { id: 'f1', url: 'https://school.example/cal.ics', name: 'School calendar', personId: null, personName: null, personColor: null, visibility: 'family', lastSyncedAt: '2026-07-01T00:00:00Z', lastError: null, createdAt: '2026-06-01T00:00:00Z' },
+    ]
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url)
+      if (u.includes('/api/calendar/feeds')) {
+        const method = init?.method ?? 'GET'
+        if (method !== 'GET') {
+          calls.push({ url: u, method, body: JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown> })
+          if (u.endsWith('/sync')) return { ok: true, json: async () => ({ feedId: 'f1', name: 'School calendar', imported: 0, updated: 0, deleted: 0 }) }
+          return { ok: true, json: async () => ({ feed: { ...feeds[0], visibility: 'personal' } }) }
+        }
+        return { ok: true, json: async () => ({ feeds }) }
+      }
+      if (u.includes('/api/calendar/google/status')) return { ok: true, json: async () => ({ configured: false, connected: false, accounts: [], calendars: [], feeds }) }
+      if (u.includes('/api/countdowns')) return { ok: true, json: async () => ({ countdowns: [], sleeps: false, birthdayHorizonDays: 183 }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('Calendars'))
+    await screen.findByText('School calendar')
+
+    // Private → PATCH visibility 'personal' (API supported this all along; the
+    // control was the missing piece — see BACKLOG P9).
+    fireEvent.click(screen.getByLabelText('Private feed School calendar'))
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH' && c.url.includes('/f1') && c.body.visibility === 'personal')).toBe(true))
+
+    // Manual refresh → POST /feeds/:id/sync.
+    fireEvent.click(screen.getByLabelText('Sync feed School calendar'))
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.includes('/f1/sync'))).toBe(true))
+  })
+
+  it('AI & Capture shows which voice transcription backend is active', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/voice/status')) return { ok: true, json: async () => ({ stt: 'local' }) }
+      if (u.includes('/api/capture/config')) return { ok: true, json: async () => ({ provider: 'heuristic', model: null, available: { heuristic: true, anthropic: false, openai: false, ollama: false }, defaultModels: { anthropic: 'a', openai: 'o', ollama: 'l' } }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('AI & Capture'))
+    expect(await screen.findByText(/Voice transcription/)).toBeInTheDocument()
+    expect(screen.getByText('🖥 local Whisper')).toBeInTheDocument()
+  })
+
   it('shows the System Health panel with component cards (admin)', async () => {
     const report = {
       status: 'degraded',

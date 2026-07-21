@@ -5,6 +5,7 @@
 // screensaver overlay, and applies night dimming on a schedule.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useLocation } from 'react-router'
+import { applyNightBacklight } from '../lib/fully'
 import {
   isDisplayMode,
   isKioskMode,
@@ -160,6 +161,13 @@ function DisplayLayer() {
     const id = setInterval(tick, 60_000)
     return () => clearInterval(id)
   }, [cfg, household?.timezone, wx?.sunrise, wx?.sunset])
+
+  // Inside Fully Kiosk, back the CSS dim with REAL backlight dimming (restores
+  // the daytime level on wake / unmount; no-ops in a normal browser).
+  useEffect(() => {
+    applyNightBacklight(dim)
+    return () => { applyNightBacklight(false) }
+  }, [dim])
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
-import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
+import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
@@ -1211,8 +1211,42 @@ function AiPanel() {
         </span>
       </div>
 
+      <VoiceSttCard />
+
       <LearnedMatches />
     </div>
+  )
+}
+
+// Read-only: which speech-to-text backend /api/voice/transcribe will use — the
+// choice itself is server env (WHISPER_BASE_URL vs OPENAI_API_KEY), so this
+// just makes the active one visible instead of leaving operators guessing.
+function VoiceSttCard() {
+  const [stt, setStt] = useState<'local' | 'openai' | null | 'loading'>('loading')
+  useEffect(() => {
+    let alive = true
+    voiceApi.status().then((s) => alive && setStt(s.stt)).catch(() => alive && setStt(null))
+    return () => { alive = false }
+  }, [])
+  if (stt === 'loading') return null
+  return (
+    <SettingCard style={{ marginTop: 16 }}>
+      <SettingRow
+        icon="🎙️"
+        title="Voice transcription"
+        sub={
+          stt === 'local'
+            ? 'Push-to-talk audio is transcribed by your own local Whisper container — nothing leaves your network.'
+            : stt === 'openai'
+              ? 'Push-to-talk audio is transcribed by OpenAI (whisper-1) using the server\'s API key.'
+              : 'Not configured — start the voice profile (local Whisper) or set OPENAI_API_KEY on the server to enable the mic.'
+        }
+      >
+        <span className="tiny" style={{ fontWeight: 700 }}>
+          {stt === 'local' ? '🖥 local Whisper' : stt === 'openai' ? '☁️ OpenAI' : 'off'}
+        </span>
+      </SettingRow>
+    </SettingCard>
   )
 }
 
@@ -1473,6 +1507,22 @@ function CalendarFeedsCard({ feeds, onChanged }: { feeds: IcsFeed[]; onChanged: 
     onChanged()
   }
 
+  async function toggleVisibility(f: IcsFeed) {
+    await calendarsApi.updateFeed(f.id, { visibility: f.visibility === 'personal' ? 'family' : 'personal' })
+    onChanged()
+  }
+
+  const [syncingId, setSyncingId] = useState<string | null>(null)
+  async function syncNow(f: IcsFeed) {
+    setSyncingId(f.id)
+    try {
+      await calendarsApi.syncFeed(f.id)
+    } finally {
+      setSyncingId(null)
+      onChanged()
+    }
+  }
+
   async function remove(f: IcsFeed) {
     if (!window.confirm('Remove this calendar feed? Its imported events are removed too.')) return
     await calendarsApi.removeFeed(f.id)
@@ -1510,6 +1560,32 @@ function CalendarFeedsCard({ feeds, onChanged }: { feeds: IcsFeed[]; onChanged: 
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          <label
+            className="cal-sync"
+            title={
+              f.visibility === 'personal'
+                ? 'Private — only the assigned person sees this feed. Uncheck to show it to the whole family.'
+                : 'Visible to the whole family, including the shared kiosk. Check to keep it private.'
+            }
+          >
+            <input
+              type="checkbox"
+              checked={f.visibility === 'personal'}
+              onChange={() => toggleVisibility(f)}
+              aria-label={`Private feed ${f.name ?? feedHost(f.url)}`}
+            />
+            Private
+          </label>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => syncNow(f)}
+            disabled={syncingId === f.id}
+            title="Refresh this feed now"
+            aria-label={`Sync feed ${f.name ?? feedHost(f.url)}`}
+          >
+            ↻
+          </button>
           <button type="button" className="btn btn-ghost" onClick={() => remove(f)} title="Remove this feed" aria-label={`Remove feed ${f.name ?? feedHost(f.url)}`}>
             ×
           </button>
