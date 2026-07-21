@@ -9,7 +9,7 @@
 import createAPI from 'lambda-api'
 import { query } from '../../platform/db'
 import { version } from '../../platform/version'
-import { adminRoute } from '../../platform/route-guards'
+import { adminRoute, tenantRoute } from '../../platform/route-guards'
 
 type Api = ReturnType<typeof createAPI>
 
@@ -86,8 +86,12 @@ async function getLatest(): Promise<Cache> {
 }
 
 export function registerUpdateRoutes(api: Api): void {
+  // Build/version provenance for the About panel — every signed-in member, not
+  // admin-gated (caddy answers /healthz itself, so the SPA can't read it there).
+  api.get('/api/version', tenantRoute(async () => ({ ...version })))
+
   api.get('/api/updates', adminRoute(async (tenant) => {
-    const current = { version: version.pkg, sha: version.sha }
+    const current = { version: version.pkg, sha: version.sha, fork: version.fork }
     if (!envEnabled()) return { enabled: false, reason: 'env', current }
     if (!(await householdEnabled(tenant.householdId))) return { enabled: false, current }
     const c = await getLatest()

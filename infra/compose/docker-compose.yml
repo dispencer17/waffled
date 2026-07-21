@@ -45,6 +45,7 @@ services:
         # sha "dev" (which also defeats update.ps1's already-deployed check).
         GIT_SHA: ${GIT_SHA:-dev}
         BUILD_TIME: ${BUILD_TIME:-}
+        FORK_VERSION: ${FORK_VERSION:-dev}
     container_name: waffled-migrate
     depends_on:
       postgres:
@@ -62,10 +63,12 @@ services:
     build:
       context: ../../apps/api
       args:
-        # Build provenance, surfaced on /healthz + /api/health. ./waffled passes the
-        # real values; a bare `docker compose build` falls back to dev/empty.
+        # Build provenance, surfaced on /healthz + /api/health + /api/version.
+        # ./waffled passes the real values; a bare `docker compose build` falls
+        # back to dev/empty.
         GIT_SHA: ${GIT_SHA:-dev}
         BUILD_TIME: ${BUILD_TIME:-}
+        FORK_VERSION: ${FORK_VERSION:-dev}
     container_name: waffled-api
     depends_on:
       postgres:

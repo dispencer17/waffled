@@ -297,7 +297,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | **Notifications** (reminders) | ❌ N/A | ✅ | ✅ | ✅ Done (mobile) |
 | **Login & security** (OIDC config, password toggle) | ✅ | 🟡 | 🟡 | ✅ Done (web); mobile shows accounts/sign-in, OIDC config is web-only |
 | Household settings (name, week start, timezone, location) | ✅ | ✅ | ✅ | ✅ Done |
-| **About** (version, editable server address + switch warning) | — | ✅ | ✅ | ✅ Done (mobile) |
+| **About** (version; mobile adds editable server address + switch warning) | ✅ | ✅ | ✅ | ✅ Done (web shows the fork build — upstream base + commits ahead + sha — with build time; every member, not admin-gated) |
 | **Lists** settings | 🚧 | 🚧 | 🚧 | 🚧 Planned ("Soon") |
 
 ## Sync, offline & platform
@@ -327,7 +327,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | **Live Sync (this browser)** card in System Health — sync state · last synced · watchdog restarts · manual **Restart sync** | ✅ | ⬜ | ⬜ | ✅ Done (web) |
 | **`./waffled doctor`** CLI health report (in-container, no token) | ✅ | — | — | ✅ Done |
 | Background-**job run registry** (last-run / duration / error per scheduler) | ✅ | — | — | ✅ Done |
-| Build **provenance** (git sha + build time on /healthz + /api/health) | ✅ | — | — | ✅ Done |
+| Build **provenance** (git sha + build time + fork version on /healthz, /api/health + member-visible /api/version; shown in Settings → About and the System Health build line) | ✅ | — | — | ✅ Done |
 | **OpenTelemetry** traces+metrics (OTLP, **off by default**) | ✅ | — | — | ✅ Done |
 | All-local **Grafana/OTEL stack** (`./waffled observability up`, profile) | ✅ | — | — | ✅ Done |
 

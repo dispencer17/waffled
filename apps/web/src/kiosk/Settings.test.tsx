@@ -243,7 +243,7 @@ describe('Settings screen', () => {
   it('shows the System Health panel with component cards (admin)', async () => {
     const report = {
       status: 'degraded',
-      version: { pkg: '0.0.0', sha: 'abc123', buildTime: null },
+      version: { pkg: '0.0.0', sha: 'abc123', fork: 'v0.8.0-150-gabc1234', buildTime: null },
       generatedAt: '2026-06-25T20:00:00Z',
       checks: {
         db: { status: 'ok', total: 3, idle: 1, waiting: 0 },
@@ -268,8 +268,25 @@ describe('Settings screen', () => {
 
     expect(await screen.findByText('Database')).toBeInTheDocument()
     expect(screen.getByText('Calendar Sync')).toBeInTheDocument()
-    expect(screen.getByText(/Build abc123/)).toBeInTheDocument()
+    expect(screen.getByText(/Build abc123 · fork v0\.8\.0-150-gabc1234/)).toBeInTheDocument()
     expect(screen.getByText(/DEGRADED/)).toBeInTheDocument()
+  })
+
+  it('About shows the fork version with its upstream base (any member)', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/version')) return { ok: true, json: async () => ({ pkg: '0.8.0', sha: 'abc1234', fork: 'v0.8.0-150-gabc1234', buildTime: '2026-07-20T10:00:00Z' }) }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      // Non-admin viewer: version info in About must not be admin-gated.
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[1] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderSettings()
+    expect(await screen.findByText('Waffled — Family Hub')).toBeInTheDocument() // About is the default landing
+    expect(await screen.findByText('v0.8.0-150-gabc1234')).toBeInTheDocument()
+    expect(screen.getByText(/upstream base 0\.8\.0/)).toBeInTheDocument()
   })
 
   it('shows the per-browser Live Sync card in System Health, with a restart button (admin)', async () => {

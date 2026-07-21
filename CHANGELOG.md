@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Settings → About now shows exactly which build is running.** The fork version headline
+  reads like `v0.8.0-152-gabc1234` — the upstream base, how many fork commits sit on top,
+  and the build's sha — with the upstream base and build time spelled out beneath, visible
+  to every family member. The same fork version appears on the System Health build line and
+  in the update notifier, whose advice is now fork-aware: when upstream publishes a new
+  release it points at merging upstream rather than `./waffled upgrade` (which would
+  install upstream's images over the fork's features).
 - **The web app now watches its own live sync — and heals it.** A sync watchdog keeps an
   eye on the browser's PowerSync engine: if it silently stops syncing while you're online
   and signed in, Waffled restarts it automatically (gently first, then a full rebuild,
@@ -38,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source (exiting early when there's nothing new — use `-Force` to rebuild anyway). The
   compose config now pins image names to local builds so a plain `./waffled up` can never
   overwrite the fork with upstream's published images, and the in-app update notifier
-  (Settings → System Health) watches this fork's releases.
+  (Settings → System Health) watches upstream's releases — an "update available" there
+  means "time to merge upstream", not a button to press.
 - **The kiosk updates itself.** When the server starts serving a new build, the always-on
   display notices (it re-checks the app shell every few minutes) and quietly reloads —
   but only once the tablet has sat untouched for ten minutes or the screensaver is up,

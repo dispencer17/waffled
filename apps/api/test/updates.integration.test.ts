@@ -37,6 +37,7 @@ beforeAll(async () => {
   process.env.DATABASE_URL = url
   delete process.env.AUTH0_DOMAIN
   delete process.env.UPDATE_CHECK_REPO // keep hermetic — no outbound call
+  process.env.FORK_VERSION = 'v0.8.0-150-gabc1234' // baked into the image by docker build in prod
   app = (await import('../src/app')).default
   closePool = (await import('../src/platform/db')).closePool
 
@@ -56,6 +57,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  delete process.env.FORK_VERSION
   await closePool?.()
   await pg?.stop()
 })
@@ -82,6 +84,7 @@ describe('GET/PUT /api/updates', () => {
     const b = JSON.parse(res.body)
     expect(b.enabled).toBe(true)
     expect(b.current.version).toBeTruthy()
+    expect(b.current.fork).toBe('v0.8.0-150-gabc1234')
     expect(b.updateAvailable).toBe(false)
     expect(b.error).toContain('UPDATE_CHECK_REPO')
   })
@@ -110,4 +113,23 @@ describe('GET/PUT /api/updates', () => {
       delete process.env.UPDATE_CHECK_ENABLED
     }
   })
+})
+
+// The About panel is visible to every signed-in member (not just admins), and caddy
+// answers /healthz itself — so the fork/build provenance needs its own tenant route.
+describe('GET /api/version', () => {
+  it('401s unauthenticated', async () => {
+    expect((await call('GET', '/api/version')).statusCode).toBe(401)
+  })
+
+  it('returns pkg + sha + fork + buildTime to any signed-in member', async () => {
+    const res = await call('GET', '/api/version', mint('dev|kid'))
+    expect(res.statusCode).toBe(200)
+    const b = JSON.parse(res.body)
+    expect(b.pkg).toBeTruthy()
+    expect(b.fork).toBe('v0.8.0-150-gabc1234')
+    expect(b).toHaveProperty('sha')
+    expect(b).toHaveProperty('buildTime')
+  })
+
 })

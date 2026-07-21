@@ -9,7 +9,7 @@ export interface HealthCheck {
 }
 export interface HealthReport {
   status: HealthStatus
-  version: { pkg: string; sha: string; buildTime: string | null }
+  version: { pkg: string; sha: string; fork: string; buildTime: string | null }
   generatedAt: string
   checks: Record<string, HealthCheck>
 }

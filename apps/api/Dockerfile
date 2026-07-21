@@ -24,11 +24,15 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-# Build provenance — surfaced on /healthz + /api/health (passed by ./waffled / CI).
+# Build provenance — surfaced on /healthz + /api/health + /api/version (passed by
+# ./waffled / CI). FORK_VERSION is `git describe --tags --always`: upstream base
+# tag + commits ahead + sha.
 ARG GIT_SHA=dev
 ARG BUILD_TIME=
+ARG FORK_VERSION=dev
 ENV GIT_SHA=$GIT_SHA
 ENV BUILD_TIME=$BUILD_TIME
+ENV FORK_VERSION=$FORK_VERSION
 # OpenTelemetry packages, loaded ONLY by the --require preload below and only when
 # OTEL_EXPORTER_OTLP_ENDPOINT is set. The bundled app reaches the same
 # @opentelemetry/api singleton from this node_modules.

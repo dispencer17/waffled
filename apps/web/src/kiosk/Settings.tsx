@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
-import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
+import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
@@ -524,7 +524,7 @@ function SystemHealthPanel() {
             ))}
           </div>
           <div className="tiny muted" style={{ fontWeight: 600, marginTop: 12 }}>
-            Build {report.version.sha}{report.version.buildTime ? ` · ${new Date(report.version.buildTime).toLocaleString()}` : ''} · refreshed {new Date(report.generatedAt).toLocaleTimeString()}
+            Build {report.version.sha}{report.version.fork && report.version.fork !== 'dev' ? ` · fork ${report.version.fork}` : ''}{report.version.buildTime ? ` · ${new Date(report.version.buildTime).toLocaleString()}` : ''} · refreshed {new Date(report.generatedAt).toLocaleTimeString()}
           </div>
         </>
       )}
@@ -584,6 +584,11 @@ function BrowserSyncCard() {
 // with an admin toggle. Hidden entirely when the operator disabled it via env.
 function UpdateBanner({ upd, onToggle, toggling }: { upd: UpdateInfo; onToggle: (v: boolean) => void; toggling: boolean }) {
   const envOff = !upd.enabled && upd.reason === 'env'
+  // Prefer the fork version (git describe: upstream base + commits ahead + sha)
+  // when the build has one — it names the exact build, not just the upstream base.
+  const running = upd.current.fork && upd.current.fork !== 'dev'
+    ? `${upd.current.fork} (upstream base ${upd.current.version})`
+    : `${upd.current.version} (${upd.current.sha})`
   return (
     <SettingCard style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -592,25 +597,26 @@ function UpdateBanner({ upd, onToggle, toggling }: { upd: UpdateInfo; onToggle: 
             <>
               <div className="card-h" style={{ margin: 0 }}>⬆ Update available — {upd.latest.tag}</div>
               <div className="tiny muted" style={{ fontWeight: 600 }}>
-                You're on {upd.current.version} ({upd.current.sha}).{' '}
+                You're on {running}.{' '}
                 <a href={upd.latest.url} target="_blank" rel="noreferrer">View release ↗</a>
               </div>
               <div className="tiny muted" style={{ fontWeight: 600, marginTop: 2 }}>
-                On the server, run <code>./waffled upgrade</code> to update.
+                This is a fork build — update by merging upstream into the fork. A plain{' '}
+                <code>./waffled upgrade</code> would install upstream's images and drop the fork's features.
               </div>
             </>
           ) : upd.enabled && upd.latest ? (
             <>
               <div className="card-h" style={{ margin: 0 }}>✓ Up to date</div>
               <div className="tiny muted" style={{ fontWeight: 600 }}>
-                Running {upd.current.version} ({upd.current.sha}) · latest is {upd.latest.tag}
+                Running {running} · latest is {upd.latest.tag}
               </div>
             </>
           ) : upd.enabled ? (
             <>
               <div className="card-h" style={{ margin: 0 }}>Update check</div>
               <div className="tiny muted" style={{ fontWeight: 600 }}>
-                Running {upd.current.version} ({upd.current.sha}){upd.error ? ` · ${upd.error}` : ''}
+                Running {running}{upd.error ? ` · ${upd.error}` : ''}
               </div>
             </>
           ) : (
@@ -2579,13 +2585,22 @@ function FamilyNightSettings() {
 function AboutPanel() {
   const { household } = useHousehold()
   const { canInstall, promptInstall } = useInstallPrompt()
+  // Build provenance — the fork version (git describe: upstream base + commits
+  // ahead + sha) is the headline; the upstream base it tracks sits beneath.
+  const [ver, setVer] = useState<BuildVersion | null>(null)
+  useEffect(() => { versionApi.get().then(setVer).catch(() => {}) }, [])
+  const isFork = !!ver && ver.fork !== '' && ver.fork !== 'dev'
   return (
     <div className="set-panel">
       <div className="set-head"><div className="wf-serif set-head-t">About</div></div>
       <SettingCard>
         <div className="set-row2-t" style={{ marginBottom: 4 }}>Waffled — Family Hub</div>
+        {ver && (
+          <div style={{ fontWeight: 800, margin: '2px 0 4px' }}>{isFork ? ver.fork : `v${ver.pkg} (${ver.sha})`}</div>
+        )}
         <div className="tiny muted" style={{ fontWeight: 600 }}>
-          Self-hosted{household?.name ? ` · ${household.name}` : ''}. Version and storage info land here.
+          Self-hosted{household?.name ? ` · ${household.name}` : ''}
+          {ver ? <> · upstream base {ver.pkg} · build {ver.sha}{ver.buildTime ? ` · built ${new Date(ver.buildTime).toLocaleString()}` : ''}</> : null}
         </div>
       </SettingCard>
       {canInstall && (

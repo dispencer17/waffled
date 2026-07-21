@@ -57,11 +57,13 @@ set_env_var() {
   fi
 }
 
-# Build provenance for the api image — stamped into /healthz + /api/health.
+# Build provenance for the api image — stamped into /healthz + /api/health +
+# /api/version. FORK_VERSION (git describe) = upstream base + commits ahead + sha.
 export_build_meta() {
   GIT_SHA="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo dev)"
   BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  export GIT_SHA BUILD_TIME
+  FORK_VERSION="$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo dev)"
+  export GIT_SHA BUILD_TIME FORK_VERSION
 }
 
 # Bootstrap required secrets on a clean clone and fill values added by newer releases.
