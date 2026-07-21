@@ -186,7 +186,18 @@ OK/fixed list) appended below this item.
 
 ## P4.5 — Clearly visible fork version (user request 2026-07-20)
 
-- [ ] **Surface a distinct fork version in the app, alongside the upstream base.**
+- [x] **Surface a distinct fork version in the app, alongside the upstream base.**
+  - *Result (2026-07-21): shipped as 44b55ccd — FORK_VERSION (git describe) baked
+    into the image (waffled script → compose args → Dockerfile, api + migrate),
+    member-visible GET /api/version, About panel headline + upstream base/build
+    time, System Health build line, fork-aware update notifier (points at merging
+    upstream, not ./waffled upgrade). UPDATE_CHECK_REPO flipped to
+    kevinpsites/waffled in the live .env so "latest is vX.Y.Z" tracks upstream.
+    TDD: api 912/912, web 473/473, tsc clean both. Live-verified after
+    update.ps1 -Force. Follow-up in the same item (f71888ca): the upstream-repo
+    flip surfaced upstream's app-wide UpdateModal telling the operator to run
+    ./waffled upgrade — made fork-aware (merge-upstream guidance, no one-command
+    upgrade, no How-to-upgrade link) with a TDD'd component test.*
 
 **Why:** the user checked Settings and could only find "0.8.0" — which is the
 upstream base version, indistinguishable from vanilla upstream. The fork deploys
