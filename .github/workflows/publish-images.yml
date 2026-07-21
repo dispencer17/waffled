@@ -63,6 +63,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history + tags so `git describe` yields the fork version
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -85,6 +87,10 @@ jobs:
         run: |
           echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          # git describe = upstream base tag + commits ahead + sha (e.g. v0.9.0-63-gabc1234).
+          # actions/checkout does a shallow clone by default (no tags) — fetch-depth: 0 in
+          # the checkout step ensures the tag is present, else this falls back to the sha.
+          echo "fork=$(git describe --tags --always 2>/dev/null || echo dev)" >> "$GITHUB_OUTPUT"
 
       - name: Build & push by digest
         id: build
@@ -100,6 +106,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ steps.prov.outputs.sha }}
             BUILD_TIME=${{ steps.prov.outputs.time }}
+            FORK_VERSION=${{ steps.prov.outputs.fork }}
           # Push a tagless, digest-addressed image; the merge job attaches the tags.
           outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/waffled-${{ matrix.image.name }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.image.name }}-${{ env.PLATFORM_PAIR }}
