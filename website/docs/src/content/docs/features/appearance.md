@@ -24,6 +24,19 @@ Every choice on this page **saves on that device only** and applies **instantly*
 no server round-trip. Set it once on the kitchen kiosk and once on your phone; they're
 independent.
 
+## Night dimming can follow the sun too
+
+The kiosk's **Night dimming** schedule (further down in Display & Kiosk, admin-only) learned
+the same trick: with dimming on, flip **"Sunset to sunrise"** and the dim window follows your
+household location's sun times instead of fixed hours — so it tracks the seasons on its own.
+Turn the toggle off to go back to a fixed from → to window. Until the first weather fetch
+delivers sun times, the window falls back to fixed overnight hours.
+
+Waffled's dim is an on-screen overlay — a web page can't turn down a tablet's actual
+backlight. If you want **real screen-backlight dimming**, run the kiosk in **Fully Kiosk
+Browser** on the tablet (Android/Fire tablets; its PLUS license with the JavaScript interface
+enabled is what exposes true brightness control to a web app).
+
 ## Color themes
 Pick a palette under **COLOR THEME**:
 

@@ -26,9 +26,26 @@ goals & rewards, meals & recipes, lists, photos, and an AI "Add anything" captur
 ## This fork
 
 This is a personal fork of [kevinpsites/waffled](https://github.com/kevinpsites/waffled)
-adding: sunset-triggered dark mode & sunset-to-sunrise night dimming, a Smart Home
-module (Home Assistant quick controls + entity allowlist), Outlook calendar sync,
-a Walmart grocery-cart handoff, kiosk voice control, and Android PWA/TWA packaging.
+adding:
+
+- **Follow-the-sun dark mode** + sunset-to-sunrise kiosk night dimming (backlight-level
+  on Fully Kiosk tablets)
+- **Smart Home module** — Home Assistant quick controls + entity allowlist
+- **Outlook / Microsoft 365 calendar sync**, right beside Google
+- **ICS calendar feeds** — subscribe to any published calendar URL, no OAuth
+- **"Share list" grocery handoff** — unchecked items as an aisle-grouped text list via
+  copy / share sheet / QR (the Walmart affiliate path was abandoned; its cart-matching
+  code remains behind the same button but is unused without credentials)
+- **Kiosk voice, push-to-talk** — timers, groceries, smart-home, spoken answers; STT via
+  your own Whisper container or OpenAI (an always-listening wake word is deferred —
+  openWakeWord spike queued)
+- **Android PWA/TWA packaging** — installable PWA + a sideloadable APK
+  (`apps/android-twa/`)
+- **Visible fork version** — Settings → About / System Health / `GET /api/version` show
+  `v0.8.0-<n>-g<sha>`, and the update notifier knows a fork merges upstream instead of
+  running `./waffled upgrade`
+- **Sync watchdog (web)** — auto-restarts a stalled PowerSync engine, with a Live Sync
+  card in System Health
 
 ### Updating this fork (never `./waffled upgrade`)
 

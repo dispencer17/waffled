@@ -93,6 +93,8 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | Full-screen **event detail** (location/Directions, repeats, notes, timeline) | ✅ | ✅ | ✅ | ✅ Done (iPad detail is two-column) |
 | Per-person filter | ✅ | ✅ | ✅ | ✅ Done |
 | **Two-way Google Calendar sync** (inbound poll + outbound push) | ✅ | ✅ | ✅ | ✅ Done (sync runs server-side; connect in Settings → Calendars) |
+| **Two-way Outlook / Microsoft 365 sync** (Graph delta poll + push, provider badge, same write-target model) | ✅ | ✅ | ✅ | ✅ Done — server-side, so events reach every surface; connect in Settings → Calendars ([setup guide](/administration/outlook-calendar/)) |
+| **Calendar feeds (ICS)** — subscribe to any published `.ics`/`webcal://` URL (school, sports, published Outlook), auto-refresh every 15 min, person mapping | ✅ | ✅ | ✅ | ✅ Done — no sign-in needed; managed in web Settings → Calendars, events flow to every surface |
 | Connect calendars + per-person write-target (Settings → Calendars) | ✅ | ✅ | ✅ | ✅ Done |
 | **Offline** calendar (PowerSync: local reads + queued writes) | ✅ | ✅ | ✅ | ✅ Done |
 | AI **"Heads up this week"** digest + **per-event insight** | ✅ | ✅ | ✅ | ✅ Done |
@@ -176,6 +178,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Add a recipe's ingredients to the grocery list from its page** — no meal-plan entry needed (one-off dinners, sides, snacks); staples skipped, quantities merged, items linked back to the recipe | ✅ | ✅ | ✅ | ✅ Done — web: cart icon in the recipe actions (plus the on-hand banner button); mobile: "Add to grocery list" in the recipe ⋯ menu + the banner button |
 | **Unscheduled recipe sections in By-meal view** — off-plan recipes group under their own "Unscheduled" header with their own dot color, instead of lumping into "Other items"; they're also listed in the "This week's meals" card below a divider, completing the dot-color legend | ✅ | ✅ | ✅ | ✅ Done |
 | **Aisle grouping** + **quantity merge** (By aisle / By meal) | ✅ | ✅ | ✅ | ✅ Done |
+| **Share list** grocery handoff — aisle-grouped text with quantities via share sheet / copy / **QR** (no app or account on the receiving phone); with Walmart affiliate credentials the button becomes **Send to Walmart** (product matching + pre-filled cart) | ✅ | ⬜ | ⬜ | ✅ Done (web grocery board) |
 | **Pantry staples** (kept off the list; Pantry check) | ✅ | ✅ | ✅ | ✅ Done |
 | Check off / add / delete (persists) | ✅ | ✅ | ✅ | ✅ Done |
 | **Item attribution** — "added by {name}" / "🍽 from meal plan" | ✅ | ✅ | ✅ | ✅ Done |
@@ -243,6 +246,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Heuristic fallback** (offline / no provider / provider defers) | ✅ | ✅ | ✅ | ✅ Done (on-device `CaptureHeuristic` — capture works with no server; ported from web `parse.ts`, kept in sync) |
 | Household-local "now" + family names for resolution | ✅ | ✅ | ✅ | ✅ Done |
 | Server-side **fuzzy person resolution** (nicknames/aliases) | 🚧 | 🚧 | 🚧 | 🚧 Planned (6.6-names) |
+| **Push-to-talk voice** on the capture bar — local Whisper or OpenAI STT; timers ring on the kiosk, groceries land on the list, pinned smart-home devices respond, questions get spoken answers | ✅ | ⬜ | ⬜ | ✅ Done (web kiosk; hands-free wake word deferred — [voice guide](/features/voice/)) |
 
 ## Notifications
 
@@ -268,6 +272,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | **Pluggable optional modules** — registry + per-household enable flag; gates Today cards / nav / routes | ✅ | ✅ | ✅ | ✅ Done — iOS now gates the **Chores/Goals/Meals/Lists** nav (phone hub tiles + Meals tab; iPad rail), their Today cards, and the **Rewards** sub-toggle on the shared flag (Today + Calendar never gated) |
 | **Settings → Modules** tab (toggle optional modules on/off) | ✅ | ✅ | ✅ | ✅ Done — iOS `ModulesSettingsView` (admin-gated toggles + Rewards sub-toggle + "coming soon" rows); toggling updates nav/Today live |
 | **Pantry / on-hand inventory** module — items + quantities + locations (fridge/freezer/pantry) | ✅ | ✅ | ✅ | ✅ Done — iOS `PantryView` (list grouped by location, add by hand, edit/used-up/delete) |
+| **Smart Home (Home Assistant)** module — HA URL + long-lived token (encrypted at rest), pinned-entity allowlist, one-tap quick controls on Today | ✅ | ⬜ | ⬜ | ✅ Done (web — [smart home guide](/features/smart-home/)) |
 | Pantry: quantity **stepper** + tap-to-type amount, **"used up"** state | ✅ | ✅ | ✅ | ✅ Done — iOS: ± stepper on rows/detail/scan (stepping below 1 marks used up) |
 | Pantry: **drag items between locations**; **Today card** (whole-card tap, mark-used) | ✅ | 🟡 | 🟡 | ✅ Done (web); mobile: **Pantry Today card now ships** (use-soon + running-low, "N on hand · M soon", taps into Pantry — iPhone card + iPad `kioskPantryCard`, module-gated); change location from the editor (**no drag** yet) |
 | Pantry: **redesigned list** (location sidebar + counts, search, sort), **item detail** sheet | ✅ | 🟡 | 🟡 | ✅ Done — iOS matches the web: sidebar (chips on iPhone) of All/Use-soon/Running-low + locations, search, Expiring/A–Z/Recent sort, card grid + item detail |

@@ -56,7 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Appearance switches to the dark theme at your local sunset and back at sunrise, using the
   household location already set for weather — no schedule to maintain. Kiosk night dimming
   gained the same trick: flip **"Sunset to sunrise"** in Display & Kiosk and the dim window
-  tracks the seasons, with real screen-backlight dimming on tablets running Fully Kiosk.
+  tracks the seasons. (Dimming is an on-screen overlay; on tablets running Fully Kiosk the
+  app can talk to the real backlight, but that wiring is still on the backlog.)
 - **Outlook and Microsoft 365 calendars now sync, right beside Google.** Settings → Calendars
   gains a **Connect Outlook** button; connected accounts show a provider badge and behave
   exactly like Google ones — two-way sync, per-person calendar mapping, write targets, and the
@@ -76,12 +77,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Talk to the kiosk.** The capture bar's microphone now works: hold it and say "set a timer
   for 10 minutes", "add milk to the grocery list", or "turn off the kitchen lights" — timers ring
   on the kiosk, groceries land on the list, pinned smart-home devices respond, and questions get
-  short spoken answers. An optional always-listening wake word (Picovoice) can be enabled in
-  Display & Kiosk settings. Speech-to-text runs through your own Whisper container or OpenAI —
-  your choice, shown in Settings.
+  short spoken answers. Speech-to-text runs through your own Whisper container or OpenAI —
+  your choice, set on the server. (A hands-free wake word is deferred: the Display & Kiosk
+  toggle is experimental plumbing that needs a Picovoice key; an account-free engine is
+  being evaluated.)
 - **Waffled installs like an app on Android phones.** The web app is now a proper installable
   PWA in portrait — install it from Chrome's menu (or the new prompt in Settings → About), get
-  home-screen shortcuts for Capture, Grocery, and Today, and an offline page when the server is
+  home-screen shortcuts for Today, the grocery list, and the calendar, and an offline page when the server is
   unreachable. For a no-URL-bar experience, `apps/android-twa/` builds a sideloadable APK.
 - **Add any recipe's ingredients to the grocery list — no meal plan needed.** Every recipe
   page (web and iOS) now has a first-class "Add to grocery" action, so a one-off dinner, a

@@ -143,6 +143,68 @@ Legend: ✅ done · 🟡 partial / in progress · 🚧 planned · ⛔ dropped (s
   now **complete**. Per-surface (iPhone / iPad)
   status — and the remaining mobile gaps — live in the [feature matrix](./features.md).
 
+### Fork additions ✅ (this fork only)
+
+This repo is a personal fork of upstream that deploys from its own `main`. **Upstream
+v0.8.0 (142 commits) is merged** (2026-07-20, all fork features intact; the v0.9.0 merge
+is queued next — see [`BACKLOG.md`](../../BACKLOG.md)). Everything below ships in the
+fork on top of the upstream feature set above:
+
+- **ICS calendar feeds (read-only subscriptions)** — paste any published ICS URL
+  (`webcal://` included — a school schedule, a sports team, a work calendar published
+  from Outlook) into **Settings → Calendars → Calendar feeds** and its events land on the
+  family calendar: refreshed every 15 minutes, mappable to a person for color, markable
+  private, recurring events expanded like any other series, and events removed from the
+  feed disappear on the next refresh. The zero-OAuth plan B when a workplace won't
+  approve calendar access.
+- **Outlook / Microsoft 365 calendar sync** — a **Connect Outlook** button beside Google
+  in Settings → Calendars; connected accounts get a provider badge and behave exactly
+  like Google ones (two-way sync, per-person calendar mapping, write targets, the same
+  five-minute background poll). Needs `MS_CLIENT_ID` / `MS_CLIENT_SECRET` /
+  `MS_CALENDAR_REDIRECT_URI` from a free Azure app registration.
+- **Smart Home module (Home Assistant)** — an optional module (Settings → Modules) that
+  connects to your own Home Assistant: admins pin the entities that matter (lights,
+  scenes, switches) and a Smart Home card on Today gives everyone one-tap control of
+  exactly those devices and nothing else. The HA token stays on the server, encrypted
+  at rest.
+- **"Share list" grocery handoff** — the grocery board's **Share list** button turns the
+  unchecked items into a clean text list grouped by aisle (quantities included): copy it,
+  send it through a phone's share sheet, or scan the QR code on the way to the store — no
+  app, no account, nothing to configure. (The Walmart affiliate application was
+  **abandoned**; the Send-to-Walmart product-matching path is kept intact behind the same
+  button but is unused without credentials.)
+- **Kiosk voice, push-to-talk** — hold the capture bar's mic and say it: "set a timer for
+  10 minutes", "add milk to the grocery list", "turn off the kitchen lights" — timers
+  ring on the kiosk, groceries land on the list, pinned smart-home devices respond, and
+  questions get short spoken answers. Speech-to-text through your own Whisper container
+  or OpenAI, your choice. The always-listening wake word is **deferred** (see Planned).
+- **Appearance rides the sun** — the **Follow the sun** theme choice and the eight color
+  themes in the dark-mode entry above are fork additions, and kiosk night dimming gained
+  a **Sunset to sunrise** mode that tracks the seasons (with real screen-backlight
+  dimming on tablets running Fully Kiosk). All four fork-added web surfaces (Appearance,
+  Smart Home, Calendar feeds, Share list) were verified in both light and dark
+  (2026-07-20) — no defects.
+- **Visible fork version** — Settings → About headlines the running build as
+  `v0.8.0-<n>-g<sha>` (upstream base + fork commits ahead + sha, auto-derived from
+  `git describe`), with the upstream base and build time beneath; the same value shows
+  on the System Health build line and a member-visible `GET /api/version`. The update
+  notifier is fork-aware: a new upstream release means "merge upstream", never
+  `./waffled upgrade` (which would install upstream's images over the fork's features).
+  Deploys ride `update.ps1` (fast-forward the fork's CI-tested `main` + rebuild from
+  source), schedulable nightly; the kiosk display reloads itself once idle when it
+  notices a new build.
+- **Sync watchdog (web)** — the browser supervises its own PowerSync engine: a silently
+  stalled sync is restarted automatically (soft first, then a full rebuild, backing off
+  between tries) while a quiet strip explains data is coming straight from the server,
+  and **Settings → System Health** gains a **Live Sync (this browser)** card — sync
+  state, last-synced time, watchdog restart count, and a manual **Restart sync** button.
+- **Android phones (PWA + TWA)** — the web app is an installable **PWA** (manifest +
+  home-screen shortcuts for Today / Grocery list / Calendar + a cached offline app
+  shell, with an **Install** prompt in Settings → About), and `apps/android-twa/` builds
+  an optional sideloadable **TWA** APK for a no-URL-bar experience. See the *Waffled on
+  Android phones* guide on the docs site
+  (`website/docs/src/content/docs/guides/android-phones.md`).
+
 ## Partial / in progress 🟡
 
 - **Offline scope (Web/Kiosk)** — PowerSync covers the **calendar** domain; other domains
@@ -299,6 +361,13 @@ Legend: ✅ done · 🟡 partial / in progress · 🚧 planned · ⛔ dropped (s
   ("make it vegetarian", "double it").
 - **Shared album import** for Photos (Google Photos / iCloud).
 - **Server-side fuzzy person resolution** for capture (nicknames/aliases).
+- **Kiosk wake word ("always listening") — fork, deferred.** Push-to-talk voice shipped
+  (see the fork additions under Done); the hands-free wake word has a toggle + a Porcupine
+  (Picovoice) path wired into Display & Kiosk, but it needs a per-install Picovoice
+  AccessKey and that signup was deferred (it wants a company email). An **openWakeWord**
+  spike (Apache-2.0, runs locally, no account — ONNX models in-browser via
+  `onnxruntime-web`) is queued to replace the Picovoice dependency
+  ([`BACKLOG.md`](../../BACKLOG.md) P6). Until then, voice is push-to-talk only.
 - **Milestone reward payouts** — deferred by design (needs idempotency + attribution rules).
 - **Goal weekly check-in (Sunday recap)** — the goal-editor mock shows a "🔔 Weekly check-in"
   toggle, but there's no backend for it (it's a decorative, unpersisted toggle in the web

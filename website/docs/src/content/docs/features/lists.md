@@ -16,7 +16,33 @@ Lists is where "things to buy or do" live — shared custom lists you build by h
 - 🧂 **Staples stay off the list** — staple detection keeps the salt-and-pepper basics out of your grocery run.
 - 🎯 **Re-aisle an item** — section chips in its editor move it, and an **Auto** chip clears the override.
 - ✅ **Check off / add / delete** — everything persists, with attribution ("added by {name}" or "🍽 from meal plan"), and the grocery build honors recipe substitutions.
+- 📤 **Share list** — hand the grocery run to any phone: an aisle-grouped text list (quantities included) via share sheet, clipboard, or a QR code a phone camera grabs — no app, no account. See [Taking the list to the store](#taking-the-list-to-the-store).
 - 🔄 **Live cross-surface refresh** — Today, Lists, and Rewards stay in sync through the in-app refresh bus.
+
+## Taking the list to the store
+
+The grocery board's top bar has a handoff button for getting the list onto the phone that's
+actually going shopping:
+
+- 📤 **Share list** (the default) — turns the unchecked items into a clean plain-text list,
+  grouped in the board's aisle walking order with quantities:
+
+  ```
+  PRODUCE
+  - Asparagus (2 bunch)
+
+  DAIRY & CHILLED
+  - Milk (1 gal)
+  ```
+
+  Send it through your phone's share sheet, copy it to the clipboard, or point a phone
+  camera at the **QR code** — the QR encodes the text itself, so the list lands on any phone
+  with no app, no account, and nothing to configure.
+- 🛒 **Send to Walmart** — when the server has Walmart affiliate credentials
+  (`WALMART_CONSUMER_ID` / `WALMART_PRIVATE_KEY`), the same button matches your items to
+  Walmart products instead: the QR (or tap link) opens a Walmart cart pre-filled for
+  checkout with Walmart+, a **"✓ Right product"** pin teaches it your preferred brands over
+  time, and anything it couldn't match falls back to a copy/share text list.
 
 ## Where it works
 
