@@ -422,21 +422,17 @@ the fork features + About now reads `v0.9.0-<n>-g<sha>`.
 
 ## Explicitly NOT in this backlog (blocked on the user / other machines)
 
-- **Restore upstream's improved ci.yml** — the v0.8.0 merge deliberately kept the fork's
-  older `.github/workflows/ci.yml` because the gh token can't push workflow files. Upstream's
-  version adds a CLI-test job, splits the slow e2e into its own job, and runs the api suite
-  on the new fast harness. Two ways to fix (either takes ~2 min): run
-  `gh auth refresh -h github.com -s workflow` and tell Claude to push it, OR on github.com
-  open the fork's `.github/workflows/ci.yml` → edit → paste the contents of upstream's
-  version (github.com/kevinpsites/waffled/blob/main/.github/workflows/ci.yml) → commit.
-  Until then CI runs the old layout (no CLI tests, no e2e job in CI; e2e still runnable
-  locally via `npm run test:e2e` in apps/api).
+- ~~**Restore upstream's improved ci.yml**~~ — DONE (2026-07-21, 24c72d0c): after the
+  user added the `workflow` scope (`gh auth refresh -h github.com -s workflow`), adopted
+  upstream/main's ci.yml verbatim (adds the `cli-tests` job, splits e2e into its own
+  `api-e2e` job, trims the main api run). First CI run under the new layout was fully
+  green — all six jobs incl. the two new ones.
 
-- **Add FORK_VERSION to publish-images.yml** (once P4.5 lands) — same workflow-scope
-  problem as above; the GHCR builds need `FORK_VERSION=$(git describe --tags --always)`
-  passed as a build arg next to GIT_SHA (~line 101) or GHCR images report fork version
-  'dev'. Harmless for the kiosk (it builds from source) but worth the one-line fix
-  whenever the token gets workflow scope.
+- ~~**Add FORK_VERSION to publish-images.yml**~~ — DONE (2026-07-21, 24c72d0c): the
+  provenance step now emits `git describe --tags --always` and passes it as the
+  `FORK_VERSION` build arg (with `fetch-depth: 0` so the tag is present), so GHCR images
+  report the real fork version instead of 'dev'. Landed in the same commit as the ci.yml
+  adoption once the token had `workflow` scope.
 
 - Outlook work-account connect — waiting on OIT approval; retry is a user click.
 - ~~Google Calendar OAuth client~~ — DONE (verified 2026-07-20): GOOGLE_* wired
