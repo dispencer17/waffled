@@ -539,6 +539,8 @@ function SystemHealthPanel() {
 // restart ladder.
 const SYNC_STATE_LABEL: Record<SyncHealthStatus, string> = {
   off: 'off — reading over REST',
+  starting: 'starting…',
+  failed: 'failed to start — reading over REST',
   'no-auth': 'waiting for sign-in',
   offline: 'offline',
   connecting: 'connecting…',
@@ -549,7 +551,8 @@ const SYNC_STATE_LABEL: Record<SyncHealthStatus, string> = {
 function BrowserSyncCard() {
   const health = useSyncHealth()
   const [restarting, setRestarting] = useState(false)
-  const badge: HealthStatus = health.status === 'ok' ? 'ok' : health.status === 'stalled' ? 'down' : 'degraded'
+  const badge: HealthStatus =
+    health.status === 'ok' ? 'ok' : health.status === 'stalled' || health.status === 'failed' ? 'down' : 'degraded'
   async function restart() {
     setRestarting(true)
     try {
@@ -570,6 +573,9 @@ function BrowserSyncCard() {
           <span className="health-chip">last synced: {new Date(health.lastSyncedAt).toLocaleString()}</span>
         )}
         {health.restartCount > 0 && <span className="health-chip">watchdog restarts: {health.restartCount}</span>}
+        {health.status === 'failed' && health.lastError && (
+          <span className="health-chip">error: {health.lastError}</span>
+        )}
       </div>
       <div style={{ marginTop: 10 }}>
         <button className="btn btn-ghost" disabled={restarting} onClick={() => void restart()}>

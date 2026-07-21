@@ -245,3 +245,46 @@ describe('isReplicaTrusted', () => {
     expect(isReplicaTrusted()).toBe(false)
   })
 })
+
+// The 2026-07-21 report: the card said "off" during normal boot (≈5 s of WASM
+// init) and would say the same if the engine crashed — indistinguishable. Boot
+// is now 'starting' and a swallowed startClient error is 'failed' + message.
+describe('starting / failed states', () => {
+  it('engineStarting publishes starting (not off) until the engine is up', async () => {
+    const { m } = makeMonitor()
+    m.engineStarting()
+    expect(getSyncHealth().status).toBe('starting')
+    await m.tick()
+    expect(getSyncHealth().status).toBe('starting')
+    m.engineStarted()
+    await m.tick()
+    expect(getSyncHealth().status).toBe('connecting')
+  })
+
+  it('engineFailed publishes failed with the error message, and sticks', async () => {
+    const { m } = makeMonitor()
+    m.engineStarting()
+    m.engineFailed(new Error('OPFS unavailable'))
+    expect(getSyncHealth().status).toBe('failed')
+    expect(getSyncHealth().lastError).toBe('OPFS unavailable')
+    await m.tick()
+    expect(getSyncHealth().status).toBe('failed')
+  })
+
+  it('a successful start after a failure clears the error', () => {
+    const { m } = makeMonitor()
+    m.engineFailed(new Error('boom'))
+    m.engineStarting()
+    m.engineStarted()
+    expect(getSyncHealth().status).toBe('connecting')
+    expect(getSyncHealth().lastError ?? null).toBeNull()
+  })
+
+  it('replica is never trusted while starting or failed', () => {
+    const base = { hasSynced: true as const, lastSyncedAt: 1, restartCount: 0, lastRestartAt: null }
+    publishSyncHealth({ status: 'failed', ...base })
+    expect(isReplicaTrusted()).toBe(false)
+    publishSyncHealth({ status: 'starting', ...base })
+    expect(isReplicaTrusted()).toBe(false)
+  })
+})

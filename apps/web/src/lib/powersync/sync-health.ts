@@ -10,7 +10,11 @@
 // restart hooks; everything here is plain testable logic.
 import { useSyncExternalStore } from 'react'
 
-export type SyncHealthStatus = 'off' | 'no-auth' | 'offline' | 'connecting' | 'ok' | 'stalled'
+// 'starting' = engine boot in progress (WASM/OPFS init takes a few seconds — the
+// 2026-07-21 report was a user reading the boot window as "off"). 'failed' = the
+// boot (or a hard restart) threw; the error rides along in lastError so the card
+// can say WHY instead of a crash masquerading as "off".
+export type SyncHealthStatus = 'off' | 'starting' | 'failed' | 'no-auth' | 'offline' | 'connecting' | 'ok' | 'stalled'
 
 export interface SyncHealthSnapshot {
   status: SyncHealthStatus
@@ -19,6 +23,7 @@ export interface SyncHealthSnapshot {
   lastSyncedAt: number | null // ms epoch of the last completed sync
   restartCount: number // watchdog restarts this session (surfaced in System Health)
   lastRestartAt: number | null
+  lastError?: string | null // set only while status is 'failed'
 }
 
 // Stall = not connected+synced for this long while online and signed in. Long
@@ -55,7 +60,8 @@ export function publishSyncHealth(next: SyncHealthSnapshot): void {
     prev.hasSynced === next.hasSynced &&
     prev.lastSyncedAt === next.lastSyncedAt &&
     prev.restartCount === next.restartCount &&
-    prev.lastRestartAt === next.lastRestartAt
+    prev.lastRestartAt === next.lastRestartAt &&
+    (prev.lastError ?? null) === (next.lastError ?? null)
   )
     return
   snapshot = next
@@ -66,7 +72,13 @@ export function publishSyncHealth(next: SyncHealthSnapshot): void {
 // when it holds a complete sync AND the engine isn't wedged. When false, the
 // data hooks let REST drive so a stalled/empty replica never blanks the UI.
 export function isReplicaTrusted(): boolean {
-  return snapshot.hasSynced === true && snapshot.status !== 'stalled' && snapshot.status !== 'off'
+  return (
+    snapshot.hasSynced === true &&
+    snapshot.status !== 'stalled' &&
+    snapshot.status !== 'off' &&
+    snapshot.status !== 'starting' &&
+    snapshot.status !== 'failed'
+  )
 }
 
 export function useSyncHealth(): SyncHealthSnapshot {
@@ -98,7 +110,10 @@ export class SyncHealthMonitor {
   private deps: Required<Pick<SyncHealthMonitorDeps, 'isOnline' | 'isAuthenticated' | 'softRestart' | 'hardRestart'>> & {
     now(): number
   }
-  private running = false // engine present (connectPowerSync succeeded)
+  // Engine lifecycle: 'off' (never attempted / stopped) → 'starting' (boot in
+  // progress) → 'running' (connectPowerSync succeeded) or 'failed' (boot threw).
+  private phase: 'off' | 'starting' | 'running' | 'failed' = 'off'
+  private lastError: string | null = null
   private status: EngineStatus = { connected: false, connecting: false, hasSynced: undefined, lastSyncedAt: null }
   // Last instant the engine was verifiably healthy (connected + synced) — or,
   // while it can't possibly be (offline / signed out / just started), the moment
@@ -113,14 +128,27 @@ export class SyncHealthMonitor {
     this.deps = { now: () => Date.now(), ...deps }
   }
 
+  engineStarting(): void {
+    this.phase = 'starting'
+    this.publish()
+  }
+
   engineStarted(): void {
-    this.running = true
+    this.phase = 'running'
+    this.lastError = null
     this.lastHealthyAt = this.deps.now() // fresh grace window; ladder position intentionally kept
     this.publish()
   }
 
+  engineFailed(err: unknown): void {
+    this.phase = 'failed'
+    this.lastError = err instanceof Error ? err.message : String(err)
+    this.status = { connected: false, connecting: false, hasSynced: undefined, lastSyncedAt: null }
+    this.publish()
+  }
+
   engineStopped(): void {
-    this.running = false
+    this.phase = 'off'
     this.status = { connected: false, connecting: false, hasSynced: undefined, lastSyncedAt: null }
     this.publish()
   }
@@ -139,7 +167,7 @@ export class SyncHealthMonitor {
   // events can't trigger a restart storm.
   async tick(): Promise<void> {
     const now = this.deps.now()
-    if (!this.running) {
+    if (this.phase !== 'running') {
       this.publish()
       return
     }
@@ -165,7 +193,9 @@ export class SyncHealthMonitor {
   }
 
   private classify(now: number): SyncHealthStatus {
-    if (!this.running) return 'off'
+    if (this.phase === 'failed') return 'failed'
+    if (this.phase === 'starting') return 'starting'
+    if (this.phase !== 'running') return 'off'
     if (!this.deps.isOnline()) return 'offline'
     if (!this.deps.isAuthenticated()) return 'no-auth'
     if (this.status.connected && this.status.hasSynced) return 'ok'
@@ -197,6 +227,7 @@ export class SyncHealthMonitor {
       lastSyncedAt: this.status.lastSyncedAt,
       restartCount: this.restartCount,
       lastRestartAt: this.lastRestartAt,
+      lastError: this.phase === 'failed' ? this.lastError : null,
     })
   }
 }

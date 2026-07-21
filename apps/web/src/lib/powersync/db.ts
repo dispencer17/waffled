@@ -35,6 +35,9 @@ export function getPowerSyncDb(): PowerSyncDatabase | null {
 
 // Build + connect a client and wire its status stream into the health store.
 async function startClient(): Promise<void> {
+  // WASM/OPFS init takes a few seconds — publish 'starting' so the Live Sync
+  // card never reads "off" during a normal boot (the 2026-07-21 confusion).
+  monitor.engineStarting()
   const instance = new PowerSyncDatabase({
     schema: AppSchema,
     database: { dbFilename: 'waffled.db' },
@@ -66,6 +69,9 @@ export async function connectPowerSync(): Promise<void> {
   } catch (err) {
     console.warn('PowerSync unavailable; falling back to REST only', err)
     db = null
+    // Surface the crash — a boot failure must not be indistinguishable from
+    // "engine not running" on the Live Sync card.
+    monitor.engineFailed(err)
   }
 }
 
@@ -114,7 +120,7 @@ async function doHardRestart(): Promise<void> {
   } catch (err) {
     console.warn('PowerSync restart failed; falling back to REST only', err)
     db = null
-    monitor.engineStopped()
+    monitor.engineFailed(err)
   }
 }
 

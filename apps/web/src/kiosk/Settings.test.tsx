@@ -383,6 +383,31 @@ describe('Settings screen', () => {
     await waitFor(() => expect(restartHardMock).toHaveBeenCalledTimes(1))
   })
 
+  it('Live Sync card distinguishes a failed engine boot (with the error) from off', async () => {
+    const report = {
+      status: 'ok',
+      version: { pkg: '0.0.0', sha: 'abc123', fork: 'dev', buildTime: null },
+      generatedAt: '2026-06-25T20:00:00Z',
+      checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+    }
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/health')) return { ok: true, json: async () => report }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    publishSyncHealth({ status: 'failed', hasSynced: null, lastSyncedAt: null, restartCount: 0, lastRestartAt: null, lastError: 'OPFS unavailable' })
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+
+    expect(await screen.findByText(/state: failed to start — reading over REST/)).toBeInTheDocument()
+    expect(screen.getByText(/error: OPFS unavailable/)).toBeInTheDocument()
+  })
+
   it('keeps household kiosk controls available when global sign-in config is forbidden', async () => {
     globalThis.fetch = vi.fn(async (url: string) => {
       const u = String(url)
