@@ -245,8 +245,20 @@ shows a `v0.8.0-<n>-g<sha>` fork version.
 
 ## P5 — Documentation debt for all six fork features
 
-- [ ] **Bring the docs site + roadmap in line with what the fork actually does.**
+- [x] **Bring the docs site + roadmap in line with what the fork actually does.**
   (Repo rule: "a feature isn't done until users could find and understand it.")
+  - *Result (2026-07-21): shipped as 6737d3ca (13 files, +594) — NEW
+    administration/outlook-calendar.md (Azure registration, work-account admin
+    consent w/ ICS plan-B framing, AADSTS troubleshooting from git history),
+    features/smart-home.md, features/voice.md, guides/android-phones.md (PWA +
+    TWA — apps/android-twa exists); UPDATED calendar.md (ICS feeds section),
+    appearance.md (sunset night dim), lists.md (Share list), env-variables (MS_*
+    + ICS_SYNC_INTERVAL_MS, defaults verified against config.ts), features
+    matrix (+4 fork rows), roadmap (Fork additions ✅ + wake word deferred),
+    README reality pass. Astro build green (56 pages). Also fixed three FALSE
+    CHANGELOG claims found during sourcing: Fully-Kiosk backlight (overlay only
+    — setScreenBrightness never called), wake word "can be enabled" (deferred),
+    PWA shortcuts (Today/Grocery/Calendar, not Capture). Gaps → P9.*
 
 **How:** following existing Starlight frontmatter/voice in
 `website/docs/src/content/docs/`: (1) update `reference/features.md` with the
@@ -346,6 +358,28 @@ Outlook button, Calendar feeds section, About fork version, Share list.
 
 **Done when:** merged, pushed, CI green, `.\update.ps1 -Force` spot-check shows
 the fork features + About now reads `v0.9.0-<n>-g<sha>`.
+
+---
+
+## P9 — Small fork polish (gaps found during the P5 docs pass)
+
+- [ ] **Close the truth gaps the documentation sourcing uncovered.** Three small,
+  independent TDD items (one branch is fine):
+  1. **ICS feeds Settings UI is missing two API-backed controls** — the API
+     accepts `visibility` on POST/PATCH `/api/calendar/feeds` and has
+     POST `/feeds/:id/sync`, but `CalendarFeedsCard` in
+     `apps/web/src/kiosk/Settings.tsx` exposes neither a Private toggle nor a
+     manual Sync-now button (and last_error surfacing is worth checking). Add
+     them following the calendar-row UI patterns; then update calendar.md's
+     hedged wording ("a feed can also be marked personal") to name the controls.
+  2. **Wire the real Fully Kiosk backlight into night dim** —
+     `apps/web/src/lib/fully.ts` has `setScreenBrightness` but nothing calls it;
+     night dim is a CSS overlay (`.kiosk-dim`). Drive the backlight on the dim
+     schedule when running under Fully Kiosk (feature-detect), restore on wake.
+     Then un-hedge the CHANGELOG line and appearance.md's Fully note.
+  3. **(check first)** CHANGELOG says the STT choice is "set on the server" —
+     if a Settings surface showing the active STT backend is cheap (read-only
+     line in AI & Capture), add it; otherwise leave as-is.
 
 ---
 
