@@ -393,8 +393,15 @@ the fork features + About now reads `v0.9.0-<n>-g<sha>`.
 
 ## P9 — Small fork polish (gaps found during the P5 docs pass)
 
-- [ ] **Close the truth gaps the documentation sourcing uncovered.** Three small,
+- [x] **Close the truth gaps the documentation sourcing uncovered.** Three small,
   independent TDD items (one branch is fine):
+  - *Result (2026-07-21): shipped as 34283efa — (1) feed rows gained the Private
+    checkbox (PATCH visibility) + ↻ Sync-now button, live-verified; (2)
+    applyNightBacklight() bridges night dim to Fully Kiosk's real backlight
+    (remembers/restores daytime level; 4 unit tests; needs the actual tablet for
+    end-to-end); (3) AI & Capture shows the active STT backend — live stack
+    reads "🖥 local Whisper". Docs + changelog un-hedged. web 558/558, docs
+    build green, CI green.*
   1. **ICS feeds Settings UI is missing two API-backed controls** — the API
      accepts `visibility` on POST/PATCH `/api/calendar/feeds` and has
      POST `/feeds/:id/sync`, but `CalendarFeedsCard` in
