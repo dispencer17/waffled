@@ -38,6 +38,11 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
 
 // Pure layout helpers + drop-target math live in today-layout-utils.ts (tested).
 
+// Live drag: how long a press must hold still to lift a card, and how far the
+// pointer may wander during the hold before we treat the gesture as a scroll.
+const HOLD_MS = 450
+const HOLD_SLOP = 8
+
 // The kiosk "Today" dashboard. Cards are arranged from a saved layout (family
 // default + optional per-person override) and can be rearranged in a Customize
 // mode via drag-and-drop, then saved for just you or the whole family.
@@ -88,14 +93,23 @@ export function Today() {
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)
   const [saving, setSaving] = useState(false)
 
-  // Pointer drag state (edit mode only). `drag` is set once per drag so the
-  // listener effect subscribes once; `pos` drives the ghost, `target` the drop
-  // indicator (read live via ref on drop).
-  const [drag, setDrag] = useState<{ card: string } | null>(null)
+  // Pointer drag state (Customize chips AND live long-press drags). `drag` is
+  // set once per drag so the listener effect subscribes once; `pos` drives the
+  // ghost, `target` the drop indicator (read live via ref on drop). A live drag
+  // (`live: true`) starts from a long-press on the board and auto-saves on drop.
+  const [drag, setDrag] = useState<{ card: string; live?: boolean } | null>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
   const [target, setTarget] = useState<{ col: number; index: number } | null>(null)
   const targetRef = useRef<{ col: number; index: number } | null>(null)
   targetRef.current = target
+  // While a live drop's PUT is in flight, render its layout (covers the gap
+  // until the hook's optimistic update lands); reverts on failure. Refs keep
+  // the drag effect subscribed once per drag without stale closures.
+  const [liveCols, setLiveCols] = useState<string[][] | null>(null)
+  const resolvedRef = useRef(effectiveResolved)
+  resolvedRef.current = effectiveResolved
+  const saveRef = useRef(save)
+  saveRef.current = save
 
   // Keep the working copy in sync with the server layout (+ module cards) when not editing.
   useEffect(() => {
@@ -111,20 +125,49 @@ export function Today() {
       setPos({ x: e.clientX, y: e.clientY })
       setTarget(dropTargetAt(e.clientX, e.clientY))
     }
-    const up = () => {
+    const drop = () => {
       const t = targetRef.current
       if (t) {
-        setLayout((prev) => insertAt(prev, drag.card, t.col, t.index))
+        if (drag.live) {
+          // Live drag: apply and persist as the personal layout in one go.
+          const base = resolvedRef.current
+          const next = insertAt(base.cols, drag.card, t.col, t.index)
+          setLiveCols(next)
+          saveRef
+            .current('user', { cols: next, hidden: base.hidden })
+            .catch(() => {}) // clearing liveCols below reverts to the server layout
+            .finally(() => setLiveCols(null))
+        } else {
+          setLayout((prev) => insertAt(prev, drag.card, t.col, t.index))
+        }
       }
       setDrag(null)
       setTarget(null)
     }
+    const cancel = () => {
+      setDrag(null)
+      setTarget(null)
+    }
+    // A lifted card owns the gesture: no native scroll while dragging, and the
+    // trailing click (press + release over card content) never reaches the card.
+    const blockScroll = (e: TouchEvent) => e.preventDefault()
+    const swallowClick = (e: MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    window.addEventListener('pointerup', drop)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('touchmove', blockScroll, { passive: false })
+    window.addEventListener('click', swallowClick, true)
     document.body.style.userSelect = 'none'
     return () => {
       window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointerup', drop)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('touchmove', blockScroll)
+      // Deferred: the click trailing this drag's pointerup must still be swallowed.
+      window.setTimeout(() => window.removeEventListener('click', swallowClick, true), 0)
       document.body.style.userSelect = ''
     }
   }, [drag])
@@ -153,6 +196,35 @@ export function Today() {
     setPos({ x: e.clientX, y: e.clientY })
     setTarget(null)
     setDrag({ card })
+  }
+
+  // Live drag entry: a long-press (hold still) on a card lifts it without
+  // entering Customize. Presses on interactive content, or a finger that moves
+  // (scrolls) past the slop before the hold fires, never lift — and native
+  // scroll cancels the hold via pointercancel.
+  function beginHold(e: ReactPointerEvent, card: string) {
+    if (editing || drag || loading) return
+    if ((e.target as Element).closest('button, a, input, select, textarea, [role="button"]')) return
+    const x0 = e.clientX
+    const y0 = e.clientY
+    const stop = () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+    const onMove = (ev: PointerEvent) => {
+      if (Math.abs(ev.clientX - x0) > HOLD_SLOP || Math.abs(ev.clientY - y0) > HOLD_SLOP) stop()
+    }
+    const timer = window.setTimeout(() => {
+      stop()
+      setPos({ x: x0, y: y0 })
+      setTarget(null)
+      setDrag({ card, live: true })
+    }, HOLD_MS)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
   }
 
   function cancel() {
@@ -194,8 +266,9 @@ export function Today() {
   }
 
   // During a drag, render the layout without the dragged card so the drop
-  // indicator and indices line up; otherwise render the working/resolved layout.
-  const cols = editing ? layout : effectiveResolved.cols
+  // indicator and indices line up; otherwise render the working/resolved layout
+  // (or a just-dropped live layout while its PUT is in flight).
+  const cols = editing ? layout : (liveCols ?? effectiveResolved.cols)
   const display = drag ? removeCard(cols, drag.card) : cols
   // Hidden cards the user could bring back — only those whose module is on (a card
   // whose module is off can't be shown, and would just get stripped again).
@@ -216,7 +289,7 @@ export function Today() {
         </div>
       )}
 
-      <div className={`today-board ${editing ? 'editing' : ''}`}>
+      <div className={`today-board ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}>
         {display.map((col, ci) => (
           <div className="today-col" data-col={ci} key={ci}>
             {col.map((card, idx) => {
@@ -224,7 +297,7 @@ export function Today() {
               if (!def) return null
               return (
                 <Fragment key={card}>
-                  {editing && drag && target?.col === ci && target?.index === idx && <div className="today-drop-line" />}
+                  {drag && target?.col === ci && target?.index === idx && <div className="today-drop-line" />}
                   {editing ? (
                     // In edit mode cards collapse to a compact chip (just the labeled drag
                     // bar) so a long list — a 60-item grocery card — can't dominate the board
@@ -247,13 +320,15 @@ export function Today() {
                       </div>
                     </div>
                   ) : (
-                    <div className={`today-slot ${def.fill ? 'fill' : ''}`}>{def.node}</div>
+                    <div className={`today-slot ${def.fill ? 'fill' : ''}`} data-card={card} onPointerDown={(e) => beginHold(e, card)}>
+                      {def.node}
+                    </div>
                   )}
                 </Fragment>
               )
             })}
-            {editing && drag && target?.col === ci && target?.index === col.length && <div className="today-drop-line" />}
-            {editing && col.length === 0 && <div className="today-col-empty">Drop a card here</div>}
+            {drag && target?.col === ci && target?.index === col.length && <div className="today-drop-line" />}
+            {(editing || !!drag) && col.length === 0 && <div className="today-col-empty">Drop a card here</div>}
           </div>
         ))}
       </div>
