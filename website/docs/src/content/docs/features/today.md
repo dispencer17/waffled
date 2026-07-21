@@ -15,8 +15,19 @@ always there, whatever modules you've turned on.
   **module cards** ([Pantry](/administration/modules/), Family Night,
   [Countdowns](/features/countdowns/), [Goals](/features/goals/)) that appear only when
   their module is on.
+- 🗓️ **Week calendar card** (web) — a glanceable week strip: seven day columns starting
+  on the household's week-start day, today's date ringed, every event a **solid block in
+  its person's color** with a compact time ("1p"), all-day events pinned on top. Tap an
+  event to open it, tap a day header for the full [calendar](/features/calendar/). It
+  joins the board automatically (bottom of the third column) — drag it where you like,
+  or hide it in Customize.
 - 🎯 **Goals card** — shows one goal's progress; pick **My spotlight**, **Family
   spotlight**, or a **specific goal** from a grouped picker. See [Goals](/features/goals/).
+- ✋ **Drag cards right on the board** (web) — press and **hold a card ~half a second**
+  and it lifts; drag between columns and drop, and the layout saves as **your personal
+  layout** automatically. A finger that moves early scrolls instead of lifting, and
+  buttons inside cards are never drag handles — so the board can't be rearranged by
+  accident. For hiding cards, resetting, or saving for everyone, use Customize mode.
 - 🎛️ **Customize mode** (web / iPhone):
   - **drag** a card by its bar to reorder; each card also has an **× to hide it** —
     hidden cards drop into a tray below the board where a tap adds them back

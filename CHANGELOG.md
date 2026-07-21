@@ -14,6 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
+  Today card for half a second and it lifts; drag it where you want and let go — the new
+  arrangement saves as your personal layout automatically. Scrolling still scrolls (a
+  moving finger never lifts a card), taps on buttons inside cards still just work, and
+  the Customize mode stays for hiding cards, resetting, and saving a family-wide layout.
+- **A Week calendar card for the Today board.** A glanceable week strip in the style the
+  family board should have had all along: seven day columns starting on your household's
+  week-start day, today's date ringed, and every event a solid block in its person's
+  color with a compact time ("1p") — all-day events pinned on top, tap any block to open
+  the event. It appears at the bottom of the dashboard's third column on next load; drag
+  it wherever you like or hide it in Customize.
+- **Fully colored events, everywhere — with an "Event style" setting.** Event chips
+  across the calendar's Month, Week, and Day views now fill solid with their person's
+  color (readable white text, dark-mode aware) instead of the pale wash — the more color,
+  the easier a glance. Solid is the new default for every household; anyone preferring
+  the softer look can flip **Settings → Family → Event style → Tinted** (admins only,
+  applies to the whole household instantly).
 - **The goal editor tells you which progress views you'll get.** As you pick a goal's
   type and deadline, a "Progress views" line updates live — so it's clear up front that
   the Year ring belongs to long-running total goals, a habit gets its Consistency
@@ -113,6 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
+- **Saving a customized dashboard works with the Smart Home card placed.** The server's
+  card allowlist was missing the Smart Home card, so households using that module got a
+  silent "Bad Request" when saving a rearranged Today layout that included it.
 - **Voice commands actually run now.** A recorder bug made every spoken clip come back
   empty — the kiosk would hear the wake word (or the mic button), listen, and then
   silently do nothing. The recording is captured correctly now, and if the mic truly
