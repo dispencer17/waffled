@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Home Assistant, one command away.** The compose stack now ships an optional
+  `homeassistant` profile: `docker compose --profile homeassistant up -d homeassistant`
+  starts a full Home Assistant on the same box (config kept in its own volume), ready for
+  the Smart Home module to connect to. It's strictly opt-in — a plain `./waffled up`
+  never starts or pays for it.
 - **Settings → About now shows exactly which build is running.** The fork version headline
   reads like `v0.8.0-152-gabc1234` — the upstream base, how many fork commits sit on top,
   and the build's sha — with the upstream base and build time spelled out beneath, visible

@@ -67,6 +67,18 @@ in-app notifier (Settings → System Health) at this repo instead of upstream.
 
 ### Home Assistant ↔ Waffled
 
+**No Home Assistant yet?** The compose stack ships one behind an opt-in profile —
+start it on the same box when you're ready to onboard your devices:
+
+```bash
+docker compose -f infra/compose/docker-compose.yml --profile homeassistant up -d homeassistant
+```
+
+First run: open `http://<server>:8123`, finish HA's onboarding, create a
+long-lived access token (your HA profile → **Security**), and paste it into
+Waffled **Settings → Smart Home**. HA's config lives in the `ha_config` volume;
+it is **not** started by a plain `./waffled up` (no resource cost until you opt in).
+
 **Waffled → HA** (this fork): enable the *Smart Home* module (Settings → Modules),
 then Settings → Smart Home to connect your HA URL + a long-lived access token and
 pin the entities the Today card may control.

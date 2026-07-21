@@ -26,6 +26,11 @@ never talks to a cloud; it talks to your HA server, and your HA token never leav
 
 ## Connecting Home Assistant
 
+Don't run Home Assistant yet? Waffled's compose stack includes one behind an opt-in
+profile — `docker compose --profile homeassistant up -d homeassistant` on the server
+starts it at `http://<server>:8123` (config persists in the `ha_config` volume; it is
+never started by a plain `./waffled up`). Finish HA's own onboarding there first.
+
 **Settings → Smart Home** (admin-only) is the whole setup:
 
 1. Enter your **HA URL** (e.g. `http://homeassistant.local:8123`).
