@@ -11,7 +11,7 @@ describe('eventStyle', () => {
     expect(eventStyle(h())).toBe('solid')
     expect(eventStyle(h({}))).toBe('solid')
     expect(eventStyle(h({ display: {} }))).toBe('solid')
-    expect(eventStyle(h({ display: { eventStyle: 'plaid' } } as Household['settings']))).toBe('solid')
+    expect(eventStyle(h({ display: { eventStyle: 'plaid' } } as unknown as Household['settings']))).toBe('solid')
   })
 
   it('honors an explicit tinted choice', () => {
