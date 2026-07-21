@@ -37,6 +37,28 @@ describe('UpdateModal', () => {
     expect(screen.getByRole('link', { name: /how to upgrade/i }).getAttribute('href')).toContain('docs.waffled.app/operations/upgrading')
   })
 
+  it('fork build: names the fork version, drops the upgrade command for merge-upstream guidance', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/household')) return ok({ provisioned: true, household, person: adminPerson })
+      if (u.includes('/api/updates')) return ok({
+        enabled: true,
+        current: { version: '0.8.0', sha: '44b55ccd', fork: 'v0.8.0-153-g44b55ccd' },
+        latest: { tag: 'v0.9.0', url: 'https://github.com/kevinpsites/waffled/releases/tag/v0.9.0', publishedAt: null },
+        updateAvailable: true,
+      })
+      return ok({})
+    }) as unknown as typeof fetch
+    render(<UpdateModal />)
+    expect(await screen.findByText(/Waffled 0\.9\.0 is here/i)).toBeInTheDocument()
+    expect(screen.getByText(/You.re on v0\.8\.0-153-g44b55ccd \(upstream base 0\.8\.0\)/)).toBeInTheDocument()
+    // The one-command upgrade would install upstream's images over the fork — never show it.
+    expect(screen.queryByText('./waffled upgrade')).not.toBeInTheDocument()
+    expect(screen.getByText(/merging upstream/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /how to upgrade/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /view changelog/i }).getAttribute('href')).toContain('/releases/tag/v0.9.0')
+  })
+
   it('stays hidden when already up to date', async () => {
     const calls = mockApi({ admin: true, updateAvailable: false })
     render(<UpdateModal />)

@@ -39,6 +39,9 @@ export function UpdateModal() {
   const { tag, url } = info.latest
   const display = tag.replace(/^v/i, '')
   const upgradeUrl = 'https://docs.waffled.app/operations/upgrading/'
+  // A fork build must never be pointed at the one-command upgrade — it would pull
+  // upstream's published images over the fork's. The path is merging upstream.
+  const isFork = !!info.current.fork && info.current.fork !== 'dev'
 
   // "Remind me later" just closes for this session (reappears on next load);
   // the × / next-version logic remembers the tag so it won't return for this one.
@@ -57,18 +60,27 @@ export function UpdateModal() {
       <div className="modal-card upd-card">
         <button type="button" className="modal-close" aria-label="Dismiss this version" onClick={dismiss}>×</button>
         <div className="upd-badge">🧇</div>
-        <div className="upd-eyebrow">Update available</div>
+        <div className="upd-eyebrow">{isFork ? 'Upstream update available' : 'Update available'}</div>
         <h2 className="upd-title wf-serif">Waffled {display} is here</h2>
-        <div className="upd-ver">You’re on {info.current.version}</div>
+        <div className="upd-ver">You’re on {isFork ? `${info.current.fork} (upstream base ${info.current.version})` : info.current.version}</div>
 
         <div className="upd-cmd">
-          <div className="upd-cmd-l">To update, run this on the server that hosts Waffled:</div>
-          <code>./waffled upgrade</code>
+          {isFork ? (
+            <div className="upd-cmd-l">
+              This fork updates by merging upstream into it — the one-command upgrade would
+              install upstream’s images and drop the fork’s features.
+            </div>
+          ) : (
+            <>
+              <div className="upd-cmd-l">To update, run this on the server that hosts Waffled:</div>
+              <code>./waffled upgrade</code>
+            </>
+          )}
         </div>
 
         <div className="upd-actions">
           <a className="btn btn-ghost" href={url} target="_blank" rel="noopener noreferrer">View changelog</a>
-          <a className="btn btn-primary" href={upgradeUrl} target="_blank" rel="noopener noreferrer">How to upgrade</a>
+          {!isFork && <a className="btn btn-primary" href={upgradeUrl} target="_blank" rel="noopener noreferrer">How to upgrade</a>}
         </div>
         <button type="button" className="upd-later" onClick={snooze}>Remind me later</button>
       </div>
