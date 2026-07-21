@@ -352,7 +352,17 @@ merged + pushed.
 
 ## P8 — Merge upstream v0.9.0 (discovered 2026-07-21)
 
-- [ ] **Merge `upstream/main` (v0.9.0, published 2026-07-20) into fork `main`.**
+- [x] **Merge `upstream/main` (v0.9.0, published 2026-07-20) into fork `main`.**
+  - *Result (2026-07-21): merged as 80075e99 — far smaller than P1 (26 commits;
+    most of v0.9.0's features were already in via P1's merge of upstream main
+    past the v0.8.0 tag). New: goal-detail data views (web+iOS), iOS fixes, App
+    Store release. Only 3 conflicts (package.json x2 → 0.9.0 + fork engines
+    block; CHANGELOG → fork-only entries kept in [Unreleased], released entries
+    moved under upstream's [0.9.0] verbatim). No new migrations — 0102 safe.
+    Verified: tsc x2, api 919/919, web 552/552, web+docs builds, migration
+    hygiene, CI green. Live smoke after update.ps1 -Force: About reads
+    v0.9.0-63-g80075e99 · upstream base 0.9.0, feeds/Outlook/Share-list/Smart
+    Home all present, no update modal (current with upstream).*
 
 **Why:** the update checker's very first run against upstream (P4.5) found
 v0.9.0, published hours after our v0.8.0 merge landed. Same rationale as P1 —
