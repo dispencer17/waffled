@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from '
 import { useSearchParams } from 'react-router'
 import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
+import { eventStyle, type EventStyle } from '../lib/display'
 import { testWakeWord, BUILTIN_KEYWORDS } from '../lib/voice/wakeword'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
@@ -978,6 +979,12 @@ function FamilyPanel() {
     refetch()
   }
 
+  async function saveDisplay(style: EventStyle) {
+    await personsApi.setDisplay({ eventStyle: style })
+    emitHouseholdChanged() // EventStyleSync restamps the root immediately
+    refetch()
+  }
+
   return (
     <div className="set-panel">
       <div className="set-head">
@@ -1014,6 +1021,12 @@ function FamilyPanel() {
           <select className="sel" value={household.weekStart} onChange={(e) => saveHousehold({ weekStart: e.target.value })}>
             <option value="sunday">Sunday</option>
             <option value="monday">Monday</option>
+          </select>
+        </SettingRow>
+        <SettingRow icon="🎨" title="Event style" sub="How calendar events are colored">
+          <select className="sel" value={eventStyle(household)} onChange={(e) => saveDisplay(e.target.value as EventStyle)}>
+            <option value="solid">Solid colors</option>
+            <option value="tinted">Tinted</option>
           </select>
         </SettingRow>
         <SettingRow icon="🌐" title="Time zone" sub="Used for every calendar &amp; reminder">

@@ -548,6 +548,19 @@ select.cap-edit-sub { cursor: pointer; }
   color: color-mix(in srgb, var(--ev, var(--ink-3)) 55%, var(--ink));
 }
 
+/* Solid event style (household display setting, the default): chips fill with
+   the person color and flip to on-accent text. Keyed off data-ev-style on the
+   root (stamped by EventStyleSync) so the tint↔solid switch is pure CSS; the
+   --ev mechanism above is untouched. Dark mode mixes toward black so solid
+   chips keep depth against dark cards. */
+:root[data-ev-style="solid"] .ev-tint {
+  background: var(--ev, var(--ink-3));
+  color: var(--on-accent);
+}
+:root[data-ev-style="solid"][data-theme="dark"] .ev-tint {
+  background: color-mix(in srgb, var(--ev, var(--ink-3)) 82%, black);
+}
+
 /* ===== chore columns ============================================ */
 .chore-col { background: var(--card); border-radius: var(--r-lg); padding: 16px;
   display: flex; flex-direction: column; gap: 11px; box-shadow: var(--sh-2); }
