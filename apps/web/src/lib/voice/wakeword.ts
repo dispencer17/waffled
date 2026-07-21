@@ -1,19 +1,31 @@
-// Wake word (fork) — Porcupine Web WASM listening for a built-in keyword
-// (default "Computer"; pick another in Settings → Display & Kiosk → Voice).
-// The Picovoice AccessKey comes from kiosk display settings (per-install,
-// usage-metered on the free personal tier). Loaded lazily so households that
-// never enable it don't pay the WASM download.
+// Wake word (fork) — two engines behind one switch, both lazy-loaded so
+// households that never enable the toggle don't pay any WASM download:
+//  - openWakeWord (default): account-free, in-browser ONNX ("Hey Jarvis") —
+//    used whenever no Picovoice AccessKey is configured. EXPERIMENTAL — real-mic
+//    verification pending.
+//  - Porcupine: used when a Picovoice AccessKey is set (more built-in keywords,
+//    usage-metered free personal tier).
 
 type StopFn = () => Promise<void>
 
 let running: StopFn | null = null
 
 export async function startWakeWord(
-  accessKey: string,
+  accessKey: string | null,
   keyword: string,
   onWake: () => void
 ): Promise<boolean> {
   if (running) return true
+  if (!accessKey) {
+    try {
+      const { startOpenWakeWord } = await import('./openwakeword')
+      running = await startOpenWakeWord(onWake)
+      return true
+    } catch (err) {
+      console.error('openWakeWord failed to start', err)
+      return false
+    }
+  }
   try {
     const [{ PorcupineWorker, BuiltInKeyword }, { WebVoiceProcessor }] = await Promise.all([
       import('@picovoice/porcupine-web'),

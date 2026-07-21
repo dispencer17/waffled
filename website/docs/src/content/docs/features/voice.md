@@ -57,14 +57,19 @@ but open-ended **questions need an AI provider** to get an answer.
 Grocery and smart-home commands respect their modules: with [Lists](/features/lists/) or
 [Smart Home](/features/smart-home/) turned off, the assistant says so instead of acting.
 
-## Wake word: deferred 🚧
+## Wake word: experimental 🧪
 
-Hands-free "always listening" is **not shipped**. A **Wake word** toggle exists in
-**Settings → Display & Kiosk**, wired to the Porcupine engine — but it requires a Picovoice
-AccessKey (a third-party account), and it isn't a supported part of Waffled today; treat it
-as experimental plumbing. A spike of **openWakeWord** (open-source, no account, runs
-locally) is planned as the path to a real hands-free wake word. For now, voice is
-push-to-talk: tap the mic.
+Hands-free "always listening" is **experimental**. Flip the **Wake word** toggle in
+**Settings → Display & Kiosk** and the kiosk listens for **"Hey Jarvis"** using
+**openWakeWord** (Apache-2.0) — ONNX models running in the browser via `onnxruntime-web`,
+**no account or key needed**, and nothing leaves the device: the engine (~13 MB) and
+models (~3.6 MB) are served by your own Waffled and load only when the toggle is on.
+Adding a free Picovoice AccessKey switches to the Porcupine engine instead, which unlocks
+a picker of other phrases ("Computer", "Bumblebee", …).
+
+Treat it as a preview: detection quality on real kitchen audio hasn't been broadly
+verified yet, and there's no custom "Hey Waffled" phrase. If it misbehaves, turn the
+toggle off — push-to-talk is unaffected.
 
 ## Where it works
 

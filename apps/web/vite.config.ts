@@ -1,6 +1,33 @@
 /// <reference types="vitest/config" />
-import { defineConfig, type ProxyOptions } from 'vite'
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'node:fs'
+import path from 'node:path'
+
+// onnxruntime-web's wasm engine (~13 MB) is fetched at runtime from /ort/ when the
+// openWakeWord engine starts (see lib/voice/openwakeword.ts). Emit it from
+// node_modules into the build — self-hosted, no third-party CDN, nothing that
+// heavy committed to git. configureServer covers `npm run dev`.
+const ORT_FILES = ['ort-wasm-simd-threaded.wasm', 'ort-wasm-simd-threaded.mjs']
+function ortWasmAssets(): Plugin {
+  const dist = path.resolve(__dirname, 'node_modules/onnxruntime-web/dist')
+  return {
+    name: 'ort-wasm-assets',
+    generateBundle() {
+      for (const f of ORT_FILES) {
+        this.emitFile({ type: 'asset', fileName: `ort/${f}`, source: fs.readFileSync(path.join(dist, f)) })
+      }
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const m = /^\/ort\/([\w.-]+)$/.exec(req.url ?? '')
+        if (!m || !ORT_FILES.includes(m[1])) return next()
+        res.setHeader('content-type', m[1].endsWith('.wasm') ? 'application/wasm' : 'text/javascript')
+        fs.createReadStream(path.join(dist, m[1])).pipe(res)
+      })
+    },
+  }
+}
 
 // Proxy /api to the local api container so the SPA and api share an origin (no
 // CORS), exactly like Caddy does in the stack. We forward the browser's host +
@@ -30,7 +57,7 @@ const apiProxy: Record<string, ProxyOptions> = {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), ortWasmAssets()],
   // @powersync/web ships its own SQLite WASM + worker; pre-bundling breaks them,
   // so exclude it from Vite's dep optimizer (PowerSync's documented Vite setup).
   optimizeDeps: { exclude: ['@powersync/web'] },

@@ -78,8 +78,9 @@ export function VoiceHud() {
     kioskApi
       .displayConfig()
       .then((cfg) => {
-        if (!alive || !cfg.voice?.wakeWord || !cfg.voice.picovoiceKey) return
-        void startWakeWord(cfg.voice.picovoiceKey, cfg.voice.keyword || 'Computer', () => {
+        if (!alive || !cfg.voice?.wakeWord) return
+        // No Picovoice key → the account-free openWakeWord engine ("Hey Jarvis").
+        void startWakeWord(cfg.voice.picovoiceKey ?? null, cfg.voice.keyword || 'Computer', () => {
           speak('Yes?')
           void runOnce()
         })

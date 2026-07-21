@@ -246,7 +246,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Heuristic fallback** (offline / no provider / provider defers) | ✅ | ✅ | ✅ | ✅ Done (on-device `CaptureHeuristic` — capture works with no server; ported from web `parse.ts`, kept in sync) |
 | Household-local "now" + family names for resolution | ✅ | ✅ | ✅ | ✅ Done |
 | Server-side **fuzzy person resolution** (nicknames/aliases) | 🚧 | 🚧 | 🚧 | 🚧 Planned (6.6-names) |
-| **Push-to-talk voice** on the capture bar — local Whisper or OpenAI STT; timers ring on the kiosk, groceries land on the list, pinned smart-home devices respond, questions get spoken answers | ✅ | ⬜ | ⬜ | ✅ Done (web kiosk; hands-free wake word deferred — [voice guide](/features/voice/)) |
+| **Push-to-talk voice** on the capture bar — local Whisper or OpenAI STT; timers ring on the kiosk, groceries land on the list, pinned smart-home devices respond, questions get spoken answers | ✅ | ⬜ | ⬜ | ✅ Done (web kiosk; experimental account-free wake word "Hey Jarvis" via in-browser openWakeWord — [voice guide](/features/voice/)) |
 
 ## Notifications
 

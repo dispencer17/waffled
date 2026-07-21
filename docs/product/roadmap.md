@@ -177,7 +177,8 @@ fork on top of the upstream feature set above:
   10 minutes", "add milk to the grocery list", "turn off the kitchen lights" — timers
   ring on the kiosk, groceries land on the list, pinned smart-home devices respond, and
   questions get short spoken answers. Speech-to-text through your own Whisper container
-  or OpenAI, your choice. The always-listening wake word is **deferred** (see Planned).
+  or OpenAI, your choice. An **experimental account-free wake word** ("Hey Jarvis" via
+  in-browser openWakeWord) shipped 2026-07-21 — real-mic verification still open (see Planned).
 - **Appearance rides the sun** — the **Follow the sun** theme choice and the eight color
   themes in the dark-mode entry above are fork additions, and kiosk night dimming gained
   a **Sunset to sunrise** mode that tracks the seasons (with real screen-backlight
@@ -361,13 +362,13 @@ fork on top of the upstream feature set above:
   ("make it vegetarian", "double it").
 - **Shared album import** for Photos (Google Photos / iCloud).
 - **Server-side fuzzy person resolution** for capture (nicknames/aliases).
-- **Kiosk wake word ("always listening") — fork, deferred.** Push-to-talk voice shipped
-  (see the fork additions under Done); the hands-free wake word has a toggle + a Porcupine
-  (Picovoice) path wired into Display & Kiosk, but it needs a per-install Picovoice
-  AccessKey and that signup was deferred (it wants a company email). An **openWakeWord**
-  spike (Apache-2.0, runs locally, no account — ONNX models in-browser via
-  `onnxruntime-web`) is queued to replace the Picovoice dependency
-  ([`BACKLOG.md`](../../BACKLOG.md) P6). Until then, voice is push-to-talk only.
+- **Kiosk wake word — verify + harden the experimental engine (fork).** The openWakeWord
+  spike shipped (2026-07-21): flipping the Display & Kiosk toggle with no Picovoice key now
+  runs "Hey Jarvis" detection fully in-browser (Apache-2.0 ONNX models via
+  `onnxruntime-web`, no account, ~1 ms per 80 ms audio chunk). What remains: real-microphone
+  verification on the kitchen tablet (headless dev can't test a mic), threshold tuning on
+  real kitchen audio, and a custom "Hey Waffled" phrase (needs openWakeWord's training
+  pipeline). The Porcupine path still works when a Picovoice AccessKey is set.
 - **Milestone reward payouts** — deferred by design (needs idempotency + attribution rules).
 - **Goal weekly check-in (Sunday recap)** — the goal-editor mock shows a "🔔 Weekly check-in"
   toggle, but there's no backend for it (it's a decorative, unpersisted toggle in the web

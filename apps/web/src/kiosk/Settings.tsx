@@ -3238,7 +3238,7 @@ function DisplayKioskPanel() {
           </SettingCard>
 
           <SettingCard style={{ marginTop: 16 }}>
-            <SettingRow icon="🎙️" title="Wake word" sub="Hands-free voice on this kiosk — say the wake word, then ask for timers, groceries, lights, or your day. Needs a free Picovoice AccessKey (picovoice.ai) and a microphone.">
+            <SettingRow icon="🎙️" title="Wake word" sub="Hands-free voice on this kiosk (experimental) — say the wake word, then ask for timers, groceries, lights, or your day. Works out of the box with the built-in “Hey Jarvis” (no account); add a free Picovoice AccessKey for more phrases. Needs a microphone.">
               <button
                 type="button"
                 role="switch"
@@ -3250,7 +3250,7 @@ function DisplayKioskPanel() {
             </SettingRow>
             {(cfg.voice ?? VOICE_DEFAULTS).wakeWord && (
               <>
-                <SettingRow icon="🔑" title="Picovoice AccessKey" sub="From console.picovoice.ai — free personal tier. Served to this kiosk's browser.">
+                <SettingRow icon="🔑" title="Picovoice AccessKey (optional)" sub="Leave empty to use the built-in account-free engine (“Hey Jarvis”). A key from console.picovoice.ai (free personal tier) unlocks the phrase picker below.">
                   <input
                     type="password"
                     className="set-inline-input"
@@ -3260,7 +3260,7 @@ function DisplayKioskPanel() {
                     aria-label="Picovoice AccessKey"
                   />
                 </SettingRow>
-                <SettingRow icon="🗣️" title="Wake word phrase" sub="Built-in Porcupine keywords; a custom phrase needs a model trained on the Picovoice console.">
+                <SettingRow icon="🗣️" title="Wake word phrase" sub="With a Picovoice key: built-in Porcupine keywords (a custom phrase needs a model trained on the Picovoice console). Without one, the phrase is “Hey Jarvis”.">
                   <select className="sel" value={(cfg.voice ?? VOICE_DEFAULTS).keyword} onChange={(e) => updateVoice({ keyword: e.target.value })} aria-label="Wake word phrase">
                     {['Computer', 'Jarvis', 'Bumblebee', 'Porcupine', 'Blueberry', 'Grasshopper', 'Terminator'].map((k) => (
                       <option key={k} value={k}>{k}</option>

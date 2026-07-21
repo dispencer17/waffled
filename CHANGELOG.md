@@ -78,9 +78,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for 10 minutes", "add milk to the grocery list", or "turn off the kitchen lights" — timers ring
   on the kiosk, groceries land on the list, pinned smart-home devices respond, and questions get
   short spoken answers. Speech-to-text runs through your own Whisper container or OpenAI —
-  your choice, set on the server. (A hands-free wake word is deferred: the Display & Kiosk
-  toggle is experimental plumbing that needs a Picovoice key; an account-free engine is
-  being evaluated.)
+  your choice, set on the server.
+- **Hands-free "Hey Jarvis" — no account needed (experimental).** The Display & Kiosk
+  **Wake word** toggle now works out of the box: with no Picovoice key set, the kiosk
+  listens for "Hey Jarvis" using openWakeWord — open-source ONNX models running inside the
+  browser, served entirely by your own Waffled (nothing goes to a third party, ~17 MB
+  downloaded only when the toggle is on). Adding a free Picovoice AccessKey still switches
+  to Porcupine and its phrase picker. Experimental: real-kitchen microphone verification is
+  still pending — if it misbehaves, turn the toggle off; push-to-talk is unaffected.
 - **Waffled installs like an app on Android phones.** The web app is now a proper installable
   PWA in portrait — install it from Chrome's menu (or the new prompt in Settings → About), get
   home-screen shortcuts for Today, the grocery list, and the calendar, and an offline page when the server is
