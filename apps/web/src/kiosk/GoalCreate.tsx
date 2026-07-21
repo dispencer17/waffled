@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTopbarFull } from './topbar-slot'
 import { api, useGoalLists, useGoalDetail, useHousehold, can, type GoalList } from '../lib/api'
 import { CATEGORIES, CATEGORY_KEYS } from './categories'
+import { availableViews, classifyTimeframe } from '../lib/goalStats'
+import { VIEW_LABEL } from './goalViews/GoalDataViews'
 import { ListModal } from './components/ListModal'
 import './../styles/goals.css'
 
@@ -483,6 +485,19 @@ export function GoalCreate() {
                 </button>
               ))}
             </div>
+
+            {/* Which data views the detail page will offer for this shape of goal —
+                the same gating GoalDataViews applies (type × timeframe), so nobody
+                wonders where the Year ring went on a two-week habit. New goals
+                start today, so today-vs-deadline approximates the window. */}
+            {!isChecklist && (
+              <div className="ge-sec-h" style={{ marginTop: 10 }}>
+                Progress views:{' '}
+                {availableViews(form.goalType, classifyTimeframe(new Date().toISOString().slice(0, 10), form.deadline || null))
+                  .map((v) => VIEW_LABEL[v])
+                  .join(' · ')}
+              </div>
+            )}
 
             {isChecklist ? (
               // Checklist: three EMPTY step fields — nothing prefilled.

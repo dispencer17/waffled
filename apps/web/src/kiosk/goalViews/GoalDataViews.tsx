@@ -18,7 +18,7 @@ import { CollectionGrid } from './CollectionGrid'
 import { ConsistencyCalendar } from './ConsistencyCalendar'
 import type { DataViewProps } from './types'
 
-const VIEW_LABEL: Record<ViewKey, string> = {
+export const VIEW_LABEL: Record<ViewKey, string> = {
   week: 'Week',
   month: 'Month',
   pace: 'Pace',

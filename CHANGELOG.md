@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The goal editor tells you which progress views you'll get.** As you pick a goal's
+  type and deadline, a "Progress views" line updates live — so it's clear up front that
+  the Year ring belongs to long-running total goals, a habit gets its Consistency
+  calendar, and a two-week goal skips the calendar-scale views. No more creating a goal
+  and wondering where a view went.
 - **Home Assistant, one command away.** The compose stack now ships an optional
   `homeassistant` profile: `docker compose --profile homeassistant up -d homeassistant`
   starts a full Home Assistant on the same box (config kept in its own volume), ready for
@@ -108,6 +113,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
+- **The Live Sync card no longer reads "off" while the engine is just booting.** The
+  sync engine takes a few seconds to start on every page load, and the System Health
+  card used to call that window "off — reading over REST" — indistinguishable from a
+  crashed engine. It now shows "starting…" during boot, and if the engine genuinely
+  fails to start it says "failed to start" **with the actual error**, so a glance tells
+  you whether to wait, or what broke.
 - **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
   sync replica stops updating (or never finished its first sync), the calendar now falls
   back to reading straight from the server instead of trusting the stale/empty local copy —

@@ -18,6 +18,14 @@ Goals turn intentions into visible progress. Track **count**, **total**, **habit
 - 🕰️ **Backdated logs** — a **"When?"** picker so yesterday's run still counts.
 - 🏁 **Milestones** — per-type thresholds with an emoji, label, and reward text; checklists get **named steps**.
 - 🔍 **Goal detail** — a milestone track, hours-by-person, streaks, and recent activity.
+- 📈 **Swappable data views** — the detail page offers visualizations that fit the goal's
+  **type and window**: a *total* goal that runs a month or longer (or open-ended) gets the
+  full set — Week · Month · Year · Pace · **Year ring** · By person; a *count* goal gets
+  Month · Pace · Collection; a *habit* gets Consistency · Week; a checklist tracks by its
+  steps instead. Goals with a window under ~a month drop the calendar-scale views. The
+  goal editor shows a **"Progress views:"** line as you pick the type and deadline, so you
+  know up front which views that goal will offer — if you want the Year ring, make it a
+  total-type goal with a long (or no) deadline.
 - 👤 **Person profile + Family overview** — see one person's goals or the whole household at a glance.
 - 📅 **Calendar auto-count** — a single-event recap, smart **"might count toward a goal"** suggestions that learn over time, and recurring-event counting (via Calendar's **"counts toward a goal"** tag).
 - ❤️ **Apple Health auto-fill (iPhone)** — link a goal to steps, exercise, mindful minutes, your Apple Watch rings, or your mood and progress fills itself, including days you didn't open the app. See [Apple Health → goals](/features/apple-health/).
