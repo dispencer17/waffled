@@ -250,6 +250,34 @@ export async function updateModules(
   return rows[0] ?? null
 }
 
+// Merge display preferences into settings.display (jsonb merge so sibling
+// settings keys are preserved). Only validated keys reach here.
+export async function updateDisplay(
+  householdId: string,
+  patch: Record<string, string>
+): Promise<HouseholdRow | null> {
+  if (Object.keys(patch).length === 0) {
+    const { rows } = await query<HouseholdRow>(`select * from households where id = $1`, [householdId])
+    return rows[0] ?? null
+  }
+  const { rows } = await query<HouseholdRow>(
+    `update households
+        set settings = jsonb_set(
+          coalesce(settings, '{}'::jsonb),
+          '{display}',
+          coalesce(settings->'display', '{}'::jsonb) || $2::jsonb
+        )
+      where id = $1
+      returning *`,
+    [householdId, JSON.stringify(patch)]
+  )
+  return rows[0] ?? null
+}
+
+// How event chips render across the calendar views: 'solid' (full person-color
+// blocks, the default) or 'tinted' (the soft wash).
+const EVENT_STYLES = new Set(['solid', 'tinted'])
+
 export function registerPersonRoutes(api: Api): void {
   // Household settings: the household + its members (with login/owner flags).
   api.get('/api/household/settings', tenantRoute((tenant) => householdSettings(tenant.householdId)))
@@ -305,6 +333,25 @@ export function registerPersonRoutes(api: Api): void {
     const h = await updateModules(tenant.householdId, patch)
     if (!h) return res.status(404).json({ error: 'NotFound', message: 'household not found' })
     return { modules: (h.settings as { modules?: unknown })?.modules ?? {} }
+  }))
+
+  // Display preferences (admins only). Stored in settings.display; today just
+  // eventStyle — how event chips color across the calendar views.
+  api.patch('/api/household/display', adminRoute(async (tenant, req: Request, res: Response) => {
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const patch: Record<string, string> = {}
+    if (body.eventStyle !== undefined) {
+      if (typeof body.eventStyle !== 'string' || !EVENT_STYLES.has(body.eventStyle)) {
+        return res.status(400).json({ error: 'BadRequest', message: 'eventStyle must be solid|tinted' })
+      }
+      patch.eventStyle = body.eventStyle
+    }
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'BadRequest', message: 'no valid display settings provided' })
+    }
+    const h = await updateDisplay(tenant.householdId, patch)
+    if (!h) return res.status(404).json({ error: 'NotFound', message: 'household not found' })
+    return { display: (h.settings as { display?: unknown })?.display ?? {} }
   }))
 
   // List everyone in the household (any member may read).

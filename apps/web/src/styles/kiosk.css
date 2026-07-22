@@ -289,6 +289,14 @@ body {
   font-weight: 700;
   font-size: 13px;
 }
+/* Live drag (long-press a card on the board — no Customize needed): while a
+   card is lifted, the columns read as drop zones. */
+.today-board.dragging .today-col {
+  outline: 1.5px dashed var(--hair);
+  outline-offset: 4px;
+  border-radius: var(--r-lg);
+}
+
 /* Insertion indicator between cards while dragging. */
 .today-drop-line {
   height: 3px;

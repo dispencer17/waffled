@@ -6,6 +6,7 @@ import { SyncHealthBanner } from './components/SyncHealthBanner'
 import { UpdateModal } from './components/UpdateModal'
 import { VoiceHud } from './components/VoiceHud'
 import { Timers } from './components/Timers'
+import { EventStyleSync } from './components/EventStyleSync'
 import { TopbarSlotProvider } from './topbar-slot'
 import '../styles/kiosk-profiles.css'
 
@@ -15,6 +16,7 @@ import '../styles/kiosk-profiles.css'
 export function KioskLayout() {
   return (
     <TopbarSlotProvider>
+      <EventStyleSync />
       <div className="wf-kiosk wf">
         <Rail />
         <div className="kiosk-main">

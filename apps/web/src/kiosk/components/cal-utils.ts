@@ -38,6 +38,13 @@ export function startOfWeek(d: Date): Date {
   return addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -d.getDay())
 }
 
+// Week-start-aware variant: the household's `weekStart` setting decides whether
+// the week begins Sunday (default) or Monday.
+export function startOfWeekFor(d: Date, weekStart?: string | null): Date {
+  const back = weekStart === 'monday' ? (d.getDay() + 6) % 7 : d.getDay()
+  return addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -back)
+}
+
 // "4:00 PM" / "4:30 PM"; "all day" for all-day events.
 export function fmtTime(e: AgendaEvent): string {
   if (e.allDay) return 'all day'
@@ -46,6 +53,17 @@ export function fmtTime(e: AgendaEvent): string {
   const m = d.getMinutes()
   const ap = h < 12 ? 'AM' : 'PM'
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`
+}
+
+// "1p" / "1:30p" / "all day" — the compact time label on the Week calendar
+// card's event blocks (space is tight in a 7-column card).
+export function fmtTimeShort(e: Pick<AgendaEvent, 'allDay' | 'startsAt'>): string {
+  if (e.allDay) return 'all day'
+  const d = new Date(e.startsAt)
+  const h = d.getHours()
+  const m = d.getMinutes()
+  const ap = h < 12 ? 'a' : 'p'
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''}${ap}`
 }
 
 // "7 AM", "12 PM" — the week-view hour rail.

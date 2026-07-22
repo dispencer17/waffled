@@ -71,8 +71,10 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 
 | Feature | Web / Kiosk | iPhone | iPad | Status |
 | --- | :---: | :---: | :---: | --- |
-| Today cards: agenda · tonight's meal · this week · chores · grocery | ✅ | ✅ | ✅ | ✅ Done (iPad = distinct 3-column `KioskDashboard`) |
+| Today cards: agenda · tonight's meal · this week · chores · grocery · **week calendar** | ✅ | ✅ | ✅ | ✅ Done (iPad = distinct 3-column `KioskDashboard`; week-calendar card is web-only for now) |
 | **Customize** mode — drag to reorder + **× to hide** cards (hidden collect in a tray to add back) | ✅ | ✅ | 🟡 | ✅ Done (web + iPhone reorder + hide; a hidden card stays hidden even for module cards; iPad uses layout presets) |
+| **Live drag** — long-press a card on the board to lift and rearrange, saves your personal layout on drop (no Customize needed) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **Week calendar card** — 7 day columns (household week start), today ringed, events as solid person-color blocks, tap to open | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | iPad Today **layout presets** (Balanced / Agenda / Meals / **Goal-focused**) | 🟡 | ❌ N/A | ✅ | ✅ Done (iPad-only; Goal-focused features a goal big + tonight's dinner) |
 | Save layout **for me** (per-user, incl. which cards are hidden) vs **for everyone** (family default) | ✅ | ✅ | 🟡 | ✅ Done (iPad layout is device-local) |
 | **Goals card** on Today — a chosen goal's progress with a **My spotlight / Family spotlight / specific goal** picker (grouped by list) | ✅ | ✅ | 🟡 | ✅ Done (web + iPhone; iPad Goal-focused preset shows a goal big) |
@@ -87,6 +89,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | Native events (create / edit / delete) | ✅ | ✅ | ✅ | ✅ Done |
 | **Multiple participants** per event (stacked avatars, per-person color) | ✅ | ✅ | ✅ | ✅ Done |
 | Views: **Month / Week / Day / Agenda** | ✅ | ✅ | ✅ | ✅ Done (iPad = `KioskCalendarView` grids) |
+| **Event style** household setting — **Solid** person-color chips (default) vs the softer **Tinted** wash, Settings → Family | ✅ | ❌ | ❌ | ✅ Done (web/kiosk; admin-only setting, applies household-wide) |
 | **Current-time "now" line** on the time grid (Week/Day) | ✅ | ✅ | ✅ | ✅ Done (live red rule; iPhone Day + iPad Week/Day) |
 | Month cells show **event titles** (tap a day for times) | ✅ | ✅ | ✅ | ✅ Done |
 | Agenda **dims past events** | ✅ | ✅ | — | ✅ Done — the Calendar agenda **and** the Today dashboard's agenda card fade already-ended events (web + iPhone) |

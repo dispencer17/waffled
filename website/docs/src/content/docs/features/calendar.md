@@ -81,6 +81,10 @@ plan B when a workplace won't approve calendar OAuth access.
 ## Settings
 - **Settings → Calendars** — connect Google or Outlook, add calendar feeds, set
   each person's **write-target** calendar, and **"sync now"**.
+- **Settings → Family → Event style** (admins, web) — how event chips are colored
+  across the Month/Week/Day views: **Solid colors** (the default — full
+  person-color blocks with readable text, maximum at-a-glance color) or
+  **Tinted** (the softer pale wash). Applies to the whole household, instantly.
 - **Household settings** — week start, timezone, and location (which also feeds
   weather). Provider sync and feed polling run **server-side**, on a schedule.
 

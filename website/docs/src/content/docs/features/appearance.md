@@ -72,8 +72,11 @@ Everything else — the **coral** primary, the **gold** stars, the **violet** AI
 family member's **personal color** — stays exactly the same in both themes. That's deliberate:
 keeping the accent hues fixed is what makes the app still feel like Waffled with the lights off.
 
-Calendar event chips adapt too: their text is mixed toward the theme's ink — richer and darker
-on light, a bright pastel on dark — so every person's events stay readable in both modes.
+Calendar event chips adapt too. In the default **Solid** event style they fill with the
+person's color (mixed slightly toward black in dark mode so they keep depth); in the
+**Tinted** style (Settings → Family → Event style) their text is mixed toward the theme's
+ink — richer and darker on light, a bright pastel on dark. Either way, every person's
+events stay readable in both modes.
 
 ## Where it works
 | Surface | Support |
