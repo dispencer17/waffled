@@ -65,7 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - **Web routing dependencies now include current security patches.** React Router
-  is updated to 7.18.1 to clear the production dependency audit.
+  is updated to 8.3.0, which clears the last outstanding advisory against the web
+  app's production dependencies. The advisory itself (a CSRF bypass in React
+  Router's experimental React Server Components paths) never affected Waffled —
+  the web app uses plain client-side routing and has no server-component surface —
+  but no fix was published for the 7.x line, so clearing the audit means moving to
+  8.x. React and React DOM move to 19.2 alongside it, as React Router 8 requires
+  them. No behaviour changes.
 
 ## [0.12.0] - 2026-07-23
 

@@ -66,7 +66,7 @@ describe('Reward Shop', () => {
     // Affordable treat → a "Get it" button.
     const ice = await screen.findByText('Ice cream')
     const iceTile = ice.closest('.shop-tile') as HTMLElement
-    expect(within(iceTile).getByRole('button', { name: /get it/i })).toBeInTheDocument()
+    expect(await within(iceTile).findByRole('button', { name: /get it/i })).toBeInTheDocument()
 
     // Unaffordable adventure → locked: shows "N more to unlock", no Get.
     const park = screen.getByText('Theme park')
@@ -102,7 +102,7 @@ describe('Reward Shop', () => {
     const ice = await screen.findByText('Ice cream')
     const iceTile = ice.closest('.shop-tile') as HTMLElement
 
-    fireEvent.click(within(iceTile).getByRole('button', { name: /get it/i }))
+    fireEvent.click(await within(iceTile).findByRole('button', { name: /get it/i }))
     // confirm sheet
     const confirm = await screen.findByRole('button', { name: /redeem it/i })
     fireEvent.click(confirm)
