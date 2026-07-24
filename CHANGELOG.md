@@ -56,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   elsewhere, and the "Stay cozy until…" line on the left, the countdown ring on the
   right. The grown-up-controls tiles are now compact and vertically centered instead
   of stretched to fill the screen's height, matching the mock's proportions.
+- **Waffled-Bite device: the "Set a timer" countdown now matches quiet time's split
+  layout.** The countdown ring is bigger and moved to the left, with the "Timer
+  running" title and End-timer button on the right, instead of a single stacked
+  column — the same split-row treatment as the quiet-time screen above, mirrored.
 
 ### Fixed
 

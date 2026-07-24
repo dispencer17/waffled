@@ -205,7 +205,13 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
     fixed in a later milestone** (it now force-navigates on the same active/inactive
     edge quiet time does, while staying exitable). Parent web app gained a matching "Set
     a timer" card (`WaffledBiteDevice.tsx`) with presets + custom length + pause/+5/end,
-    same shape as the existing Quiet time card.
+    same shape as the existing Quiet time card. **Countdown layout reworked to match
+    quiet time's split mock** (later still, direct request): was a single centered
+    column (title above the ring, matching quiet time's own earlier layout); now a
+    split row — the ring on the **left** (sized up 220 -> 260, since it's the only
+    thing on that side, unlike quiet time's ring which shares its side with nothing),
+    the "Timer running" title + End-timer button stacked on the right. Deliberately
+    mirrored left/right from quiet time's ring-on-the-right, per the request.
   - **Bedtime** (`src/ui/bedtime_screen.cpp`) — deliberately NOT a routine or countdown:
     just a full-screen preview of the nightlight at its actual configured color and
     brightness, so a kid (or parent) can see what the room will actually look like. No new

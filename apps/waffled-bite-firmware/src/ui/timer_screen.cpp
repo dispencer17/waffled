@@ -276,18 +276,23 @@ static void wb_timer_end_clicked_cb(lv_event_t *e)
 
 static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbTimerState &timer, WbTimerEndCallback onEnd)
 {
-  lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-  lv_obj_t *title = lv_label_create(parent);
-  lv_label_set_text(title, "Timer running");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
-  lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
+  // Split layout — big countdown ring on the left, title + End button on the
+  // right — same split-row shape as quiet_screen.cpp's updated mock
+  // (wb_build_quiet_screen), mirrored left/right (quiet's ring is on the
+  // right) and the ring sized up (220 -> 260) per request.
+  lv_obj_t *content_row = lv_obj_create(parent);
+  lv_obj_remove_style_all(content_row);
+  lv_obj_set_size(content_row, lv_pct(100), LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(content_row, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(content_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_flex_grow(content_row, 1);
+  lv_obj_clear_flag(content_row, LV_OBJ_FLAG_SCROLLABLE);
 
   int durationSec = timer.durationSec > 0 ? timer.durationSec : 1;
   int remainingSec = timer.remainingSec > 0 ? timer.remainingSec : 0;
 
-  lv_obj_t *arc = lv_arc_create(parent);
-  lv_obj_set_size(arc, 220, 220);
+  lv_obj_t *arc = lv_arc_create(content_row);
+  lv_obj_set_size(arc, 260, 260);
   lv_arc_set_rotation(arc, 270);
   lv_arc_set_bg_angles(arc, 0, 360);
   lv_arc_set_range(arc, 0, durationSec);
@@ -307,7 +312,20 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   lv_obj_set_style_text_color(time_lbl, WB_COLOR_INK, 0);
   lv_obj_center(time_lbl);
 
-  lv_obj_t *end_btn = lv_obj_create(parent);
+  lv_obj_t *right_col = lv_obj_create(content_row);
+  lv_obj_remove_style_all(right_col);
+  lv_obj_set_size(right_col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(right_col, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(right_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+  lv_obj_set_style_pad_row(right_col, 24, 0);
+  lv_obj_clear_flag(right_col, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t *title = lv_label_create(right_col);
+  lv_label_set_text(title, "Timer running");
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
+
+  lv_obj_t *end_btn = lv_obj_create(right_col);
   lv_obj_remove_style_all(end_btn);
   lv_obj_set_size(end_btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(end_btn, WB_COLOR_TILE_ACTIVE, 0);
