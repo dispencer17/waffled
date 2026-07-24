@@ -54,6 +54,16 @@ function renderShop() {
   return render(<MemoryRouter><RewardsPanel /></MemoryRouter>)
 }
 
+// The panel hangs off four independent fetches, and they land in no fixed order:
+// /api/rewards fills the grid, /api/balances decides which tiles are affordable, and
+// /api/persons/:id/overview only fires *after* balances (the active kid is derived
+// from the roster). So "Ice cream is on screen" does NOT mean the tiles know the
+// wallet balance yet — asserting affordability synchronously after it reads a tile
+// mid-load. Waiting for the saving-toward panel is the one signal that implies the
+// whole balances → active kid → overview chain has settled.
+const shopGrid = () => document.querySelector('.shop-grid') as HTMLElement
+const settled = () => screen.findByText(/to go — keep earning/i)
+
 beforeEach(() => {
   vi.restoreAllMocks()
 })
@@ -62,14 +72,16 @@ describe('Reward Shop', () => {
   it('locks a reward the active kid can’t afford (progress, no Get) and offers Get on affordable ones', async () => {
     mockApi(me([]))
     renderShop()
+    await settled()
 
     // Affordable treat → a "Get it" button.
-    const ice = await screen.findByText('Ice cream')
+    const ice = within(shopGrid()).getByText('Ice cream')
     const iceTile = ice.closest('.shop-tile') as HTMLElement
-    expect(await within(iceTile).findByRole('button', { name: /get it/i })).toBeInTheDocument()
+    expect(within(iceTile).getByRole('button', { name: /get it/i })).toBeInTheDocument()
 
     // Unaffordable adventure → locked: shows "N more to unlock", no Get.
-    const park = screen.getByText('Theme park')
+    // Scope to the grid — "Theme park" is also the saving-toward reward.
+    const park = within(shopGrid()).getByText('Theme park')
     const parkTile = park.closest('.shop-tile') as HTMLElement
     expect(parkTile.className).toMatch(/locked/)
     expect(within(parkTile).getByText(/12 more to unlock/i)).toBeInTheDocument()
@@ -79,9 +91,9 @@ describe('Reward Shop', () => {
   it('filters the grid by category chip', async () => {
     mockApi(me([]))
     renderShop()
-    await screen.findByText('Ice cream')
+    await settled()
     // scope to the grid — "Theme park" also appears in the saving-toward panel
-    const grid = () => document.querySelector('.shop-grid') as HTMLElement
+    const grid = shopGrid
     expect(within(grid()).getByText('Theme park')).toBeInTheDocument()
 
     // Pick the Treats chip → only the treat remains in the grid.
@@ -99,10 +111,11 @@ describe('Reward Shop', () => {
   it('redeeming an affordable reward opens the celebration for the active kid', async () => {
     mockApi(me([]))
     renderShop()
-    const ice = await screen.findByText('Ice cream')
+    await settled()
+    const ice = within(shopGrid()).getByText('Ice cream')
     const iceTile = ice.closest('.shop-tile') as HTMLElement
 
-    fireEvent.click(await within(iceTile).findByRole('button', { name: /get it/i }))
+    fireEvent.click(within(iceTile).getByRole('button', { name: /get it/i }))
     // confirm sheet
     const confirm = await screen.findByRole('button', { name: /redeem it/i })
     fireEvent.click(confirm)
@@ -126,7 +139,10 @@ describe('Reward Shop', () => {
   it('hides "Award stars" from someone without reward.grant', async () => {
     mockApi(me([]))
     renderShop()
-    await screen.findByText('Ice cream')
+    // Let the panel finish loading before asserting an absence, or this passes
+    // vacuously against a half-rendered shop. The preceding test is the positive
+    // control: with reward.grant, the button does render.
+    await settled()
     expect(screen.queryByRole('button', { name: /award stars/i })).not.toBeInTheDocument()
   })
 })
