@@ -29,6 +29,7 @@
 #include "ui/timer_screen.h"
 #include "ui/bedtime_screen.h"
 #include "ui/offline_screen.h"
+#include "ui/forget_confirm_screen.h"
 #include "icons/wb_icons.h"
 #include <ArduinoJson.h>
 #include <string>
@@ -220,15 +221,20 @@ static void wb_mark_poll_failed()
     // Force onto offline_scr so device-initiated actions (which all need a
     // live request — starting a timer, completing a chore...) don't just
     // silently fail with no explanation, same "confirmed live" story as the
-    // freeze fix above. Never preempt a parent-forced lock (quiet time, or
-    // bedtime's Sleep/Warn/Wake claim) though — that would hand a kid a
-    // "Change Wi-Fi/go to Settings" way OUT of a lock just by taking the
-    // device offline on purpose. Only fires on the edge into offline
-    // (streak == threshold, not every miss after) and only if not already
-    // showing it.
-    bool locked = lv_screen_active() == quiet_scr ||
-                  (lv_screen_active() == bedtime_scr && g_bedtimeClaim != WbBedtimeClaim::Preview);
-    if (g_pollFailStreak == WB_OFFLINE_AFTER_MISSES && !locked && lv_screen_active() != offline_scr)
+    // freeze fix above. Re-asserted on EVERY offline poll (not just the
+    // first edge into the state) — confirmed live: backing out to another
+    // screen while still offline used to just quietly stay there forever
+    // instead of coming back. Never preempt a parent-forced lock (quiet
+    // time, or bedtime's Sleep/Warn/Wake claim) — that would hand a kid a
+    // way OUT of a lock just by taking the device offline on purpose — and
+    // never yank someone off a screen they're actively mid-recovery on
+    // (the WiFi picker, onboarding, or the forget-pairing confirm screen
+    // offline_scr's own buttons lead to) or off offline_scr itself.
+    lv_obj_t *active = lv_screen_active();
+    bool locked = active == quiet_scr ||
+                  (active == bedtime_scr && g_bedtimeClaim != WbBedtimeClaim::Preview);
+    bool inRecoveryFlow = active == wifi_scr || active == onboarding_scr || active == forget_scr || active == offline_scr;
+    if (!locked && !inRecoveryFlow)
       lv_scr_load(offline_scr);
   }
 }
@@ -722,7 +728,17 @@ static void wb_enter_app()
   wb_build_offline_screen(
       offline_scr, settings_scr, []()
       { wb_do_poll(); }, // manual retry — don't wait for a possibly-30s-backed-off scheduled poll
-      wb_show_wifi_picker);
+      wb_show_wifi_picker,
+      []()
+      {
+        // Same clean+build+load forget_scr does from Settings' 5-tap
+        // gesture (settings_screen.cpp's WbGrownupTapCtx) — forget_scr has
+        // no content of its own until something builds it, same
+        // never-built-until-tapped shape as detail_scr/tasks_scr.
+        lv_obj_clean(forget_scr);
+        wb_build_forget_confirm_screen(forget_scr, settings_scr, wb_forget_pairing_and_unpair);
+        lv_scr_load(forget_scr);
+      });
 
   lv_scr_load(home_scr);
 

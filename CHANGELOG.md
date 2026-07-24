@@ -38,10 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checking off a chore, and every other on-device action needs to reach your Waffled
   server — while it can't, those taps used to just silently do nothing. The device now
   shows a plain "Can't reach the server" screen with a Try again button, a way to change
-  Wi-Fi networks, and a way to reach Settings — instead of a dead tap with no
-  explanation. It automatically goes away again the moment the device is back online.
-  (It never interrupts quiet time or a bedtime lock, so it can't be used as a way to
-  escape one by taking the device offline on purpose.)
+  Wi-Fi networks, a way to change the server address directly, and a way to reach
+  Settings — instead of a dead tap with no explanation. It keeps coming back to this
+  screen while the device stays offline (it won't just quietly stay wherever you
+  navigated to), and goes away on its own the moment the device is back online. (It
+  never interrupts quiet time or a bedtime lock, and it won't pull you off the Wi-Fi
+  picker or the change-address screen while you're actively using them.)
 
 ### Changed
 
