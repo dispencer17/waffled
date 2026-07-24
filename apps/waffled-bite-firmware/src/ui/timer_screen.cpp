@@ -317,11 +317,16 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   lv_obj_set_style_text_color(time_lbl, WB_COLOR_INK, 0);
   lv_obj_center(time_lbl);
 
+  // Cross-axis CENTER (was START) per request — "Timer running"/"End timer"
+  // used to read as left-aligned against each other, since right_col shrinks
+  // to its widest child (the title) and START just pins everything to that
+  // child's left edge. CENTER centers the narrower End-timer button under
+  // the title instead.
   lv_obj_t *right_col = lv_obj_create(content_row);
   lv_obj_remove_style_all(right_col);
   lv_obj_set_size(right_col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(right_col, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(right_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+  lv_obj_set_flex_align(right_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_row(right_col, 24, 0);
   lv_obj_clear_flag(right_col, LV_OBJ_FLAG_SCROLLABLE);
 

@@ -107,7 +107,7 @@ void wb_build_quiet_screen(lv_obj_t *parent, const WbQuietState &quiet, int nowH
   lv_obj_set_size(left_col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(left_col, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_flex_align(left_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-  lv_obj_set_style_pad_row(left_col, 14, 0);
+  lv_obj_set_style_pad_row(left_col, 18, 0);
   lv_obj_clear_flag(left_col, LV_OBJ_FLAG_SCROLLABLE);
 
   // Same crescent path as the moon icon used elsewhere (wb_icon_moon_32/40),
@@ -121,7 +121,10 @@ void wb_build_quiet_screen(lv_obj_t *parent, const WbQuietState &quiet, int nowH
 
   lv_obj_t *title = lv_label_create(left_col);
   lv_label_set_text(title, "Quiet time");
-  lv_obj_set_style_text_font(title, &wb_font_newsreader_semibold_32, 0);
+  // 32->48, matching the countdown ring's own font_48 bump, per request —
+  // "use our custom font [at a bigger] size" (wb_font_newsreader_semibold_48,
+  // see lv_conf.h's LV_FONT_CUSTOM_DECLARE).
+  lv_obj_set_style_text_font(title, &wb_font_newsreader_semibold_48, 0);
   lv_obj_set_style_text_color(title, WB_QUIET_INK, 0);
 
   int durationSec = quiet.durationSec > 0 ? quiet.durationSec : 1;
@@ -131,9 +134,11 @@ void wb_build_quiet_screen(lv_obj_t *parent, const WbQuietState &quiet, int nowH
   // rather than directly in parent — same widget, same sync logic below,
   // just a different parent in the tree now.
   lv_obj_t *until_lbl = lv_label_create(left_col);
-  lv_obj_set_style_text_font(until_lbl, &lv_font_montserrat_16, 0);
+  // 16->24 per request — bigger to match the rest of this pass, but staying
+  // well under the title's 48px so the title still reads as the anchor.
+  lv_obj_set_style_text_font(until_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(until_lbl, WB_QUIET_MUTED, 0);
-  lv_obj_set_style_pad_top(until_lbl, 4, 0);
+  lv_obj_set_style_pad_top(until_lbl, 6, 0);
   char until_buf[48];
   formatUntilText(until_buf, sizeof(until_buf), remainingSec, nowHour, nowMin);
   lv_label_set_text(until_lbl, until_buf);

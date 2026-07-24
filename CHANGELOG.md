@@ -102,6 +102,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Direct feedback: both rings were small and hard to read from across a room. The
   quiet-time ring is now roughly half the screen's width, the timer's ring nearly
   so, and the countdown numbers inside them are noticeably bigger too.
+- **Waffled-Bite device: quiet time's title is bigger, and the timer screen's text
+  is centered.** Direct follow-up: "Quiet time" now uses a bigger version of the
+  app's warm serif font, "Stay cozy until…" is bigger too (though still smaller than
+  the title), and on the timer screen, "Timer running" and the End-timer button are
+  now centered under each other instead of looking left-aligned.
 
 ### Fixed
 

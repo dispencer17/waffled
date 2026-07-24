@@ -694,3 +694,25 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   468px` available for the ring's row, so 440 leaves a little breathing room
   rather than exactly maxing it out). Native and esp32-p4 both build clean;
   verified no crash on real hardware post-flash.
+- **Quiet time's title bumped to a bigger custom-font bake; timer screen's text
+  centered — direct follow-up.** `wb_font_newsreader_semibold_32` (the app's warm
+  serif, `src/fonts/`) was the only size baked. Bumping the "Quiet time" title to
+  match the ring's own `font_48` jump meant baking a genuinely bigger version of
+  the custom font, not just picking a bigger built-in Montserrat: ran the exact
+  `lv_font_conv` invocation from the 32px file's own header comment with
+  `--size 48`, output to a new `src/fonts/wb_font_newsreader_semibold_48.c`, and
+  added it to `lv_conf.h`'s `LV_FONT_CUSTOM_DECLARE` (multiple `LV_FONT_DECLARE()`
+  calls chain in that macro — `LV_FONT_DECLARE(wb_font_newsreader_semibold_32)
+  LV_FONT_DECLARE(wb_font_newsreader_semibold_48)`). No new tooling needed —
+  `lv_font_conv` runs fine via `npx` without a local install. "Stay cozy until…"
+  bumped 16→24 (plain Montserrat, not the custom serif — the request was
+  specifically for the title to use "our custom font size," the subtitle just
+  needed to be bigger, staying visibly smaller than the title). Separately,
+  `timer_screen.cpp`'s `right_col` (holding "Timer running" + the End-timer
+  button) had its cross-axis alignment changed `START`→`CENTER`: since
+  `right_col` is `LV_SIZE_CONTENT` width (shrinks to its widest child, the
+  title), `START` just pinned every child to that child's left edge — with a
+  narrower child (the button) that reads as left-aligned/lopsided rather than
+  centered as a block. `CENTER` centers the narrower button under the title
+  instead. Native and esp32-p4 both build clean; verified no crash on real
+  hardware post-flash.
