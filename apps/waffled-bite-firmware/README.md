@@ -394,20 +394,26 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
 - **`esp32-p4` WiFi: picker showed zero networks when the saved AP was out of range —
   fixed.** Boot always retries `wifiSsid`/`wifiPass` from NVS first
   (`main.cpp`'s `setup()`); when that network isn't reachable (device moved to a new
-  location), this app's own 15s give-up (`wb_wifi_connect_status()`'s timeout branch)
-  is a software-only flag — it never told the STA driver to actually stop. The WiFi
-  picker's scan (`wb_wifi_begin_scan()`) was then issued while the driver still
-  considered itself busy connecting/retrying, which fails synchronously
-  (`WIFI_SCAN_FAILED`) even with real networks in range — and `wb_wifi_scan_status()`
-  used to collapse that straight into `Done`, indistinguishable from "scan succeeded,
-  found nothing." Tapping Rescan didn't help either, since it hit the same stuck
-  driver every time. Fixed two ways: `wb_wifi_begin_scan()` now calls
-  `WiFi.disconnect()` before every scan (safe — only ever called while the picker is
-  on screen, never while actually connected), and the connect-timeout branch does the
-  same when it gives up on a saved AP. Separately, `WbWifiScanStatus` gained a
-  `Failed` state distinct from `Done`, so `wifi_screen.cpp` retries a failed scan
-  automatically (`WB_WIFI_SCAN_RETRY_LIMIT`, 5 attempts) instead of silently
-  rendering an empty list.
+  location), the STA driver ends up stuck reporting `WL_NO_SSID_AVAIL`, and the WiFi
+  picker's scan (`wb_wifi_begin_scan()`) issued from that state fails synchronously
+  (`WIFI_SCAN_FAILED`) even with real networks in range — `wb_wifi_scan_status()` used
+  to collapse that straight into `Done`, indistinguishable from "scan succeeded, found
+  nothing." First fix attempt (`WiFi.disconnect()` before scanning) did **not** clear
+  it — confirmed live on real hardware via temporary serial logging: `WiFi.status()`
+  kept reporting `WL_NO_SSID_AVAIL` and `scanNetworks()` kept returning
+  `WIFI_SCAN_FAILED` across dozens of attempts, even after a full power cycle of the
+  device (ruling out the "stale ESP32-C6 co-processor, needs a real power cycle" issue
+  documented above — this is a different, software-clearable stuck state on the P4
+  side). What actually works: power-cycling the STA mode itself in software —
+  `WiFi.mode(WIFI_OFF)` then `WiFi.mode(WIFI_STA)` with a 200ms settle each side —
+  before every scan, which resets the driver's internal state machine rather than just
+  its connection state. Separately, `WbWifiScanStatus` gained a `Failed` state distinct
+  from `Done`, so `wifi_screen.cpp` retries a failed scan automatically
+  (`WB_WIFI_SCAN_RETRY_LIMIT`, 5 attempts) instead of silently rendering an empty list.
+  Also found in the same live-debugging session: a network broadcast from more than one
+  BSSID (mesh WiFi, dual-band routers) was showing up once per BSSID in the list, since
+  `scanNetworks()` returns one row per access-point radio, not per SSID —
+  `wb_wifi_scan_results()` now dedupes by SSID, keeping the strongest-signal copy.
 - **`esp32-p4` display/touch: bring-up tested, but not exhaustively.** LovyanGFX's
   `Bus_DSI`/`Panel_EK79007` does drive this panel. Real-hardware bring-up found
   touch was mirrored on the X axis (`main.cpp`'s `touchpad_read` — the GT911's

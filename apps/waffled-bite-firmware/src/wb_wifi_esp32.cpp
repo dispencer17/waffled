@@ -8,23 +8,26 @@
 #include "wb_wifi.h"
 #include "wb_tick_hal.h"
 #include <WiFi.h>
+#include <algorithm>
 
 #define WB_WIFI_CONNECT_TIMEOUT_MS 15000
 
 void wb_wifi_begin_scan()
 {
   // A prior WiFi.begin() against an out-of-range saved AP (e.g. the device
-  // booted somewhere other than home) can leave the STA driver mid-connect
-  // or auto-retrying even after this app's own connect attempt gives up —
-  // that timeout (see wb_wifi_connect_status() below) is a software-only
-  // flag, it never itself told the driver to stop. Scanning while the
-  // driver still considers itself busy connecting fails synchronously
-  // (WIFI_SCAN_FAILED) even with real networks in range. Disconnecting
-  // first guarantees a clean slate; safe to call unconditionally since this
-  // is only ever invoked while the WiFi picker is on screen, i.e. never
-  // while actually connected to anything.
-  WiFi.disconnect();
+  // booted somewhere other than home) leaves the STA driver stuck reporting
+  // WL_NO_SSID_AVAIL — confirmed live on real hardware: WiFi.disconnect()
+  // alone doesn't clear it (WiFi.status() kept reporting WL_NO_SSID_AVAIL
+  // and scanNetworks() kept returning WIFI_SCAN_FAILED across dozens of
+  // attempts, even after a full power cycle of the device). Power-cycling
+  // the STA mode itself in software resets the driver's internal state
+  // machine, not just its connection state. Safe to call unconditionally
+  // here since this is only ever invoked while the WiFi picker is on
+  // screen, i.e. never while actually connected to anything.
+  WiFi.mode(WIFI_OFF);
+  delay(200);
   WiFi.mode(WIFI_STA);
+  delay(200);
   WiFi.scanNetworks(true /* async */);
 }
 
@@ -48,7 +51,24 @@ std::vector<WbWifiNetwork> wb_wifi_scan_results()
     return out;
   out.reserve(n);
   for (int16_t i = 0; i < n; i++)
-    out.push_back({std::string(WiFi.SSID(i).c_str()), WiFi.RSSI(i), WiFi.encryptionType(i) != WIFI_AUTH_OPEN});
+  {
+    WbWifiNetwork net{std::string(WiFi.SSID(i).c_str()), WiFi.RSSI(i), WiFi.encryptionType(i) != WIFI_AUTH_OPEN};
+    // Mesh/multi-AP setups (and dual-band routers) broadcast the same SSID
+    // from several BSSIDs — scanNetworks() returns one row per BSSID, not
+    // per network name, so the same network can otherwise show up several
+    // times in the picker. Keep just the strongest-signal copy per SSID.
+    auto existing = std::find_if(out.begin(), out.end(), [&](const WbWifiNetwork &e)
+                                  { return e.ssid == net.ssid; });
+    if (existing != out.end())
+    {
+      if (net.rssi > existing->rssi)
+        *existing = net;
+    }
+    else
+    {
+      out.push_back(net);
+    }
+  }
   WiFi.scanDelete(); // free the scan result buffer now that it's copied out
   return out;
 }
