@@ -452,3 +452,25 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   locally. A 401 on the live poll (e.g. a parent unpairing from the web app) now drops the
   device back to onboarding within one 5s poll instead of waiting for the ~4-minute token
   refresh cycle.
+- **Offline: the poll used to freeze the whole UI, not just show a badge — fixed.**
+  `wb_do_poll()` runs synchronously on the same LVGL thread that drives touch/rendering
+  (`wb_poll_timer_cb`, `main.cpp`) — there's no task offload, and `wb_http_esp32.cpp`'s
+  `HTTPClient` had no explicit connect-phase timeout, so it fell back to the
+  arduino-esp32 default (`HTTPCLIENT_DEFAULT_TCP_TIMEOUT`, 5000ms). A genuinely
+  unreachable server (the common case: `serverUrl` is a plain LAN address typed in at
+  pairing time — see "What's not done" below — and the device has since moved to a
+  different network) blocked the entire touchscreen for that long on every single 5s
+  poll, which looked exactly like a device-wide slowdown or memory issue, not a network
+  one, when reported live. Fixed two ways: `wb_http_esp32.cpp` now sets an explicit,
+  shorter `http.setConnectTimeout(3000)` so one failed attempt costs less; more
+  importantly, once offline (`WB_OFFLINE_AFTER_MISSES` misses), `main.cpp` backs the
+  poll timer off from 5s to 30s (`lv_timer_set_period`, `WB_POLL_INTERVAL_OFFLINE_MS`)
+  so the device stays responsive to touch between checks instead of stuttering every 5s
+  indefinitely, and snaps back to the normal 5s cadence on the next success.
+  **Not fixed, and not really fixable device-side:** the server address itself has no
+  rediscovery — `serverUrl` is whatever was typed into the onboarding text field,
+  persisted verbatim (no QR capture, no mDNS, no cloud relay), so a self-hosted
+  household's server that's only reachable on the home LAN will correctly show
+  "Offline" from anywhere else. That's expected today, not a bug; a remote-reachable
+  self-hosted deployment (reverse proxy, VPN, tunnel) is a household networking choice
+  outside this firmware's scope.

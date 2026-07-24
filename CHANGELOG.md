@@ -89,6 +89,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   latent bug found during this work: reopening the WiFi picker (the "Change Wi-Fi
   network" option) while a previous attempt was still in flight leaked memory and left
   a background timer running against already-closed screens.
+- **Waffled-Bite device: the whole screen no longer freezes every few seconds while
+  offline.** If the device can't reach your Waffled server (e.g. it's paired to a
+  self-hosted server that's only reachable on your home network, and the device is
+  currently somewhere else), it checks in every 5 seconds — and each failed check-in
+  was blocking the entire touchscreen for up to several seconds, making the whole
+  device feel frozen. Once it's been offline for a couple of checks in a row, it now
+  backs off to checking in every 30 seconds instead, and snaps back to normal as soon
+  as it reconnects — so it stays responsive to touch even while waiting to get back
+  online. A self-hosted server that's only reachable on your home network showing
+  "Offline" away from home is expected; this fix is about the device staying usable
+  while it waits.
 - **Waffled-Bite device: touchscreen input was mirrored left-right.** Most taps landed
   fine, but the on-screen keyboard's narrow, side-by-side keys made it obvious — tapping
   a key hit its mirror on the opposite side. Also added a visible way to dismiss the

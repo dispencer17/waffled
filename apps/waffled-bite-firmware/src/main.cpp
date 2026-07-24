@@ -192,18 +192,37 @@ static lv_timer_t *g_pollTimer = nullptr;
 // A single miss doesn't show it (transient hiccups are normal on real
 // WiFi) — only WB_OFFLINE_AFTER_MISSES consecutive ones do.
 #define WB_OFFLINE_AFTER_MISSES 2
+// Every poll runs synchronously on the LVGL thread (wb_http_esp32.cpp has no
+// task offload), so a poll against an unreachable server blocks the whole UI
+// for up to its connect timeout (~3s — see wb_http_esp32.cpp) before the
+// display/touch loop can run again. At the normal 5s cadence that's most of
+// the time spent frozen rather than responsive — confirmed live: this is
+// what looked like a device-wide slowdown/possible memory issue after a
+// device moved to a new network with a now-unreachable saved server address.
+// Once offline (WB_OFFLINE_AFTER_MISSES misses), back off to a much slower
+// cadence so the device stays USABLE (if briefly stuttering every half
+// minute) instead of stuttering every 5 seconds indefinitely; a single
+// success snaps it back to normal polling.
+#define WB_POLL_INTERVAL_MS 5000
+#define WB_POLL_INTERVAL_OFFLINE_MS 30000
 static lv_obj_t *g_offlineBadge = nullptr;
 static int g_pollFailStreak = 0;
 static void wb_mark_poll_failed()
 {
   g_pollFailStreak++;
   if (g_pollFailStreak >= WB_OFFLINE_AFTER_MISSES)
+  {
     lv_obj_clear_flag(g_offlineBadge, LV_OBJ_FLAG_HIDDEN);
+    if (g_pollTimer)
+      lv_timer_set_period(g_pollTimer, WB_POLL_INTERVAL_OFFLINE_MS);
+  }
 }
 static void wb_mark_poll_ok()
 {
   g_pollFailStreak = 0;
   lv_obj_add_flag(g_offlineBadge, LV_OBJ_FLAG_HIDDEN);
+  if (g_pollTimer)
+    lv_timer_set_period(g_pollTimer, WB_POLL_INTERVAL_MS);
 }
 
 static void wb_show_onboarding();
@@ -667,7 +686,7 @@ static void wb_enter_app()
 
   if (g_pollTimer)
     lv_timer_del(g_pollTimer);
-  g_pollTimer = lv_timer_create(wb_poll_timer_cb, 5000, nullptr);
+  g_pollTimer = lv_timer_create(wb_poll_timer_cb, WB_POLL_INTERVAL_MS, nullptr);
 }
 
 static void wb_on_paired(const std::string &serverUrl, const std::string &deviceSecret)
