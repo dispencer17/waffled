@@ -414,6 +414,18 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   BSSID (mesh WiFi, dual-band routers) was showing up once per BSSID in the list, since
   `scanNetworks()` returns one row per access-point radio, not per SSID —
   `wb_wifi_scan_results()` now dedupes by SSID, keeping the strongest-signal copy.
+  A code audit prompted by this session (checking whether all the WiFi churn while
+  debugging could have degraded the device generally) turned up a real, separate bug
+  in `wifi_screen.cpp`: `wb_build_wifi_screen()` is **not** a one-time call the way
+  `onboarding_screen.cpp`'s screen is — `main.cpp`'s `wb_show_wifi_picker()` (used by
+  the "Change Wi-Fi network" option on the paired-app screens) calls it again on every
+  reopen, `lv_obj_clean()`-ing the old tree first. The old `WbWifiScreenCtx` and its
+  200ms poll timer had no cleanup tied to that clean, so reopening the picker while a
+  scan/connect was still in flight leaked the ctx and left the old timer running
+  forever against freed LVGL objects (a use-after-free, not just a leak). Fixed by
+  tying `ctx`'s lifetime to `card`'s `LV_EVENT_DELETE` (`wb_wifi_ctx_delete_cb`),
+  the same pattern already used correctly by `quiet_screen.cpp`'s `WbQuietCtx` and
+  `timer_screen.cpp`'s own ctx.
 - **`esp32-p4` display/touch: bring-up tested, but not exhaustively.** LovyanGFX's
   `Bus_DSI`/`Panel_EK79007` does drive this panel. Real-hardware bring-up found
   touch was mirrored on the X axis (`main.cpp`'s `touchpad_read` — the GT911's

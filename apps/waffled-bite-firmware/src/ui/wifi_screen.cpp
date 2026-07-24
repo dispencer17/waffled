@@ -28,9 +28,14 @@ enum class WbWifiUiState
 };
 
 // Bundles every widget/callback the poll timer and tap handlers need to
-// reach. Heap-allocated and intentionally never freed — this screen is
-// built once at boot and never torn down, same lifetime assumption as
-// onboarding_screen.cpp's own per-button context.
+// reach. Unlike onboarding_screen.cpp's screen (genuinely built once),
+// wb_build_wifi_screen() reruns every time the picker is reopened (e.g. the
+// "Change Wi-Fi network" chip on the paired-app screens calls
+// wb_show_wifi_picker(), which does lv_obj_clean(wifi_scr) then rebuilds) —
+// so this ctx and its 200ms poll timer must be torn down on every rebuild,
+// same pattern as quiet_screen.cpp's WbQuietCtx/timer_screen.cpp's own ctx:
+// tied to a real child object's LV_EVENT_DELETE (see wb_wifi_ctx_delete_cb
+// below), not left to a "never freed" assumption that doesn't hold here.
 struct WbWifiScreenCtx
 {
   lv_obj_t *list_view;
@@ -53,6 +58,22 @@ struct WbWifiScreenCtx
   WbWifiConnectedCallback onConnected;
   lv_timer_t *pollTimer;
 };
+
+// Fires when `card` (a real child of the wifi screen, recreated on every
+// wb_build_wifi_screen() call) is destroyed — i.e. on the next
+// lv_obj_clean(wifi_scr) before a rebuild, or whenever the whole screen tree
+// is torn down. Without this, a picker reopen left the old ctx's poll timer
+// running forever against just-freed LVGL objects (a use-after-free) on top
+// of leaking the ctx itself — confirmed by code audit, not yet seen on a
+// real device, but a real bug regardless of the WiFi-scan fix session that
+// surfaced it.
+static void wb_wifi_ctx_delete_cb(lv_event_t *e)
+{
+  WbWifiScreenCtx *ctx = (WbWifiScreenCtx *)lv_event_get_user_data(e);
+  if (ctx->pollTimer)
+    lv_timer_del(ctx->pollTimer);
+  delete ctx;
+}
 
 static void wb_wifi_show_view(WbWifiScreenCtx *ctx, WbWifiUiState state)
 {
@@ -291,6 +312,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   ctx->uiState = WbWifiUiState::List;
   ctx->rowsBuilt = false;
   ctx->scanFailCount = 0;
+  lv_obj_add_event_cb(card, wb_wifi_ctx_delete_cb, LV_EVENT_DELETE, ctx);
 
   // ── list view ────────────────────────────────────────────────────────────
   lv_obj_t *list_view = lv_obj_create(card);

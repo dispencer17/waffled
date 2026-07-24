@@ -85,7 +85,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   clears the stuck state, and a scan that still fails to start is retried automatically
   instead of being shown as "no networks found." Also: a network broadcast from more
   than one access point (mesh WiFi, dual-band routers) used to appear once per access
-  point in the list — it now appears once, using its strongest signal.
+  point in the list — it now appears once, using its strongest signal. Fixed a related
+  latent bug found during this work: reopening the WiFi picker (the "Change Wi-Fi
+  network" option) while a previous attempt was still in flight leaked memory and left
+  a background timer running against already-closed screens.
 - **Waffled-Bite device: touchscreen input was mirrored left-right.** Most taps landed
   fine, but the on-screen keyboard's narrow, side-by-side keys made it obvious — tapping
   a key hit its mirror on the opposite side. Also added a visible way to dismiss the
