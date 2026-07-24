@@ -572,3 +572,17 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   intentionally still secondary to the row's title/checkbox, same "leave status text
   smaller for contrast" call as the rest of this pass. Native and esp32-p4 both build
   clean; verified no crash on real hardware post-flash.
+- **Offline screen gets a mascot — direct request, user-supplied artwork.** A sad,
+  unplugged waffle-iron with a broken WiFi symbol, semi-large on the left, with the
+  message + action buttons now in a right-hand column instead of centered below —
+  same split-row shape as `quiet_screen.cpp`/`timer_screen.cpp`, mirrored so the
+  mascot mirrors those screens' icon-on-one-side treatment. The source PNG (opaque
+  RGB, no alpha) needed the full-color RGB565 bake, not the A8/tinted-icon path
+  every small glyph in `tools/icons/` uses — reused `tools/logo/`'s existing
+  `png_to_lvgl_rgb565.py` script directly rather than duplicating it (see
+  `tools/mascot/README.md`). Baked at 320×320 (~200KB — flash usage moved from 23%
+  to 26%, still plenty of headroom). `right_col` needed an explicit fixed width
+  (560px, not `LV_SIZE_CONTENT`) so its button row could still wrap reliably against
+  a real pixel value, same reasoning `wifi_screen.cpp`/`onboarding_screen.cpp`'s own
+  fixed-size cards already use. Native and esp32-p4 both build clean; verified no
+  crash on real hardware post-flash.

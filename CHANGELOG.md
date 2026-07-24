@@ -43,7 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   screen while the device stays offline (it won't just quietly stay wherever you
   navigated to), and goes away on its own the moment the device is back online. (It
   never interrupts quiet time or a bedtime lock, and it won't pull you off the Wi-Fi
-  picker or the change-address screen while you're actively using them.)
+  picker or the change-address screen while you're actively using them.) A sad,
+  unplugged waffle-iron mascot now sits alongside the message so it reads as
+  friendly rather than like an error dialog.
 
 ### Changed
 

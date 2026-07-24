@@ -45,6 +45,11 @@ extern const lv_image_dsc_t wb_icon_back_18;     // Spare: back chevron, not yet
 extern const lv_image_dsc_t wb_logo_96;
 extern const lv_image_dsc_t wb_logo_40; // Small mark next to the home screen's clock
 
+// A sad waffle-iron mascot (unplugged, broken WiFi symbol) — full-color
+// RGB565 like the logo above, baked from tools/mascot/waffled-down-source.png.
+// offline_screen.cpp's "can't reach the server" state.
+extern const lv_image_dsc_t wb_offline_mascot_320;
+
 #ifdef __cplusplus
 }
 #endif
