@@ -70,6 +70,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   layout.** The countdown ring is bigger and moved to the left, with the "Timer
   running" title and End-timer button on the right, instead of a single stacked
   column — the same split-row treatment as the quiet-time screen above, mirrored.
+- **Waffled-Bite device: bigger, chunkier buttons everywhere.** Direct feedback: the
+  WiFi setup, "can't reach the server," timer, pairing, and grown-up-controls screens
+  all had small, adult-app-sized buttons and text that didn't match the big, fun home
+  screen. Every button on those screens — Rescan, Connect, Try again, Change Wi-Fi,
+  Pair, Start/End timer, the +/- steppers, Home/Back — is now noticeably bigger with
+  larger text, along with the on/off switches, color swatches, and the volume/
+  brightness slider's knob. The one thing left deliberately small: the "For a
+  grown-up" chip in Settings, so it stays easy to overlook for a kid.
 
 ### Fixed
 

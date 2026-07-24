@@ -535,3 +535,30 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   Native and esp32-p4 both build clean; verified no crash on real hardware post-flash
   across all three iterations (only the known-benign, already-documented transient
   `H_SDIO_DRV: failed to read registers` retry, not a reboot).
+- **Bigger, chunkier buttons across every utility screen — direct request.** Every
+  button on `wifi_screen.cpp`, `offline_screen.cpp`, `forget_confirm_screen.cpp`,
+  `timer_screen.cpp`, `onboarding_screen.cpp`, `settings_screen.cpp`,
+  `control_detail_screen.cpp`, `tasks_screen.cpp`, and `bedtime_screen.cpp`'s close
+  button was built at roughly a normal adult-app scale (`&lv_font_montserrat_14`/`16`
+  text, ~14-22px padding) — noticeably smaller than the home screen's big tiles, and
+  not what a "big, fun, chunky-button" kid device should feel like. No new font was
+  baked: this project already had `&lv_font_montserrat_24` compiled in as the
+  headline size (`lv_conf.h`), with plenty of flash headroom (23% used), so button
+  labels now use that size (bumped to `_32` for a handful of screen titles), with
+  roughly double the padding and `LV_RADIUS_CIRCLE` standardized on every pill/chip
+  that wasn't already fully rounded. Also bumped: `lv_switch_create`'s default size
+  (tiny out of the box — explicit `lv_obj_set_size`), the Nightlight/Sounds color
+  swatches (44→60px) and text option chips, and the volume/brightness slider's track
+  height + knob padding (`LV_PART_KNOB`) for an easier drag target. Some containers
+  needed growing to fit the bigger content without clipping/crowding: the WiFi
+  picker's card (460×460 → 620×560) and the onboarding card (420 wide → 560, plus its
+  title gained wrap+center since "Set up your Waffled-Bite" at 32px doesn't reliably
+  fit one line). **Deliberately left alone**: every secondary/status text element
+  (routine badges, "Secured · Strong signal" subtext, "Waiting on a parent's
+  approval," the quiet/timer countdown's small caption text) — those stay smaller on
+  purpose, for contrast against the now much bigger primary buttons — and Settings'
+  "For a grown-up" chip, which stays deliberately small/easy-to-overlook for a kid
+  (see the offline-screen entry above for the same reasoning applied to its
+  change-server shortcut). Native and esp32-p4 both build clean; verified no crash on
+  real hardware post-flash (same known-benign transient SDIO error as above, not a
+  reboot).

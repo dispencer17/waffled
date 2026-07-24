@@ -43,7 +43,7 @@ static void make_home_button(lv_obj_t *parent, lv_obj_t *back_scr)
 {
   lv_obj_t *top = lv_obj_create(parent);
   lv_obj_remove_style_all(top);
-  lv_obj_set_size(top, lv_pct(100), 56);
+  lv_obj_set_size(top, lv_pct(100), 72);
   lv_obj_set_flex_flow(top, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(top, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_clear_flag(top, LV_OBJ_FLAG_SCROLLABLE);
@@ -54,12 +54,12 @@ static void make_home_button(lv_obj_t *parent, lv_obj_t *back_scr)
   lv_obj_set_style_bg_color(home_btn, WB_COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(home_btn, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(home_btn, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(home_btn, 16, 0);
-  lv_obj_set_style_pad_ver(home_btn, 10, 0);
+  lv_obj_set_style_pad_hor(home_btn, 28, 0);
+  lv_obj_set_style_pad_ver(home_btn, 14, 0);
   lv_obj_clear_flag(home_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *lbl = lv_label_create(home_btn);
   lv_label_set_text(lbl, LV_SYMBOL_LEFT " Home");
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(lbl, WB_COLOR_INK, 0);
   lv_obj_add_event_cb(home_btn, wb_timer_close_cb, LV_EVENT_CLICKED, back_scr);
 }
@@ -122,7 +122,7 @@ static lv_obj_t *make_round_btn(lv_obj_t *parent, const char *text, lv_color_t b
 {
   lv_obj_t *btn = lv_obj_create(parent);
   lv_obj_remove_style_all(btn);
-  lv_obj_set_size(btn, 44, 44);
+  lv_obj_set_size(btn, 64, 64);
   lv_obj_set_style_bg_color(btn, bg, 0);
   lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
@@ -131,7 +131,7 @@ static lv_obj_t *make_round_btn(lv_obj_t *parent, const char *text, lv_color_t b
   lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *lbl = lv_label_create(btn);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_32, 0);
   lv_obj_set_style_text_color(lbl, fg, 0);
   return btn;
 }
@@ -140,7 +140,7 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
 {
   lv_obj_t *title = lv_label_create(parent);
   lv_label_set_text(title, "Set a timer");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_32, 0);
   lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
 
   lv_obj_t *sub = lv_label_create(parent);
@@ -152,8 +152,8 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
   lv_obj_remove_style_all(row);
   lv_obj_set_size(row, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW_WRAP);
-  lv_obj_set_style_pad_column(row, 10, 0);
-  lv_obj_set_style_pad_row(row, 10, 0);
+  lv_obj_set_style_pad_column(row, 16, 0);
+  lv_obj_set_style_pad_row(row, 16, 0);
   lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
   for (int minutes : WB_TIMER_PRESET_MIN)
@@ -164,15 +164,15 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
     lv_obj_set_style_bg_color(chip, WB_COLOR_CARD, 0);
     lv_obj_set_style_bg_opa(chip, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(chip, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_pad_hor(chip, 20, 0);
-    lv_obj_set_style_pad_ver(chip, 14, 0);
+    lv_obj_set_style_pad_hor(chip, 32, 0);
+    lv_obj_set_style_pad_ver(chip, 20, 0);
     lv_obj_clear_flag(chip, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *chip_lbl = lv_label_create(chip);
     char buf[8];
     snprintf(buf, sizeof(buf), "%dm", minutes);
     lv_label_set_text(chip_lbl, buf);
-    lv_obj_set_style_text_font(chip_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(chip_lbl, &lv_font_montserrat_24, 0);
     lv_obj_set_style_text_color(chip_lbl, WB_COLOR_INK, 0);
 
     WbTimerPresetCtx *preset_ctx = new WbTimerPresetCtx{minutes, onStart};
@@ -190,7 +190,7 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
   lv_obj_set_size(custom_row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(custom_row, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(custom_row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_column(custom_row, 14, 0);
+  lv_obj_set_style_pad_column(custom_row, 18, 0);
   lv_obj_clear_flag(custom_row, LV_OBJ_FLAG_SCROLLABLE);
 
   WbTimerCustomCtx *custom_ctx = new WbTimerCustomCtx{10, nullptr, onStart};
@@ -201,9 +201,9 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
   lv_obj_add_event_cb(minus_btn, wb_timer_step_delete_cb, LV_EVENT_DELETE, minus_step);
 
   lv_obj_t *value_lbl = lv_label_create(custom_row);
-  lv_obj_set_style_text_font(value_lbl, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(value_lbl, &lv_font_montserrat_32, 0);
   lv_obj_set_style_text_color(value_lbl, WB_COLOR_INK, 0);
-  lv_obj_set_style_pad_hor(value_lbl, 4, 0);
+  lv_obj_set_style_pad_hor(value_lbl, 6, 0);
   custom_ctx->value_lbl = value_lbl;
   wb_timer_custom_refresh(custom_ctx);
 
@@ -218,12 +218,12 @@ static void wb_build_timer_picker(lv_obj_t *parent, WbTimerStartCallback onStart
   lv_obj_set_style_bg_color(start_btn, WB_COLOR_TILE_ACTIVE, 0);
   lv_obj_set_style_bg_opa(start_btn, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(start_btn, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(start_btn, 20, 0);
-  lv_obj_set_style_pad_ver(start_btn, 12, 0);
+  lv_obj_set_style_pad_hor(start_btn, 32, 0);
+  lv_obj_set_style_pad_ver(start_btn, 18, 0);
   lv_obj_clear_flag(start_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *start_lbl = lv_label_create(start_btn);
   lv_label_set_text(start_lbl, "Start");
-  lv_obj_set_style_text_font(start_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(start_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(start_lbl, lv_color_white(), 0);
   lv_obj_add_event_cb(start_btn, wb_timer_custom_start_cb, LV_EVENT_CLICKED, custom_ctx);
   // Owns custom_ctx's lifetime — the last widget built that references it.
@@ -322,7 +322,7 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
 
   lv_obj_t *title = lv_label_create(right_col);
   lv_label_set_text(title, "Timer running");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_32, 0);
   lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
 
   lv_obj_t *end_btn = lv_obj_create(right_col);
@@ -331,12 +331,12 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   lv_obj_set_style_bg_color(end_btn, WB_COLOR_TILE_ACTIVE, 0);
   lv_obj_set_style_bg_opa(end_btn, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(end_btn, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(end_btn, 22, 0);
-  lv_obj_set_style_pad_ver(end_btn, 12, 0);
+  lv_obj_set_style_pad_hor(end_btn, 32, 0);
+  lv_obj_set_style_pad_ver(end_btn, 18, 0);
   lv_obj_clear_flag(end_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *end_lbl = lv_label_create(end_btn);
   lv_label_set_text(end_lbl, "End timer");
-  lv_obj_set_style_text_font(end_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(end_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(end_lbl, lv_color_white(), 0);
   WbTimerEndCtx *end_ctx = new WbTimerEndCtx{onEnd};
   lv_obj_add_event_cb(end_btn, wb_timer_end_clicked_cb, LV_EVENT_CLICKED, end_ctx);

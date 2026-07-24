@@ -297,7 +297,7 @@ void wb_build_settings_screen(lv_obj_t *parent, const WbDeviceState &state, lv_o
   // ── top bar: back button + title on the left, locked chip on the right ──
   lv_obj_t *top = lv_obj_create(parent);
   lv_obj_remove_style_all(top);
-  lv_obj_set_size(top, lv_pct(100), 56);
+  lv_obj_set_size(top, lv_pct(100), 76);
   lv_obj_set_flex_flow(top, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(top, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_clear_flag(top, LV_OBJ_FLAG_SCROLLABLE);
@@ -316,12 +316,12 @@ void wb_build_settings_screen(lv_obj_t *parent, const WbDeviceState &state, lv_o
   lv_obj_set_style_bg_color(back_btn, WB_COLOR_TILE, 0);
   lv_obj_set_style_bg_opa(back_btn, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(back_btn, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(back_btn, 16, 0);
-  lv_obj_set_style_pad_ver(back_btn, 10, 0);
+  lv_obj_set_style_pad_hor(back_btn, 28, 0);
+  lv_obj_set_style_pad_ver(back_btn, 16, 0);
   lv_obj_clear_flag(back_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *back_lbl = lv_label_create(back_btn);
   lv_label_set_text(back_lbl, LV_SYMBOL_LEFT " Home");
-  lv_obj_set_style_text_font(back_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(back_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(back_lbl, WB_COLOR_INK, 0);
   lv_obj_add_event_cb(back_btn, wb_go_home_cb, LV_EVENT_CLICKED, home_scr);
 

@@ -147,22 +147,22 @@ static void wb_wifi_build_rows(WbWifiScreenCtx *ctx)
     lv_obj_set_size(row, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_set_style_bg_color(row, WB_COLOR_ROW, 0);
     lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(row, 14, 0);
-    lv_obj_set_style_pad_hor(row, 16, 0);
-    lv_obj_set_style_pad_ver(row, 12, 0);
+    lv_obj_set_style_radius(row, 20, 0);
+    lv_obj_set_style_pad_hor(row, 24, 0);
+    lv_obj_set_style_pad_ver(row, 18, 0);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *ssid_lbl = lv_label_create(row);
     lv_label_set_text(ssid_lbl, net.ssid.c_str());
-    lv_obj_set_style_text_font(ssid_lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(ssid_lbl, &lv_font_montserrat_24, 0);
     lv_obj_set_style_text_color(ssid_lbl, WB_COLOR_INK, 0);
 
     lv_obj_t *sub_lbl = lv_label_create(row);
     char sub[48];
     snprintf(sub, sizeof(sub), "%s · %s", net.secure ? "Secured" : "Open", wb_signal_label(net.rssi));
     lv_label_set_text(sub_lbl, sub);
-    lv_obj_set_style_text_font(sub_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(sub_lbl, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(sub_lbl, WB_COLOR_MUTED, 0);
 
     lv_obj_set_user_data(row, strdup(net.ssid.c_str()));
@@ -171,14 +171,18 @@ static void wb_wifi_build_rows(WbWifiScreenCtx *ctx)
   }
 }
 
-// A small tappable pill (icon/text label wrapped in a padded, backgrounded
-// container) — used for Rescan and Back. Plain clickable labels (the
-// original shape here) have no background for LVGL's default press-state
-// darkening to show against, and a tiny hit-box matching just the rendered
-// glyphs — near-impossible to tell whether a real finger actually landed on
-// them (confirmed on real hardware during bring-up: no visible feedback at
-// all on tap). This gives both a real touch target size and visible
-// press feedback, matching settings_screen.cpp's back_btn pattern.
+// A big, chunky tappable pill (icon/text label wrapped in a padded,
+// backgrounded container) — used for Rescan and Back. Plain clickable
+// labels (the original shape here) have no background for LVGL's default
+// press-state darkening to show against, and a tiny hit-box matching just
+// the rendered glyphs — near-impossible to tell whether a real finger
+// actually landed on them (confirmed on real hardware during bring-up: no
+// visible feedback at all on tap). This gives both a real touch target size
+// and visible press feedback, matching settings_screen.cpp's back_btn
+// pattern. Sized up (font_14/pad 16x10 -> font_24/pad 32x18, fully rounded)
+// per direct request — this and every other utility-screen button read too
+// small/adult-app-ish for a kid-facing device next to the big home-screen
+// tiles.
 static lv_obj_t *make_tap_chip(lv_obj_t *parent, const char *text, lv_color_t text_color)
 {
   lv_obj_t *chip = lv_obj_create(parent);
@@ -186,13 +190,13 @@ static lv_obj_t *make_tap_chip(lv_obj_t *parent, const char *text, lv_color_t te
   lv_obj_set_size(chip, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(chip, WB_COLOR_ROW, 0);
   lv_obj_set_style_bg_opa(chip, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(chip, 14, 0);
-  lv_obj_set_style_pad_hor(chip, 16, 0);
-  lv_obj_set_style_pad_ver(chip, 10, 0);
+  lv_obj_set_style_radius(chip, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_hor(chip, 32, 0);
+  lv_obj_set_style_pad_ver(chip, 18, 0);
   lv_obj_clear_flag(chip, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *lbl = lv_label_create(chip);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(lbl, text_color, 0);
   return chip;
 }
@@ -298,9 +302,12 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   lv_obj_set_style_pad_all(parent, 24, 0);
   lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
 
+  // Grown from 460x460 alongside the chunkier button/row sizing below — the
+  // smaller card started clipping/crowding once rows and buttons doubled in
+  // size; 620x560 still leaves real margin on the 1024x600 panel.
   lv_obj_t *card = lv_obj_create(parent);
   lv_obj_remove_style_all(card);
-  lv_obj_set_size(card, 460, 460);
+  lv_obj_set_size(card, 620, 560);
   lv_obj_set_style_bg_color(card, WB_COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(card, 20, 0);
@@ -342,7 +349,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
 
   lv_obj_t *scanning_lbl = lv_label_create(list_view);
   lv_label_set_text(scanning_lbl, "Scanning for networks...");
-  lv_obj_set_style_text_font(scanning_lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(scanning_lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(scanning_lbl, WB_COLOR_MUTED, 0);
   ctx->scanning_lbl = scanning_lbl;
 
@@ -351,7 +358,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   lv_obj_set_size(rows_container, lv_pct(100), lv_pct(100));
   lv_obj_set_flex_grow(rows_container, 1);
   lv_obj_set_flex_flow(rows_container, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_row(rows_container, 8, 0);
+  lv_obj_set_style_pad_row(rows_container, 12, 0);
   ctx->rows_container = rows_container;
 
   lv_obj_t *rescan_btn = make_tap_chip(list_view, LV_SYMBOL_REFRESH " Rescan", WB_COLOR_GOLD);
@@ -372,7 +379,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
 
   lv_obj_t *password_title_lbl = lv_label_create(password_view);
   lv_label_set_text(password_title_lbl, "Password");
-  lv_obj_set_style_text_font(password_title_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(password_title_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(password_title_lbl, WB_COLOR_INK, 0);
   lv_label_set_long_mode(password_title_lbl, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(password_title_lbl, lv_pct(100));
@@ -385,14 +392,15 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   lv_obj_set_style_bg_color(password_ta, WB_COLOR_ROW, 0);
   lv_obj_set_style_bg_opa(password_ta, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(password_ta, 0, 0);
-  lv_obj_set_style_radius(password_ta, 12, 0);
-  lv_obj_set_style_text_font(password_ta, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_radius(password_ta, 16, 0);
+  lv_obj_set_style_pad_all(password_ta, 14, 0);
+  lv_obj_set_style_text_font(password_ta, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(password_ta, WB_COLOR_INK, 0);
   ctx->password_ta = password_ta;
 
   lv_obj_t *password_error_lbl = lv_label_create(password_view);
   lv_label_set_text(password_error_lbl, "");
-  lv_obj_set_style_text_font(password_error_lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(password_error_lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(password_error_lbl, WB_COLOR_ERROR, 0);
   lv_label_set_long_mode(password_error_lbl, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(password_error_lbl, lv_pct(100));
@@ -404,15 +412,15 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   lv_obj_set_size(connect_btn, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(connect_btn, WB_COLOR_GOLD, 0);
   lv_obj_set_style_bg_opa(connect_btn, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(connect_btn, 14, 0);
-  lv_obj_set_style_pad_ver(connect_btn, 12, 0);
+  lv_obj_set_style_radius(connect_btn, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_ver(connect_btn, 20, 0);
   lv_obj_set_flex_flow(connect_btn, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(connect_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_top(connect_btn, 12, 0);
+  lv_obj_set_style_pad_top(connect_btn, 20, 0);
   lv_obj_clear_flag(connect_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *connect_lbl = lv_label_create(connect_btn);
   lv_label_set_text(connect_lbl, "Connect");
-  lv_obj_set_style_text_font(connect_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(connect_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(connect_lbl, lv_color_white(), 0);
   lv_obj_add_event_cb(connect_btn, wb_password_connect_cb, LV_EVENT_CLICKED, ctx);
 
@@ -451,7 +459,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
 
   lv_obj_t *connecting_lbl = lv_label_create(connecting_view);
   lv_label_set_text(connecting_lbl, "Connecting...");
-  lv_obj_set_style_text_font(connecting_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(connecting_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(connecting_lbl, WB_COLOR_INK, 0);
   ctx->connecting_lbl = connecting_lbl;
 
