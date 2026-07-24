@@ -19,9 +19,9 @@
 extern "C" {
 #endif
 
-extern const lv_image_dsc_t wb_icon_sun_32;      // Morning routine tile
-extern const lv_image_dsc_t wb_icon_sunhigh_32;  // Afternoon routine tile
-extern const lv_image_dsc_t wb_icon_moon_32;     // Evening routine tile
+extern const lv_image_dsc_t wb_icon_sun_48;      // Morning routine tile (32->48 on request, to match the tile's bigger text/badge)
+extern const lv_image_dsc_t wb_icon_sunhigh_48;  // Afternoon routine tile (32->48, same request)
+extern const lv_image_dsc_t wb_icon_moon_48;     // Evening routine tile (32->48, same request)
 extern const lv_image_dsc_t wb_icon_moon_40;     // Nightlight grown-up-control tile
 extern const lv_image_dsc_t wb_icon_moon_solid_128; // Quiet-time screen — same crescent
                                                      // path as wb_icon_moon_*, baked FILLED
@@ -29,7 +29,7 @@ extern const lv_image_dsc_t wb_icon_moon_solid_128; // Quiet-time screen — sam
                                                      // outline-stroked, at a bigger size for a
                                                      // solid centerpiece glyph rather than a
                                                      // small tile icon — recolor gold at use.
-extern const lv_image_dsc_t wb_icon_broom_32;    // Chores bar
+extern const lv_image_dsc_t wb_icon_broom_48;    // Chores bar (32->48, same request)
 extern const lv_image_dsc_t wb_icon_star_18;     // Stars badges/pills
 extern const lv_image_dsc_t wb_icon_gear_24;     // Settings gear button
 extern const lv_image_dsc_t wb_icon_sound_40;    // Sounds grown-up-control tile

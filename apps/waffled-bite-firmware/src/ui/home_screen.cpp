@@ -145,11 +145,11 @@ static lv_obj_t *make_badge(lv_obj_t *parent, const char *text, lv_color_t bg, l
   lv_obj_set_style_bg_color(pill, bg, 0);
   lv_obj_set_style_bg_opa(pill, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(pill, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(pill, 10, 0);
-  lv_obj_set_style_pad_ver(pill, 4, 0);
+  lv_obj_set_style_pad_hor(pill, 14, 0);
+  lv_obj_set_style_pad_ver(pill, 8, 0);
   lv_obj_set_flex_flow(pill, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(pill, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_column(pill, 5, 0);
+  lv_obj_set_style_pad_column(pill, 8, 0);
   lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
 
   if (icon)
@@ -157,7 +157,7 @@ static lv_obj_t *make_badge(lv_obj_t *parent, const char *text, lv_color_t bg, l
 
   lv_obj_t *lbl = lv_label_create(pill);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(lbl, fg, 0);
   if (out_lbl)
     *out_lbl = lbl;
@@ -176,7 +176,7 @@ static lv_obj_t *make_done_check(lv_obj_t *tile, lv_align_t align, lv_coord_t of
 {
   lv_obj_t *badge = lv_obj_create(tile);
   lv_obj_remove_style_all(badge);
-  lv_obj_set_size(badge, 26, 26);
+  lv_obj_set_size(badge, 32, 32);
   lv_obj_set_style_radius(badge, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_bg_color(badge, WB_COLOR_DONE_GREEN, 0);
   lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
@@ -189,7 +189,7 @@ static lv_obj_t *make_done_check(lv_obj_t *tile, lv_align_t align, lv_coord_t of
 
   lv_obj_t *icon = lv_label_create(badge);
   lv_label_set_text(icon, LV_SYMBOL_OK);
-  lv_obj_set_style_text_font(icon, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(icon, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(icon, lv_color_white(), 0);
   lv_obj_center(icon);
   return badge;
@@ -233,7 +233,7 @@ static lv_obj_t *make_routine_tile(lv_obj_t *parent, const char *name, const WbR
   lv_obj_set_style_bg_color(tile, bg, 0);
   lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(tile, 20, 0);
-  lv_obj_set_style_pad_all(tile, 16, 0);
+  lv_obj_set_style_pad_all(tile, 20, 0);
   lv_obj_set_flex_grow(tile, 1);
   lv_obj_set_size(tile, LV_SIZE_CONTENT, lv_pct(100));
   lv_obj_set_flex_flow(tile, LV_FLEX_FLOW_COLUMN);
@@ -276,11 +276,11 @@ static lv_obj_t *make_routine_tile(lv_obj_t *parent, const char *name, const WbR
 
   lv_obj_t *title = lv_label_create(bottom);
   lv_label_set_text(title, name);
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(title, fg, 0);
 
   lv_obj_t *bar = lv_bar_create(bottom);
-  lv_obj_set_size(bar, lv_pct(100), 8);
+  lv_obj_set_size(bar, lv_pct(100), 10);
   lv_bar_set_range(bar, 0, visible > 0 ? visible : 1);
   lv_bar_set_value(bar, done, LV_ANIM_OFF);
   lv_obj_set_style_bg_color(bar, lv_color_white(), LV_PART_MAIN);
@@ -304,9 +304,9 @@ static lv_obj_t *make_chores_bar(lv_obj_t *parent, const WbRoutine &r, lv_obj_t 
   lv_obj_set_style_bg_color(bar_card, WB_COLOR_CHORES, 0);
   lv_obj_set_style_bg_opa(bar_card, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(bar_card, 20, 0);
-  lv_obj_set_style_pad_hor(bar_card, 20, 0);
-  lv_obj_set_style_pad_column(bar_card, 16, 0);
-  lv_obj_set_size(bar_card, lv_pct(100), 96);
+  lv_obj_set_style_pad_hor(bar_card, 24, 0);
+  lv_obj_set_style_pad_column(bar_card, 20, 0);
+  lv_obj_set_size(bar_card, lv_pct(100), 110);
   lv_obj_set_flex_flow(bar_card, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(bar_card, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_clear_flag(bar_card, LV_OBJ_FLAG_SCROLLABLE);
@@ -316,16 +316,16 @@ static lv_obj_t *make_chores_bar(lv_obj_t *parent, const WbRoutine &r, lv_obj_t 
   int visible = routine_visible_count(r);
   bool all_done = visible > 0 && done == visible;
 
-  make_icon(bar_card, &wb_icon_broom_32, WB_COLOR_CHORES_TEXT);
+  make_icon(bar_card, &wb_icon_broom_48, WB_COLOR_CHORES_TEXT);
 
   lv_obj_t *title = lv_label_create(bar_card);
   lv_label_set_text(title, "Chores");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(title, WB_COLOR_CHORES_TEXT, 0);
 
   lv_obj_t *bar = lv_bar_create(bar_card);
   lv_obj_set_flex_grow(bar, 1);
-  lv_obj_set_height(bar, 8);
+  lv_obj_set_height(bar, 10);
   lv_bar_set_range(bar, 0, visible > 0 ? visible : 1);
   lv_bar_set_value(bar, done, LV_ANIM_OFF);
   lv_obj_set_style_bg_color(bar, lv_color_white(), LV_PART_MAIN);
@@ -599,9 +599,9 @@ void wb_build_home_screen(lv_obj_t *parent, const WbDeviceState &state, lv_obj_t
   lv_obj_t *morning_badge_lbl = nullptr, *morning_bar = nullptr, *morning_check = nullptr;
   lv_obj_t *afternoon_badge_lbl = nullptr, *afternoon_bar = nullptr, *afternoon_check = nullptr;
   lv_obj_t *evening_badge_lbl = nullptr, *evening_bar = nullptr, *evening_check = nullptr;
-  lv_obj_t *morning_tile = make_routine_tile(tiles_row, "Morning", state.morning, WB_COLOR_MORNING, WB_COLOR_MORNING_TEXT, &wb_icon_sun_32, &morning_badge_lbl, &morning_bar, &morning_check);
-  lv_obj_t *afternoon_tile = make_routine_tile(tiles_row, "Afternoon", state.afternoon, WB_COLOR_AFTERNOON, WB_COLOR_AFTERNOON_TEXT, &wb_icon_sunhigh_32, &afternoon_badge_lbl, &afternoon_bar, &afternoon_check);
-  lv_obj_t *evening_tile = make_routine_tile(tiles_row, "Evening", state.evening, WB_COLOR_EVENING, WB_COLOR_EVENING_TEXT, &wb_icon_moon_32, &evening_badge_lbl, &evening_bar, &evening_check);
+  lv_obj_t *morning_tile = make_routine_tile(tiles_row, "Morning", state.morning, WB_COLOR_MORNING, WB_COLOR_MORNING_TEXT, &wb_icon_sun_48, &morning_badge_lbl, &morning_bar, &morning_check);
+  lv_obj_t *afternoon_tile = make_routine_tile(tiles_row, "Afternoon", state.afternoon, WB_COLOR_AFTERNOON, WB_COLOR_AFTERNOON_TEXT, &wb_icon_sunhigh_48, &afternoon_badge_lbl, &afternoon_bar, &afternoon_check);
+  lv_obj_t *evening_tile = make_routine_tile(tiles_row, "Evening", state.evening, WB_COLOR_EVENING, WB_COLOR_EVENING_TEXT, &wb_icon_moon_48, &evening_badge_lbl, &evening_bar, &evening_check);
   wb_wire_open_tasks(morning_tile, "Morning", state.morning, tasks_scr, parent, onComplete, onUncomplete);
   wb_wire_open_tasks(afternoon_tile, "Afternoon", state.afternoon, tasks_scr, parent, onComplete, onUncomplete);
   wb_wire_open_tasks(evening_tile, "Evening", state.evening, tasks_scr, parent, onComplete, onUncomplete);

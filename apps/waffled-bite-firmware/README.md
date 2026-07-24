@@ -614,3 +614,15 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   scale. Flash usage moved from 26% to 31.5% (ARGB8888 is 2x RGB565's bytes/pixel
   and 4x A8's), still well within budget. Native and esp32-p4 both build clean;
   verified no crash on real hardware post-flash.
+- **Home screen routine tiles sized up to match — direct follow-up.** The
+  Morning/Afternoon/Evening/Chores tiles were the one place on the home screen that
+  hadn't gotten the chunky-button-pass treatment. Rebaked `wb_icon_sun`/`sunhigh`/
+  `moon`/`broom` at 48px (was 32px — these are single-purpose A8 icons, each used in
+  exactly one place, confirmed by grep before deleting the old 32px `.c` files
+  rather than leaving them orphaned) from the same `tools/icons/*.svg` sources, no
+  new assets needed. `make_routine_tile`'s title text 16→24, `make_badge`'s "X of Y"
+  pill text 14→16 (bumped for every caller — the greeting card's stars pill too,
+  not just routine tiles, since it's the same "secondary info pill" pattern),
+  `make_done_check`'s green checkmark badge 26px→32px, tile padding and progress
+  bar height bumped slightly to give the bigger content room. Native and esp32-p4
+  both build clean; verified no crash on real hardware post-flash.

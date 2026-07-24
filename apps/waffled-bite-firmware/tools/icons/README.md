@@ -31,12 +31,15 @@ output format wasn't verified against LVGL 9's `lv_image_header_t`). Instead:
    ```
 3. Declare the new constant in `src/icons/wb_icons.h` (`extern const lv_image_dsc_t ...`).
 
-Current bake sizes (chosen to match the mock's own SVG use, then rounded): 32×32 for the
-three routine-tile icons + chores' broom, 40×40 for the grown-up-controls tiles
-(sound/nightlight/timer/bedtime), 24×24 for the settings gear, 18×18 for stars/back/
-close/check. `moon` is baked twice (32 for the Evening tile, 40 for the Nightlight
-control) rather than scaled at runtime, to stay crisp — LVGL image scaling blurs a raster
-source; a second bake is a few hundred bytes for a plainly better result.
+Current bake sizes (chosen to match the mock's own SVG use, then rounded, with the
+three routine-tile icons + broom later bumped 32→48 per direct request — see the
+firmware README's "Home screen routine tiles sized up" entry): 48×48 for the three
+routine-tile icons (sun/sunhigh/moon) + chores' broom, 40×40 for the
+grown-up-controls tiles (sound/nightlight/timer/bedtime), 24×24 for the settings
+gear, 18×18 for stars/back/close/check. `moon` is baked three times now (48 for the
+Evening tile, 40 for the Nightlight control, 128 filled-solid for quiet time) rather
+than scaled at runtime, to stay crisp — LVGL image scaling blurs a raster source; a
+few hundred extra bytes per bake is a plainly better result.
 
 `moon_solid.svg` is the exact same crescent path as `moon.svg`, just switched from a
 stroked outline (`fill:none; stroke:#1c1a18`) to a plain fill (`fill:#1c1a18; stroke:none`)

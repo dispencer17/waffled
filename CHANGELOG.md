@@ -89,6 +89,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Chores) got the same treatment — a bigger checkbox and bigger title text, more
   breathing room between rows. The one thing left deliberately small: the "For a
   grown-up" chip in Settings, so it stays easy to overlook for a kid.
+- **Waffled-Bite device: bigger icons and text on the home screen's routine tiles.**
+  Direct follow-up: the Morning/Afternoon/Evening/Chores tiles' sun/sun-high/moon/
+  broom icons and "X of Y" count pills were still their original size and looked
+  small next to everything else that's gotten bigger. Icons are now noticeably
+  bigger, and the tile name and count text are bigger too.
 
 ### Fixed
 
