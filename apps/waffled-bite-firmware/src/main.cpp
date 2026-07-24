@@ -680,6 +680,23 @@ static void wb_enter_app()
   lv_obj_clean(settings_scr);
   wb_build_home_screen(home_scr, wb_mock_state(), settings_scr, tasks_scr, wb_complete_task, wb_uncomplete_task);
   wb_build_settings_screen(settings_scr, wb_mock_state(), home_scr, detail_scr, timer_scr, bedtime_scr, forget_scr, wb_patch_settings, wb_forget_pairing_and_unpair);
+
+  // timer_scr/bedtime_scr are otherwise only ever built inside wb_do_poll()'s
+  // first-success path below — if the device is offline (or the very first
+  // poll after pairing simply fails for any reason), that build never runs,
+  // and tapping into either from Settings navigates to a genuinely empty
+  // lv_obj: no content, no back button, no way out short of a power cycle.
+  // Confirmed live: this is what "I tapped Timer and it white-screened, now
+  // it's frozen" turned out to be. Give both a real placeholder build here,
+  // same mock-state pattern already used for home_scr/settings_scr above —
+  // wb_do_poll()'s first real success still fully rebuilds both with live
+  // data (g_liveScreensBuilt / g_bedtimeScrBuilt both start false), this
+  // only closes the empty-screen window before that first success lands.
+  lv_obj_clean(timer_scr);
+  wb_build_timer_screen(timer_scr, wb_mock_state().timer, settings_scr, wb_start_timer, wb_end_timer);
+  lv_obj_clean(bedtime_scr);
+  wb_build_bedtime_screen(bedtime_scr, wb_glow_spec_for_device_state(wb_mock_state()), settings_scr);
+
   lv_scr_load(home_scr);
 
   wb_do_poll(); // also does timer_scr/bedtime_scr's real first build — see wb_do_poll's g_liveScreensBuilt branch

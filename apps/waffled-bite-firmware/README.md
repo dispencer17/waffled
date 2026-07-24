@@ -474,3 +474,19 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   "Offline" from anywhere else. That's expected today, not a bug; a remote-reachable
   self-hosted deployment (reverse proxy, VPN, tunnel) is a household networking choice
   outside this firmware's scope.
+- **`timer_scr`/`bedtime_scr` could white-screen and strand the kid — fixed.** Both
+  were only ever built inside `wb_do_poll()`'s first-success path (`main.cpp`, gated by
+  `g_liveScreensBuilt`/`g_bedtimeScrBuilt`), which only runs once `wb_state_from_json()`
+  has actually succeeded at least once. If the device's very first poll after entering
+  the app fails — the offline case directly above is the common way this happens —
+  that build never runs, and `timer_scr`/`bedtime_scr` stay exactly what
+  `lv_obj_create(NULL)` produced at boot: an object with zero children. Settings'
+  "Set a timer"/"Bedtime" tiles navigate to them unconditionally either way
+  (`wb_go_scr_cb`), so tapping either landed on a genuinely blank screen — no title, no
+  content, no back button, confirmed live as "tapped Timer, it white-screened, now it's
+  frozen with no way out short of a power cycle." Fixed by giving both a real
+  placeholder build in `wb_enter_app()` up front, using `wb_mock_state()` — the exact
+  same pattern `home_scr`/`settings_scr` already used for this. `wb_do_poll()`'s first
+  real success still fully rebuilds both with live data exactly as before (the two
+  `g_...Built` flags are untouched, still start `false`); this only closes the window
+  before that first success lands.

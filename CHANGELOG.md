@@ -100,6 +100,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   online. A self-hosted server that's only reachable on your home network showing
   "Offline" away from home is expected; this fix is about the device staying usable
   while it waits.
+- **Waffled-Bite device: "Set a timer" and "Bedtime" could white-screen and strand
+  you.** Both screens were only ever filled in the first time the device successfully
+  checked in with the server after opening the app — if that first check-in failed
+  (e.g. the device is offline, as above), tapping into either from Settings landed on
+  a completely blank screen with no back button and no way out short of a power cycle.
+  Both now show right away, and fill in with real data as soon as the device is back
+  online — no more blank dead end.
 - **Waffled-Bite device: touchscreen input was mirrored left-right.** Most taps landed
   fine, but the on-screen keyboard's narrow, side-by-side keys made it obvious — tapping
   a key hit its mirror on the opposite side. Also added a visible way to dismiss the
