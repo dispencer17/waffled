@@ -28,6 +28,7 @@
 #include "ui/quiet_screen.h"
 #include "ui/timer_screen.h"
 #include "ui/bedtime_screen.h"
+#include "ui/offline_screen.h"
 #include "icons/wb_icons.h"
 #include <ArduinoJson.h>
 #include <string>
@@ -138,6 +139,7 @@ static lv_obj_t *quiet_scr;   // force-shown whenever the poll reports quiet tim
 static lv_obj_t *timer_scr;   // picker <-> countdown, kept correctly built by every poll — see wb_do_poll
 static lv_obj_t *bedtime_scr; // plain preview OR wake-light sleep/warn/wake — see wb_bedtime_claim_of
 static lv_obj_t *forget_scr;  // rebuilt fresh each time (see settings_screen.cpp's 5-tap sequence), no live state to sync
+static lv_obj_t *offline_scr; // force-shown on the offline-badge threshold (see wb_mark_poll_failed) unless a lock (quiet/bedtime) is already active
 static bool onboarding_built = false;
 static bool g_quietWasActive = false;
 static bool g_timerWasActive = false; // tracks timer_scr's built shape (picker vs countdown), same role as g_quietWasActive
@@ -215,11 +217,26 @@ static void wb_mark_poll_failed()
     lv_obj_clear_flag(g_offlineBadge, LV_OBJ_FLAG_HIDDEN);
     if (g_pollTimer)
       lv_timer_set_period(g_pollTimer, WB_POLL_INTERVAL_OFFLINE_MS);
+    // Force onto offline_scr so device-initiated actions (which all need a
+    // live request — starting a timer, completing a chore...) don't just
+    // silently fail with no explanation, same "confirmed live" story as the
+    // freeze fix above. Never preempt a parent-forced lock (quiet time, or
+    // bedtime's Sleep/Warn/Wake claim) though — that would hand a kid a
+    // "Change Wi-Fi/go to Settings" way OUT of a lock just by taking the
+    // device offline on purpose. Only fires on the edge into offline
+    // (streak == threshold, not every miss after) and only if not already
+    // showing it.
+    bool locked = lv_screen_active() == quiet_scr ||
+                  (lv_screen_active() == bedtime_scr && g_bedtimeClaim != WbBedtimeClaim::Preview);
+    if (g_pollFailStreak == WB_OFFLINE_AFTER_MISSES && !locked && lv_screen_active() != offline_scr)
+      lv_scr_load(offline_scr);
   }
 }
 static void wb_mark_poll_ok()
 {
   g_pollFailStreak = 0;
+  if (lv_screen_active() == offline_scr)
+    lv_scr_load(home_scr);
   lv_obj_add_flag(g_offlineBadge, LV_OBJ_FLAG_HIDDEN);
   if (g_pollTimer)
     lv_timer_set_period(g_pollTimer, WB_POLL_INTERVAL_MS);
@@ -697,6 +714,16 @@ static void wb_enter_app()
   lv_obj_clean(bedtime_scr);
   wb_build_bedtime_screen(bedtime_scr, wb_glow_spec_for_device_state(wb_mock_state()), settings_scr);
 
+  // offline_scr has no live state (see wb_mark_poll_failed/wb_mark_poll_ok
+  // for when it's force-shown/dismissed), so it only needs building once —
+  // same reasoning as timer_scr/bedtime_scr's placeholder builds above,
+  // just simpler since there's no per-poll data to fill in.
+  lv_obj_clean(offline_scr);
+  wb_build_offline_screen(
+      offline_scr, settings_scr, []()
+      { wb_do_poll(); }, // manual retry — don't wait for a possibly-30s-backed-off scheduled poll
+      wb_show_wifi_picker);
+
   lv_scr_load(home_scr);
 
   wb_do_poll(); // also does timer_scr/bedtime_scr's real first build — see wb_do_poll's g_liveScreensBuilt branch
@@ -826,6 +853,7 @@ void setup()
   timer_scr = lv_obj_create(NULL);
   bedtime_scr = lv_obj_create(NULL);
   forget_scr = lv_obj_create(NULL);
+  offline_scr = lv_obj_create(NULL);
 
   // A small "Offline" pill on the always-on-top layer — see g_offlineBadge's
   // header comment. Built once here, toggled hidden/visible by

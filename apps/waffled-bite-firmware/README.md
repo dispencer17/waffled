@@ -496,3 +496,32 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   real success still fully rebuilds both with live data exactly as before (the two
   `g_...Built` flags are untouched, still start `false`); this only closes the window
   before that first success lands.
+- **A real "can't reach the server" screen — direct request, following the two entries
+  above.** Every device-initiated action (starting a timer, completing a chore,
+  toggling sound/nightlight — anything routed through `wb_http_*`) needs a live request
+  to the server; while offline, those just failed silently with zero user feedback,
+  reported live as "I tried to start a timer and it doesn't do anything." Three
+  approaches were on the table — inline per-action error toasts, disabling
+  server-dependent controls up front, or a full-screen blocker with recovery options —
+  and the full-screen blocker was the one picked. New `src/ui/offline_screen.{h,cpp}`
+  (`wb_build_offline_screen`) — a plain message plus "Try again" (an immediate
+  `wb_do_poll()`, not waiting for a possibly 30s-backed-off scheduled one — see the
+  offline-backoff entry above), "Change Wi-Fi network" (`wb_show_wifi_picker` — this
+  turned out to already work correctly from a live-app context even though it had never
+  actually been wired to a button there: `wb_on_wifi_connected` already falls through to
+  `wb_enter_app()` when already paired, not just onboarding), and "Go to Settings".
+  Force-shown from `wb_mark_poll_failed()`/dismissed from `wb_mark_poll_ok()` in
+  `main.cpp`, at the exact same `WB_OFFLINE_AFTER_MISSES` threshold the small "Offline"
+  badge already used — one source of truth for "is this device offline" — and only on
+  the edge into that state (not re-triggered every subsequent miss). Deliberately
+  **excludes** a direct "change server"/unpair shortcut: that stays behind Settings'
+  existing 5-tap "For a grown-up" gesture (`forget_confirm_screen.h`), since an
+  ungated shortcut on a screen reached automatically (not by deliberate navigation)
+  would let a kid force the device offline on purpose (e.g. turn off the router) to
+  reach an unpair button with no grown-up gate at all — "Go to Settings" just routes
+  there, same as it always could. Also deliberately **never preempts** a parent-forced
+  lock (quiet time, or bedtime's Sleep/Warn/Wake claim) for the identical reason —
+  otherwise going offline would hand a kid a way out of a lock. Native and esp32-p4 both
+  build clean; verified no crash on real hardware post-flash (only the known-benign,
+  already-documented transient `H_SDIO_DRV: failed to read registers` retry, not a
+  reboot).

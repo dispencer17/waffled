@@ -1,0 +1,93 @@
+#include "offline_screen.h"
+
+// Same light palette as settings_screen.cpp/timer_screen.cpp/
+// forget_confirm_screen.cpp — a normal utility screen, not a "wind down"
+// mood; duplicated rather than shared, same per-file convention as those.
+#define WB_COLOR_BG lv_color_hex(0xF5EFE1)
+#define WB_COLOR_CARD lv_color_hex(0xFFFDF8)
+#define WB_COLOR_INK lv_color_hex(0x1C1A18)
+#define WB_COLOR_MUTED lv_color_hex(0x8A8074)
+#define WB_COLOR_GOLD lv_color_hex(0xC98A1E)
+
+static void wb_offline_goto_settings_cb(lv_event_t *e)
+{
+  lv_obj_t *settings_scr = (lv_obj_t *)lv_event_get_user_data(e);
+  // NOT a fade — see settings_screen.cpp's wb_open_detail_cb for why.
+  lv_scr_load_anim(settings_scr, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+}
+
+struct WbOfflineActionCtx
+{
+  WbOfflineActionCallback cb;
+};
+static void wb_offline_action_delete_cb(lv_event_t *e) { delete (WbOfflineActionCtx *)lv_event_get_user_data(e); }
+static void wb_offline_action_clicked_cb(lv_event_t *e)
+{
+  WbOfflineActionCtx *ctx = (WbOfflineActionCtx *)lv_event_get_user_data(e);
+  if (ctx->cb)
+    ctx->cb();
+}
+
+static lv_obj_t *make_pill_button(lv_obj_t *parent, const char *text, lv_color_t bg, lv_color_t fg)
+{
+  lv_obj_t *btn = lv_obj_create(parent);
+  lv_obj_remove_style_all(btn);
+  lv_obj_set_size(btn, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+  lv_obj_set_style_bg_color(btn, bg, 0);
+  lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+  lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_hor(btn, 22, 0);
+  lv_obj_set_style_pad_ver(btn, 12, 0);
+  lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *lbl = lv_label_create(btn);
+  lv_label_set_text(lbl, text);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(lbl, fg, 0);
+  return btn;
+}
+
+void wb_build_offline_screen(lv_obj_t *parent, lv_obj_t *settings_scr,
+                              WbOfflineActionCallback onRetry, WbOfflineActionCallback onChangeWifi)
+{
+  lv_obj_set_style_bg_color(parent, WB_COLOR_BG, 0);
+  lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_row(parent, 18, 0);
+  lv_obj_set_style_pad_all(parent, 30, 0);
+  lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t *title = lv_label_create(parent);
+  lv_label_set_text(title, "Can't reach the server");
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
+
+  lv_obj_t *sub = lv_label_create(parent);
+  lv_label_set_text(sub, "This device can't check in right now, so things like\nstarting a timer or checking off a chore won't work yet.\nCheck your Wi-Fi, or ask a grown-up if the server address\nneeds to change.");
+  lv_obj_set_style_text_font(sub, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(sub, WB_COLOR_MUTED, 0);
+  lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_width(sub, lv_pct(80));
+
+  lv_obj_t *row = lv_obj_create(parent);
+  lv_obj_remove_style_all(row);
+  lv_obj_set_size(row, lv_pct(90), LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(row, 14, 0);
+  lv_obj_set_style_pad_row(row, 14, 0);
+  lv_obj_set_style_pad_top(row, 10, 0);
+  lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t *retry_btn = make_pill_button(row, LV_SYMBOL_REFRESH " Try again", WB_COLOR_GOLD, lv_color_white());
+  WbOfflineActionCtx *retry_ctx = new WbOfflineActionCtx{onRetry};
+  lv_obj_add_event_cb(retry_btn, wb_offline_action_clicked_cb, LV_EVENT_CLICKED, retry_ctx);
+  lv_obj_add_event_cb(retry_btn, wb_offline_action_delete_cb, LV_EVENT_DELETE, retry_ctx);
+
+  lv_obj_t *wifi_btn = make_pill_button(row, "Change Wi-Fi network", WB_COLOR_CARD, WB_COLOR_INK);
+  WbOfflineActionCtx *wifi_ctx = new WbOfflineActionCtx{onChangeWifi};
+  lv_obj_add_event_cb(wifi_btn, wb_offline_action_clicked_cb, LV_EVENT_CLICKED, wifi_ctx);
+  lv_obj_add_event_cb(wifi_btn, wb_offline_action_delete_cb, LV_EVENT_DELETE, wifi_ctx);
+
+  lv_obj_t *settings_btn = make_pill_button(row, "Go to Settings", WB_COLOR_CARD, WB_COLOR_INK);
+  lv_obj_add_event_cb(settings_btn, wb_offline_goto_settings_cb, LV_EVENT_CLICKED, settings_scr);
+}
