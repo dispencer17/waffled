@@ -54,13 +54,16 @@ function renderShop() {
   return render(<MemoryRouter><RewardsPanel /></MemoryRouter>)
 }
 
-// The panel hangs off four independent fetches, and they land in no fixed order:
-// /api/rewards fills the grid, /api/balances decides which tiles are affordable, and
-// /api/persons/:id/overview only fires *after* balances (the active kid is derived
-// from the roster). So "Ice cream is on screen" does NOT mean the tiles know the
-// wallet balance yet — asserting affordability synchronously after it reads a tile
-// mid-load. Waiting for the saving-toward panel is the one signal that implies the
-// whole balances → active kid → overview chain has settled.
+// A tile being on screen does NOT mean it knows the wallet balance yet.
+// useRewardsHub commits rewards + balances together (one Promise.all → one
+// setState) and the panel renders "Loading…" until that lands, so the data is
+// there — but affordability is read through `activeKid`, and activeKidId is
+// assigned in a useEffect that runs *after* that first commit. So the first
+// render with tiles has activeKidId === null, which makes walletBalance 0: every
+// tile locked, every progress bar at 0%. /api/persons/:id/overview only fires
+// once activeKidId is set, so the saving-toward panel is a precise signal that
+// the effect has run and the tiles now reflect the real wallet.
+// (Measured: gating test 1 on findByText('Ice cream') instead fails 12 runs in 20.)
 const shopGrid = () => document.querySelector('.shop-grid') as HTMLElement
 const settled = () => screen.findByText(/to go — keep earning/i)
 
@@ -137,12 +140,18 @@ describe('Reward Shop', () => {
   })
 
   it('hides "Award stars" from someone without reward.grant', async () => {
-    mockApi(me([]))
+    // "Award stars" is gated on reward.grant, which comes from /api/household —
+    // a different effect from the balances/overview chain settled() waits on. So
+    // settled() would NOT make this absence meaningful: with /api/household still
+    // in flight, `person` is null, every capability reads false and the assertion
+    // passes without testing the gate at all.
+    // Instead give the caller a *different* reward capability. "Add reward" is
+    // gated on reward.manage from the same response, so its presence proves
+    // /api/household landed AND was applied — which is what makes the absence of
+    // "Award stars" evidence about the grant gate rather than about load order.
+    mockApi(me(['reward.manage']))
     renderShop()
-    // Let the panel finish loading before asserting an absence, or this passes
-    // vacuously against a half-rendered shop. The preceding test is the positive
-    // control: with reward.grant, the button does render.
-    await settled()
+    expect(await screen.findByRole('button', { name: /add reward/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /award stars/i })).not.toBeInTheDocument()
   })
 })
