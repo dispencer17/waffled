@@ -101,6 +101,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Waffled-Bite device: the on-screen keyboard was covering the text field you were
+  typing into.** On the setup screen, the "Server address" field was hidden entirely
+  behind the keyboard once it popped up — you had no way to see what you were typing.
+  The screen now shifts up just enough to keep whichever field you tapped visible
+  above the keyboard, and settles back down once you're done. Fixed on the setup
+  screen (confirmed) and the Wi-Fi password screen (same underlying issue, fixed
+  proactively).
 - **Waffled-Bite device: WiFi picker showed a stray blank box in network subtitles.**
   Each row's "Secured · Strong signal" line used a middle-dot character the device's
   font doesn't have, which rendered as an empty square instead. Now a plain hyphen.

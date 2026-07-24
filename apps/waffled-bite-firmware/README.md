@@ -650,3 +650,30 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   superseded 48px `.c` files); `wb_icon_broom_48` (chores bar) is untouched — the
   request was specifically the three routine tiles, not chores. Native and
   esp32-p4 both build clean; verified no crash on real hardware post-flash.
+- **On-screen keyboard covering the focused text field — real regression, fixed
+  in two places.** `onboarding_screen.cpp`'s "Vertical alignment is START, not
+  CENTER... leaves enough headroom above the keyboard" comment used to be true,
+  but the chunky-button pass grew the card's content (bigger logo, `font_32`
+  title, bigger fields) enough that it no longer held: reported live via a
+  real-device photo, the Server-address field was entirely hidden behind the
+  keyboard once it popped up, with no way to see what was typed. The keyboard is
+  a `FLOATING` overlay (see the comment on why that flag is required for its
+  bottom-docking to actually take effect) — content "under" it in flex-layout
+  terms is still there, just invisible, since the keyboard paints on top; a
+  fixed vertical offset (or just hoping the layout stays short enough) doesn't
+  hold up as content grows. Fixed by computing the overflow fresh on every
+  `FOCUSED` event (`ta`'s bottom edge minus the keyboard's top edge, plus a 16px
+  margin) and applying it as `lv_obj_set_style_translate_y()` on the card — a
+  paint-time transform, not a layout change, so it doesn't fight the flex
+  engine. Reset to 0 on defocus/hide. `lv_obj_get_coords()` always reports the
+  natural untransformed position, so recomputing on every focus handles
+  `server_ta`/`code_ta` needing different amounts of shift without compounding
+  a previous offset. `wifi_screen.cpp`'s password field sits inside the same
+  kind of fixed-size card and shares the identical risk — not yet confirmed
+  broken on real hardware (rough math suggests it currently has enough
+  headroom), but fixed the same way defensively, tied to a new small `WbKbCtx`
+  freed on `card`'s `LV_EVENT_DELETE` (this screen rebuilds on every picker
+  reopen — see the earlier ctx-cleanup entry above — so "never freed" would
+  leak one of these per reopen, unlike onboarding's screen which is genuinely
+  built once). Native and esp32-p4 both build clean; verified no crash on real
+  hardware post-flash.

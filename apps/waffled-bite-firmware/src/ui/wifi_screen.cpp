@@ -232,22 +232,43 @@ static void wb_password_connect_cb(lv_event_t *e)
   wb_wifi_show_view(ctx, WbWifiUiState::Connecting);
 }
 
+// Bundles what the focus/defocus handlers need — kb plus `card` so it can be
+// shifted up out from under the keyboard (see wb_ta_focused_cb).
+struct WbKbCtx
+{
+  lv_obj_t *kb;
+  lv_obj_t *card;
+};
+static void wb_kb_ctx_delete_cb(lv_event_t *e) { delete (WbKbCtx *)lv_event_get_user_data(e); }
+
 // Shared LV_EVENT_FOCUSED/DEFOCUSED handlers for the password textarea —
 // identical pattern to onboarding_screen.cpp's wb_ta_focused_cb/
 // wb_ta_defocused_cb, duplicated rather than shared for the same reason
 // those aren't factored out (each screen file owns its own small helpers).
+// Shifts `card` up if the focused field would otherwise sit under the
+// keyboard overlay — see onboarding_screen.cpp's identical fix for the full
+// rationale (confirmed live there; applied here defensively too, since this
+// screen's password field sits inside the same kind of fixed-size card and
+// shares the identical risk, just not yet confirmed broken on real hardware).
 static void wb_ta_focused_cb(lv_event_t *e)
 {
   lv_obj_t *ta = (lv_obj_t *)lv_event_get_target(e);
-  lv_obj_t *kb = (lv_obj_t *)lv_event_get_user_data(e);
-  lv_keyboard_set_textarea(kb, ta);
-  lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  WbKbCtx *kbCtx = (WbKbCtx *)lv_event_get_user_data(e);
+  lv_keyboard_set_textarea(kbCtx->kb, ta);
+  lv_obj_clear_flag(kbCtx->kb, LV_OBJ_FLAG_HIDDEN);
+
+  lv_area_t ta_coords, kb_coords;
+  lv_obj_get_coords(ta, &ta_coords);
+  lv_obj_get_coords(kbCtx->kb, &kb_coords);
+  int32_t overflow = ta_coords.y2 - kb_coords.y1 + 16; // 16px breathing room above the keyboard
+  lv_obj_set_style_translate_y(kbCtx->card, overflow > 0 ? -overflow : 0, 0);
 }
 
 static void wb_ta_defocused_cb(lv_event_t *e)
 {
-  lv_obj_t *kb = (lv_obj_t *)lv_event_get_user_data(e);
-  lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+  WbKbCtx *kbCtx = (WbKbCtx *)lv_event_get_user_data(e);
+  lv_obj_add_flag(kbCtx->kb, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_style_translate_y(kbCtx->card, 0, 0);
 }
 
 static void wb_wifi_screen_poll_cb(lv_timer_t *timer)
@@ -445,8 +466,13 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
   lv_keyboard_set_textarea(kb, password_ta);
   ctx->kb = kb;
-  lv_obj_add_event_cb(password_ta, wb_ta_focused_cb, LV_EVENT_FOCUSED, kb);
-  lv_obj_add_event_cb(password_ta, wb_ta_defocused_cb, LV_EVENT_DEFOCUSED, kb);
+  // Freed on card's LV_EVENT_DELETE, same rule as `ctx` itself
+  // (wb_wifi_ctx_delete_cb) — this screen rebuilds on every picker reopen,
+  // so "never freed" would leak one of these per reopen.
+  WbKbCtx *kbCtx = new WbKbCtx{kb, card};
+  lv_obj_add_event_cb(card, wb_kb_ctx_delete_cb, LV_EVENT_DELETE, kbCtx);
+  lv_obj_add_event_cb(password_ta, wb_ta_focused_cb, LV_EVENT_FOCUSED, kbCtx);
+  lv_obj_add_event_cb(password_ta, wb_ta_defocused_cb, LV_EVENT_DEFOCUSED, kbCtx);
 
   // ── connecting view ──────────────────────────────────────────────────────
   lv_obj_t *connecting_view = lv_obj_create(card);
