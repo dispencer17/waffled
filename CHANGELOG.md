@@ -97,6 +97,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Waffled-Bite device: WiFi picker showed a stray blank box in network subtitles.**
+  Each row's "Secured · Strong signal" line used a middle-dot character the device's
+  font doesn't have, which rendered as an empty square instead. Now a plain hyphen.
 - **Waffled-Bite device: chores that need a photo or a grown-up's OK no longer look
   broken.** Tapping any row on the Chores/Morning/Afternoon/Evening list worked, but a
   chore requiring approval silently reverted to unchecked once the server queued it for

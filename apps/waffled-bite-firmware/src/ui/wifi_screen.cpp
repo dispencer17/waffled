@@ -160,7 +160,12 @@ static void wb_wifi_build_rows(WbWifiScreenCtx *ctx)
 
     lv_obj_t *sub_lbl = lv_label_create(row);
     char sub[48];
-    snprintf(sub, sizeof(sub), "%s · %s", net.secure ? "Secured" : "Open", wb_signal_label(net.rssi));
+    // Plain hyphen, not a middle dot (·, U+00B7) — the built-in LVGL
+    // Montserrat fonts are only baked with the Basic Latin (ASCII) range
+    // here (see lv_conf.h), so anything outside 0x20-0x7E renders as a
+    // missing-glyph box instead of the actual character. Confirmed live on
+    // real hardware (a "tofu" square between "Secured" and "Strong signal").
+    snprintf(sub, sizeof(sub), "%s - %s", net.secure ? "Secured" : "Open", wb_signal_label(net.rssi));
     lv_label_set_text(sub_lbl, sub);
     lv_obj_set_style_text_font(sub_lbl, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(sub_lbl, WB_COLOR_MUTED, 0);

@@ -626,3 +626,14 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   `make_done_check`'s green checkmark badge 26px→32px, tile padding and progress
   bar height bumped slightly to give the bigger content room. Native and esp32-p4
   both build clean; verified no crash on real hardware post-flash.
+- **`wifi_screen.cpp`'s network-row subtitle showed a missing-glyph box — fixed.**
+  Reported live from a real-device photo: an empty square between "Secured" and
+  "Strong signal". The subtitle format string used a middle dot (`·`, U+00B7,
+  `"%s · %s"`) as the separator; this project's `lv_conf.h` only bakes the
+  built-in LVGL Montserrat fonts with the Basic Latin (ASCII, `0x20`-`0x7E`)
+  range, so anything outside that range has no glyph to draw and LVGL renders a
+  placeholder box instead. Swapped for a plain hyphen (`" - "`), which is in
+  range. Grepped every `lv_label_set_text`/`snprintf` call across `src/ui/*.cpp`
+  and `main.cpp` for other non-ASCII characters in actual label text (as opposed
+  to comments, which don't render) — this was the only one. Native and esp32-p4
+  both build clean; verified no crash on real hardware post-flash.
