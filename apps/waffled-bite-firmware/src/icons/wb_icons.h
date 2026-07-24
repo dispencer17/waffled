@@ -19,9 +19,9 @@
 extern "C" {
 #endif
 
-extern const lv_image_dsc_t wb_icon_sun_48;      // Morning routine tile (32->48 on request, to match the tile's bigger text/badge)
-extern const lv_image_dsc_t wb_icon_sunhigh_48;  // Afternoon routine tile (32->48, same request)
-extern const lv_image_dsc_t wb_icon_moon_48;     // Evening routine tile (32->48, same request)
+extern const lv_image_dsc_t wb_icon_sun_64;      // Morning routine tile (32->48->64 on request, now centered+larger in the tile)
+extern const lv_image_dsc_t wb_icon_sunhigh_64;  // Afternoon routine tile (32->48->64, same request)
+extern const lv_image_dsc_t wb_icon_moon_64;     // Evening routine tile (32->48->64, same request)
 extern const lv_image_dsc_t wb_icon_moon_40;     // Nightlight grown-up-control tile
 extern const lv_image_dsc_t wb_icon_moon_solid_128; // Quiet-time screen — same crescent
                                                      // path as wb_icon_moon_*, baked FILLED

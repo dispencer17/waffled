@@ -637,3 +637,16 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   and `main.cpp` for other non-ASCII characters in actual label text (as opposed
   to comments, which don't render) — this was the only one. Native and esp32-p4
   both build clean; verified no crash on real hardware post-flash.
+- **Morning/Afternoon/Evening icons moved to the tile center and sized up again —
+  direct follow-up.** `make_routine_tile`'s icon used to live in `top_row` next to
+  the count badge (top-left corner); moved into its own `icon_wrap` flex item
+  between `top_row` and `bottom`, given `flex_grow(1)` so it consumes whatever
+  vertical space the badge/title/bar don't need, then `CENTER`/`CENTER` aligns the
+  icon inside that space — reads as centered regardless of how tall the other
+  pieces end up, rather than a fixed pixel offset. `top_row` keeps just the badge,
+  now end-aligned since it's the row's only child. Rebaked `wb_icon_sun`/
+  `sunhigh`/`moon` at 64px (was 48px, before that 32px — same `tools/icons/*.svg`
+  sources each time, confirmed single-purpose by grep before deleting the
+  superseded 48px `.c` files); `wb_icon_broom_48` (chores bar) is untouched — the
+  request was specifically the three routine tiles, not chores. Native and
+  esp32-p4 both build clean; verified no crash on real hardware post-flash.

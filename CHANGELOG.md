@@ -94,6 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   broom icons and "X of Y" count pills were still their original size and looked
   small next to everything else that's gotten bigger. Icons are now noticeably
   bigger, and the tile name and count text are bigger too.
+- **Waffled-Bite device: Morning/Afternoon/Evening icons moved to the center and made
+  even bigger.** Direct follow-up: the sun/sun-high/moon icons used to sit in the
+  tile's top-left corner next to the count pill; they're now the big centerpiece of
+  each tile, front and center.
 
 ### Fixed
 

@@ -245,14 +245,15 @@ static lv_obj_t *make_routine_tile(lv_obj_t *parent, const char *name, const WbR
   int visible = routine_visible_count(r);
   bool all_done = visible > 0 && done == visible;
 
+  // Just the count badge now — the routine icon used to live here, cramped
+  // in the top-left corner. Moved to its own centered section below (direct
+  // request: bigger, and centered in the card, not tucked in a corner).
   lv_obj_t *top_row = lv_obj_create(tile);
   lv_obj_remove_style_all(top_row);
   lv_obj_set_size(top_row, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(top_row, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(top_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_flex_align(top_row, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_clear_flag(top_row, LV_OBJ_FLAG_SCROLLABLE);
-
-  make_icon(top_row, icon, fg);
 
   char badge_buf[24];
   snprintf(badge_buf, sizeof(badge_buf), "%d / %d", done, visible);
@@ -266,6 +267,18 @@ static lv_obj_t *make_routine_tile(lv_obj_t *parent, const char *name, const WbR
     lv_obj_clear_flag(check, LV_OBJ_FLAG_HIDDEN);
   if (out_check)
     *out_check = check;
+
+  // Consumes whatever vertical space top_row/bottom don't need, then centers
+  // the icon inside it — reads as "centered in the card" regardless of how
+  // tall the badge/title/bar end up being, rather than a fixed offset.
+  lv_obj_t *icon_wrap = lv_obj_create(tile);
+  lv_obj_remove_style_all(icon_wrap);
+  lv_obj_set_size(icon_wrap, lv_pct(100), LV_SIZE_CONTENT);
+  lv_obj_set_flex_grow(icon_wrap, 1);
+  lv_obj_set_flex_flow(icon_wrap, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(icon_wrap, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_clear_flag(icon_wrap, LV_OBJ_FLAG_SCROLLABLE);
+  make_icon(icon_wrap, icon, fg);
 
   lv_obj_t *bottom = lv_obj_create(tile);
   lv_obj_remove_style_all(bottom);
@@ -599,9 +612,9 @@ void wb_build_home_screen(lv_obj_t *parent, const WbDeviceState &state, lv_obj_t
   lv_obj_t *morning_badge_lbl = nullptr, *morning_bar = nullptr, *morning_check = nullptr;
   lv_obj_t *afternoon_badge_lbl = nullptr, *afternoon_bar = nullptr, *afternoon_check = nullptr;
   lv_obj_t *evening_badge_lbl = nullptr, *evening_bar = nullptr, *evening_check = nullptr;
-  lv_obj_t *morning_tile = make_routine_tile(tiles_row, "Morning", state.morning, WB_COLOR_MORNING, WB_COLOR_MORNING_TEXT, &wb_icon_sun_48, &morning_badge_lbl, &morning_bar, &morning_check);
-  lv_obj_t *afternoon_tile = make_routine_tile(tiles_row, "Afternoon", state.afternoon, WB_COLOR_AFTERNOON, WB_COLOR_AFTERNOON_TEXT, &wb_icon_sunhigh_48, &afternoon_badge_lbl, &afternoon_bar, &afternoon_check);
-  lv_obj_t *evening_tile = make_routine_tile(tiles_row, "Evening", state.evening, WB_COLOR_EVENING, WB_COLOR_EVENING_TEXT, &wb_icon_moon_48, &evening_badge_lbl, &evening_bar, &evening_check);
+  lv_obj_t *morning_tile = make_routine_tile(tiles_row, "Morning", state.morning, WB_COLOR_MORNING, WB_COLOR_MORNING_TEXT, &wb_icon_sun_64, &morning_badge_lbl, &morning_bar, &morning_check);
+  lv_obj_t *afternoon_tile = make_routine_tile(tiles_row, "Afternoon", state.afternoon, WB_COLOR_AFTERNOON, WB_COLOR_AFTERNOON_TEXT, &wb_icon_sunhigh_64, &afternoon_badge_lbl, &afternoon_bar, &afternoon_check);
+  lv_obj_t *evening_tile = make_routine_tile(tiles_row, "Evening", state.evening, WB_COLOR_EVENING, WB_COLOR_EVENING_TEXT, &wb_icon_moon_64, &evening_badge_lbl, &evening_bar, &evening_check);
   wb_wire_open_tasks(morning_tile, "Morning", state.morning, tasks_scr, parent, onComplete, onUncomplete);
   wb_wire_open_tasks(afternoon_tile, "Afternoon", state.afternoon, tasks_scr, parent, onComplete, onUncomplete);
   wb_wire_open_tasks(evening_tile, "Evening", state.evening, tasks_scr, parent, onComplete, onUncomplete);
