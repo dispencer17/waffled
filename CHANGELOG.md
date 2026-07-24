@@ -76,7 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   screen. Every button on those screens — Rescan, Connect, Try again, Change Wi-Fi,
   Pair, Start/End timer, the +/- steppers, Home/Back — is now noticeably bigger with
   larger text, along with the on/off switches, color swatches, and the volume/
-  brightness slider's knob. The one thing left deliberately small: the "For a
+  brightness slider's knob. The chore rows themselves (Morning/Afternoon/Evening/
+  Chores) got the same treatment — a bigger checkbox and bigger title text, more
+  breathing room between rows. The one thing left deliberately small: the "For a
   grown-up" chip in Settings, so it stays easy to overlook for a kid.
 
 ### Fixed

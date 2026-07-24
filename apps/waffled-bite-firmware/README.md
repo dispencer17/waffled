@@ -562,3 +562,13 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   change-server shortcut). Native and esp32-p4 both build clean; verified no crash on
   real hardware post-flash (same known-benign transient SDIO error as above, not a
   reboot).
+- **Chore rows sized up to match, direct follow-up.** The home screen's tiles were
+  already big; the actual Morning/Afternoon/Evening/Chores task rows
+  (`tasks_screen.cpp`'s `wb_make_task_row`) hadn't gotten the same treatment in the
+  first pass. Title text 16 -> 24, checkbox 40 -> 56px (its icon glyph 16 -> 24,
+  border 2 -> 3px to stay in proportion), row padding/radius bumped, more space
+  between rows in the scrollable list (10 -> 14px). The reward badge ("+1") and the
+  "Waiting on a parent's approval" status text got a smaller bump (14 -> 16) —
+  intentionally still secondary to the row's title/checkbox, same "leave status text
+  smaller for contrast" call as the rest of this pass. Native and esp32-p4 both build
+  clean; verified no crash on real hardware post-flash.

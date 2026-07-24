@@ -29,13 +29,13 @@ static lv_obj_t *make_badge(lv_obj_t *parent, const char *text, lv_color_t bg, l
   lv_obj_set_style_bg_color(pill, bg, 0);
   lv_obj_set_style_bg_opa(pill, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(pill, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_pad_hor(pill, 10, 0);
-  lv_obj_set_style_pad_ver(pill, 4, 0);
+  lv_obj_set_style_pad_hor(pill, 14, 0);
+  lv_obj_set_style_pad_ver(pill, 8, 0);
   lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t *lbl = lv_label_create(pill);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(lbl, fg, 0);
   return pill;
 }
@@ -95,7 +95,7 @@ static void wb_set_row_visual(WbTaskRowCtx *ctx, WbRowVisual visual)
     lv_obj_clear_flag(ctx->checkbox, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ctx->status_label, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_bg_color(ctx->checkbox, done ? WB_COLOR_DONE : WB_COLOR_CARD, 0);
-    lv_obj_set_style_border_width(ctx->checkbox, done ? 0 : 2, 0);
+    lv_obj_set_style_border_width(ctx->checkbox, done ? 0 : 3, 0);
     lv_obj_set_style_border_color(ctx->checkbox, WB_COLOR_DONE_RING, 0);
     lv_label_set_text(ctx->checkbox_icon, done ? LV_SYMBOL_OK : "");
   }
@@ -158,14 +158,17 @@ static void wb_row_clicked_cb(lv_event_t *e)
 
 static void wb_make_task_row(lv_obj_t *parent, const WbTask &task, WbTaskCompleteCallback onComplete, WbTaskCompleteCallback onUncomplete)
 {
+  // Row sizing bumped (16px/40px checkbox -> 24px/56px) per direct request —
+  // these are the primary tap target on this screen, and read too small
+  // next to the rest of this app's now-chunkier buttons.
   lv_obj_t *row = lv_obj_create(parent);
   lv_obj_remove_style_all(row);
   lv_obj_set_style_bg_color(row, WB_COLOR_TILE, 0);
   lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(row, 16, 0);
-  lv_obj_set_style_pad_hor(row, 18, 0);
-  lv_obj_set_style_pad_ver(row, 14, 0);
-  lv_obj_set_style_pad_column(row, 12, 0);
+  lv_obj_set_style_radius(row, 20, 0);
+  lv_obj_set_style_pad_hor(row, 24, 0);
+  lv_obj_set_style_pad_ver(row, 18, 0);
+  lv_obj_set_style_pad_column(row, 16, 0);
   lv_obj_set_size(row, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -174,7 +177,7 @@ static void wb_make_task_row(lv_obj_t *parent, const WbTask &task, WbTaskComplet
   lv_obj_t *label = lv_label_create(row);
   lv_label_set_text(label, task.title);
   lv_obj_set_flex_grow(label, 1);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
 
   if (task.rewardAmount > 0)
   {
@@ -188,13 +191,13 @@ static void wb_make_task_row(lv_obj_t *parent, const WbTask &task, WbTaskComplet
   // them out before calling this), so there's no "Needs a photo" case here.
   lv_obj_t *status_label = lv_label_create(row);
   lv_label_set_text(status_label, "Waiting on a parent's approval");
-  lv_obj_set_style_text_font(status_label, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(status_label, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(status_label, WB_COLOR_GOLD, 0);
   lv_obj_add_flag(status_label, LV_OBJ_FLAG_HIDDEN);
 
   lv_obj_t *checkbox = lv_obj_create(row);
   lv_obj_remove_style_all(checkbox);
-  lv_obj_set_size(checkbox, 40, 40);
+  lv_obj_set_size(checkbox, 56, 56);
   lv_obj_set_style_radius(checkbox, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_bg_opa(checkbox, LV_OPA_COVER, 0);
   lv_obj_set_flex_flow(checkbox, LV_FLEX_FLOW_ROW);
@@ -203,7 +206,7 @@ static void wb_make_task_row(lv_obj_t *parent, const WbTask &task, WbTaskComplet
   lv_obj_clear_flag(checkbox, LV_OBJ_FLAG_CLICKABLE); // taps land on the row, not this inner circle
 
   lv_obj_t *checkbox_icon = lv_label_create(checkbox);
-  lv_obj_set_style_text_font(checkbox_icon, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(checkbox_icon, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(checkbox_icon, lv_color_white(), 0);
 
   WbTaskRowCtx *ctx = new WbTaskRowCtx{std::string(task.id), checkbox, checkbox_icon, label, status_label, task.done, onComplete, onUncomplete};
@@ -272,7 +275,7 @@ void wb_build_tasks_screen(lv_obj_t *parent, const char *title, const WbRoutine 
   lv_obj_set_size(list, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_grow(list, 1);
   lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_row(list, 10, 0);
+  lv_obj_set_style_pad_row(list, 14, 0);
   lv_obj_add_flag(list, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_scroll_dir(list, LV_DIR_VER);
 
