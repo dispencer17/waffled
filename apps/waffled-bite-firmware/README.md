@@ -586,3 +586,31 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   a real pixel value, same reasoning `wifi_screen.cpp`/`onboarding_screen.cpp`'s own
   fixed-size cards already use. Native and esp32-p4 both build clean; verified no
   crash on real hardware post-flash.
+- **Logo + mascot: transparent backgrounds, bigger boot screen — direct request,
+  follow-up to the mascot entry above.** Both `wb_logo_*`/`wb_offline_mascot_320`
+  used to be baked as flat opaque images (RGB565 for the logo, the mascot's own
+  source), which drew a visible white/cream box wherever they were placed instead of
+  sitting directly on the surrounding screen's background. Neither source PNG has a
+  real alpha channel (`sips -g hasAlpha` → no on both) — the background is baked-in
+  flat color, so getting a transparent version meant chroma-keying it out, not just
+  reading existing alpha data. Both directories' READMEs document the exact
+  commands and the tuning story (ffmpeg's `colorkey` filter, `similarity` kept low
+  enough to not eat into each mascot's own near-white body — this bit the first
+  attempt on the mascot at `similarity=0.12`, confirmed by compositing onto solid
+  magenta before settling on `0.02`; the logo's source additionally needed an
+  alpha-channel blur pass to smooth a subtle paper-grain texture that showed as
+  static in the transparent regions on magenta — checked against the actual app
+  background too, where it's imperceptible, before committing to it). Rebaked as
+  **ARGB8888** (real per-pixel alpha, not A8's tint-only or RGB565's no-alpha) via a
+  new `tools/logo/png_to_lvgl_argb8888.py`, reused by `tools/mascot/` rather than
+  duplicated. `wb_logo_96`/`wb_logo_40` are drop-in replacements (same variable
+  names, every existing call site — onboarding, WiFi "Connecting…", the home
+  screen's clock corner — picks up the transparency for free); new `wb_logo_160`
+  is boot-screen-only. `main.cpp`'s boot screen (shown while connecting to WiFi at
+  power-on, before onboarding/home) also got the same bigger-everything treatment
+  as the rest of the app on request — 96px/font_24 logo+title → 160px/font_32, with
+  "Connecting…" given an explicit font_16 (previously unset/default) — it only has
+  three elements on it, so it read sparse next to every other screen's now-chunkier
+  scale. Flash usage moved from 26% to 31.5% (ARGB8888 is 2x RGB565's bytes/pixel
+  and 4x A8's), still well within budget. Native and esp32-p4 both build clean;
+  verified no crash on real hardware post-flash.

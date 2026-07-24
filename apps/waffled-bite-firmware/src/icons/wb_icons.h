@@ -39,15 +39,20 @@ extern const lv_image_dsc_t wb_icon_check_18;    // Spare: checkmark, not yet wi
 extern const lv_image_dsc_t wb_icon_close_18;    // Spare: close/X, not yet wired anywhere
 extern const lv_image_dsc_t wb_icon_back_18;     // Spare: back chevron, not yet wired anywhere
 
-// The Waffled logo (apps/web/public/logo.png, resized/baked full-color RGB565 — it has no
-// LVGL-recolor trick like the A8 icons above, it's the real multi-color mark). Onboarding
-// (onboarding_screen.cpp) + WiFi screens (wifi_screen.cpp).
-extern const lv_image_dsc_t wb_logo_96;
-extern const lv_image_dsc_t wb_logo_40; // Small mark next to the home screen's clock
+// The Waffled logo (a higher-res version of apps/web/public/logo.png — see
+// tools/logo/README.md) — full-color **ARGB8888** with a real alpha channel
+// (chroma-keyed transparent background, not the flat opaque RGB565 this used
+// to be), so it sits directly on whichever screen's own background instead of
+// showing a box. No LVGL-recolor trick like the A8 icons above — it's the
+// real multi-color mark.
+extern const lv_image_dsc_t wb_logo_96;  // Onboarding (onboarding_screen.cpp) + WiFi "Connecting..." (wifi_screen.cpp)
+extern const lv_image_dsc_t wb_logo_40;  // Small mark next to the home screen's clock
+extern const lv_image_dsc_t wb_logo_160; // Boot screen (main.cpp) — bigger, on request
 
-// A sad waffle-iron mascot (unplugged, broken WiFi symbol) — full-color
-// RGB565 like the logo above, baked from tools/mascot/waffled-down-source.png.
-// offline_screen.cpp's "can't reach the server" state.
+// A sad, unplugged waffle-iron mascot (broken WiFi symbol) — same full-color
+// ARGB8888-with-real-alpha treatment as the logo above, baked from
+// tools/mascot/waffled-down-source.png. offline_screen.cpp's "can't reach
+// the server" state.
 extern const lv_image_dsc_t wb_offline_mascot_320;
 
 #ifdef __cplusplus

@@ -846,15 +846,21 @@ void setup()
   lv_obj_set_style_bg_opa(boot_scr, LV_OPA_COVER, 0);
   lv_obj_set_flex_flow(boot_scr, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_flex_align(boot_scr, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  // Logo + text sized up (96px/font_24 -> 160px/font_32, "Connecting..."
+  // given an explicit font_20-equivalent bump too) per direct request — this
+  // screen only has three elements on it, so it read sparse/small next to
+  // every other screen's now-chunkier scale.
   lv_obj_t *boot_logo = lv_image_create(boot_scr);
-  lv_image_set_src(boot_logo, &wb_logo_96);
-  lv_obj_set_style_pad_bottom(boot_logo, 8, 0);
+  lv_image_set_src(boot_logo, &wb_logo_160);
+  lv_obj_set_style_pad_bottom(boot_logo, 12, 0);
   lv_obj_t *boot_title = lv_label_create(boot_scr);
   lv_label_set_text(boot_title, "Waffled");
-  lv_obj_set_style_text_font(boot_title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(boot_title, &lv_font_montserrat_32, 0);
   lv_obj_t *boot_sub = lv_label_create(boot_scr);
   lv_label_set_text(boot_sub, "Connecting...");
+  lv_obj_set_style_text_font(boot_sub, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(boot_sub, lv_color_hex(0x8A8478), 0);
+  lv_obj_set_style_pad_top(boot_sub, 4, 0);
   lv_scr_load(boot_scr);
   lv_timer_handler(); // flush this frame before the blocking wait below
 #endif

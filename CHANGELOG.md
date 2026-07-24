@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   picker or the change-address screen while you're actively using them.) A sad,
   unplugged waffle-iron mascot now sits alongside the message so it reads as
   friendly rather than like an error dialog.
+- **Waffled-Bite device: no more white box around the logo/mascot, and a bigger boot
+  screen.** The Waffled logo and the offline mascot used to sit on a visible white
+  rectangle instead of blending into the app's cream background — now transparent
+  everywhere they appear (onboarding, the Wi-Fi "Connecting…" screen, the home
+  screen's clock corner, and the offline screen). The very first boot screen (shown
+  while the device connects to Wi-Fi) also got the same bigger-everything treatment
+  as the rest of the app — a much bigger logo and bigger "Waffled"/"Connecting…" text.
 
 ### Changed
 
