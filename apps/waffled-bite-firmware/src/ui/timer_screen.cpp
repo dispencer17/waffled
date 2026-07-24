@@ -279,7 +279,10 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   // Split layout — big countdown ring on the left, title + End button on the
   // right — same split-row shape as quiet_screen.cpp's updated mock
   // (wb_build_quiet_screen), mirrored left/right (quiet's ring is on the
-  // right) and the ring sized up (220 -> 260) per request.
+  // right) and the ring sized up across two follow-up requests (220 -> 260
+  // -> 440 — capped a bit under quiet_screen's 480 since this screen also
+  // has a top bar (the Home button, 72px) eating into the 600px panel
+  // height that quiet_screen doesn't have to account for).
   lv_obj_t *content_row = lv_obj_create(parent);
   lv_obj_remove_style_all(content_row);
   lv_obj_set_size(content_row, lv_pct(100), LV_SIZE_CONTENT);
@@ -292,7 +295,7 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   int remainingSec = timer.remainingSec > 0 ? timer.remainingSec : 0;
 
   lv_obj_t *arc = lv_arc_create(content_row);
-  lv_obj_set_size(arc, 260, 260);
+  lv_obj_set_size(arc, 440, 440);
   lv_arc_set_rotation(arc, 270);
   lv_arc_set_bg_angles(arc, 0, 360);
   lv_arc_set_range(arc, 0, durationSec);
@@ -300,15 +303,17 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
   lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_arc_color(arc, WB_COLOR_GOLD, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_width(arc, 10, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(arc, 16, LV_PART_INDICATOR);
   lv_obj_set_style_arc_color(arc, WB_COLOR_CARD, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(arc, 10, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(arc, 16, LV_PART_MAIN);
 
   lv_obj_t *time_lbl = lv_label_create(arc);
   char time_buf[8];
   formatCountdown(time_buf, sizeof(time_buf), remainingSec);
   lv_label_set_text(time_lbl, time_buf);
-  lv_obj_set_style_text_font(time_lbl, &lv_font_montserrat_32, 0);
+  // font_48 — see quiet_screen.cpp's identical bump for why (lv_conf.h now
+  // bakes this size specifically for these two rings).
+  lv_obj_set_style_text_font(time_lbl, &lv_font_montserrat_48, 0);
   lv_obj_set_style_text_color(time_lbl, WB_COLOR_INK, 0);
   lv_obj_center(time_lbl);
 

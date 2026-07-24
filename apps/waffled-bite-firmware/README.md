@@ -677,3 +677,20 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   leak one of these per reopen, unlike onboarding's screen which is genuinely
   built once). Native and esp32-p4 both build clean; verified no crash on real
   hardware post-flash.
+- **Quiet-time and timer countdown rings sized way up — direct feedback, two
+  real-device photos.** Both rings were 260px and read as "way too small" from
+  across a room, and 32px (`&lv_font_montserrat_32`) was already the largest font
+  baked into this firmware (`lv_conf.h`), so there was no room to grow the
+  countdown text further without baking a bigger size. Enabled
+  `LV_FONT_MONTSERRAT_48` — a standard LVGL-bundled size, no custom asset/bake
+  pipeline needed, just flipping the `lv_conf.h` flag — and used it for both
+  rings' countdown numbers. `quiet_screen.cpp`'s ring: 260→480px (arc width
+  10→18, `"LEFT"` caption 14→16) — this screen has no top bar competing for the
+  600px panel height, so 480 fits with ~60px of natural top/bottom margin from
+  the parent's own `CENTER` cross-alignment, no explicit padding needed.
+  `timer_screen.cpp`'s ring: 260→440px (arc width 10→16) — capped a bit smaller
+  than quiet's since this screen's Home button bar (72px) eats into the same
+  600px budget, leaving less headroom (`600 - pad(40) - bar(72) - row_gap(20) =
+  468px` available for the ring's row, so 440 leaves a little breathing room
+  rather than exactly maxing it out). Native and esp32-p4 both build clean;
+  verified no crash on real hardware post-flash.

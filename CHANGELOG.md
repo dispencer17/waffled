@@ -98,6 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   even bigger.** Direct follow-up: the sun/sun-high/moon icons used to sit in the
   tile's top-left corner next to the count pill; they're now the big centerpiece of
   each tile, front and center.
+- **Waffled-Bite device: the quiet-time and timer countdown rings are much bigger.**
+  Direct feedback: both rings were small and hard to read from across a room. The
+  quiet-time ring is now roughly half the screen's width, the timer's ring nearly
+  so, and the countdown numbers inside them are noticeably bigger too.
 
 ### Fixed
 

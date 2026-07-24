@@ -138,8 +138,14 @@ void wb_build_quiet_screen(lv_obj_t *parent, const WbQuietState &quiet, int nowH
   formatUntilText(until_buf, sizeof(until_buf), remainingSec, nowHour, nowMin);
   lv_label_set_text(until_lbl, until_buf);
 
+  // 480px — close to half the panel's 1024 width, and comfortably within the
+  // 600-tall screen (this screen has no top bar eating into that, unlike
+  // timer_screen.cpp's countdown) — leaves ~60px of natural top/bottom
+  // padding via the parent's own CENTER cross-alignment, no explicit pad_ver
+  // needed. Sized up from 260 per direct request — "way too small," should
+  // be "almost 50% of the screen."
   lv_obj_t *arc = lv_arc_create(parent);
-  lv_obj_set_size(arc, 260, 260);
+  lv_obj_set_size(arc, 480, 480);
   lv_arc_set_rotation(arc, 270);
   lv_arc_set_bg_angles(arc, 0, 360);
   lv_arc_set_range(arc, 0, durationSec);
@@ -147,24 +153,27 @@ void wb_build_quiet_screen(lv_obj_t *parent, const WbQuietState &quiet, int nowH
   lv_obj_remove_style(arc, NULL, LV_PART_KNOB); // display-only ring, no draggable knob
   lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
   lv_obj_set_style_arc_color(arc, WB_QUIET_RING, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_width(arc, 10, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(arc, 18, LV_PART_INDICATOR);
   lv_obj_set_style_arc_color(arc, WB_QUIET_RING, LV_PART_MAIN);
   lv_obj_set_style_arc_opa(arc, LV_OPA_30, LV_PART_MAIN);
-  lv_obj_set_style_arc_width(arc, 10, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(arc, 18, LV_PART_MAIN);
 
   lv_obj_t *time_lbl = lv_label_create(arc);
   char time_buf[8];
   formatCountdown(time_buf, sizeof(time_buf), remainingSec);
   lv_label_set_text(time_lbl, time_buf);
-  lv_obj_set_style_text_font(time_lbl, &lv_font_montserrat_32, 0);
+  // font_48 — the biggest baked size in this firmware (lv_conf.h), enabled
+  // specifically for this ring and timer_screen.cpp's, since font_32 (the
+  // previous ceiling) read small against a 480px ring.
+  lv_obj_set_style_text_font(time_lbl, &lv_font_montserrat_48, 0);
   lv_obj_set_style_text_color(time_lbl, WB_QUIET_INK, 0);
   lv_obj_center(time_lbl);
 
   lv_obj_t *left_lbl = lv_label_create(arc);
   lv_label_set_text(left_lbl, "LEFT");
-  lv_obj_set_style_text_font(left_lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(left_lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(left_lbl, WB_QUIET_MUTED, 0);
-  lv_obj_align_to(left_lbl, time_lbl, LV_ALIGN_OUT_BOTTOM_MID, 0, 6);
+  lv_obj_align_to(left_lbl, time_lbl, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
   WbQuietCtx *ctx = new WbQuietCtx{remainingSec, quiet.running, arc, time_lbl, until_lbl, nullptr};
   ctx->tick_timer = lv_timer_create(wb_quiet_tick_cb, 1000, ctx);
