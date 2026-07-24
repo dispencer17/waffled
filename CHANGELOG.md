@@ -76,6 +76,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pre-packaged version) and disabling an overly aggressive failure-recovery setting that
   rebooted the whole device over a single transient WiFi hiccup — verified across 30+
   real-device reboots with no failures.
+- **Waffled-Bite device: WiFi picker no longer shows zero networks in a new location.**
+  On boot the device always retries its previously-saved home network first; if that
+  network isn't in range, the radio was still busy with that attempt when the picker
+  asked it to scan, so the scan silently failed and rendered as an empty list — even
+  with real networks nearby, and tapping Rescan didn't help since the radio was still
+  stuck. The device now clears that stale attempt before scanning, and a scan that
+  fails to start is retried automatically instead of being shown as "no networks found."
 - **Waffled-Bite device: touchscreen input was mirrored left-right.** Most taps landed
   fine, but the on-screen keyboard's narrow, side-by-side keys made it obvious — tapping
   a key hit its mirror on the opposite side. Also added a visible way to dismiss the

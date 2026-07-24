@@ -391,6 +391,23 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   connected cleanly and quickly (~6s) every time. If WiFi ever appears to fail
   hard during bench testing (not on a real, freshly-plugged-in device), power-cycle
   before assuming it's a regression.
+- **`esp32-p4` WiFi: picker showed zero networks when the saved AP was out of range —
+  fixed.** Boot always retries `wifiSsid`/`wifiPass` from NVS first
+  (`main.cpp`'s `setup()`); when that network isn't reachable (device moved to a new
+  location), this app's own 15s give-up (`wb_wifi_connect_status()`'s timeout branch)
+  is a software-only flag — it never told the STA driver to actually stop. The WiFi
+  picker's scan (`wb_wifi_begin_scan()`) was then issued while the driver still
+  considered itself busy connecting/retrying, which fails synchronously
+  (`WIFI_SCAN_FAILED`) even with real networks in range — and `wb_wifi_scan_status()`
+  used to collapse that straight into `Done`, indistinguishable from "scan succeeded,
+  found nothing." Tapping Rescan didn't help either, since it hit the same stuck
+  driver every time. Fixed two ways: `wb_wifi_begin_scan()` now calls
+  `WiFi.disconnect()` before every scan (safe — only ever called while the picker is
+  on screen, never while actually connected), and the connect-timeout branch does the
+  same when it gives up on a saved AP. Separately, `WbWifiScanStatus` gained a
+  `Failed` state distinct from `Done`, so `wifi_screen.cpp` retries a failed scan
+  automatically (`WB_WIFI_SCAN_RETRY_LIMIT`, 5 attempts) instead of silently
+  rendering an empty list.
 - **`esp32-p4` display/touch: bring-up tested, but not exhaustively.** LovyanGFX's
   `Bus_DSI`/`Panel_EK79007` does drive this panel. Real-hardware bring-up found
   touch was mirrored on the X axis (`main.cpp`'s `touchpad_read` — the GT911's

@@ -15,6 +15,11 @@
 #define WB_COLOR_GOLD lv_color_hex(0xC98A1E)
 #define WB_COLOR_ERROR lv_color_hex(0xB3372C)
 
+// How many times to silently retry a scan that fails to even start (STA
+// driver busy — see wb_wifi_esp32.cpp's wb_wifi_begin_scan()) before giving
+// up and telling the kid to tap Rescan themselves.
+#define WB_WIFI_SCAN_RETRY_LIMIT 5
+
 enum class WbWifiUiState
 {
   List,
@@ -32,6 +37,7 @@ struct WbWifiScreenCtx
   lv_obj_t *scanning_lbl;
   lv_obj_t *rows_container;
   bool rowsBuilt;
+  int scanFailCount; // consecutive WbWifiScanStatus::Failed results since the last begin_scan()
 
   lv_obj_t *password_view;
   lv_obj_t *password_title_lbl;
@@ -175,6 +181,8 @@ static void wb_rescan_clicked_cb(lv_event_t *e)
   WbWifiScreenCtx *ctx = (WbWifiScreenCtx *)lv_event_get_user_data(e);
   lv_obj_clean(ctx->rows_container);
   ctx->rowsBuilt = false;
+  ctx->scanFailCount = 0;
+  lv_label_set_text(ctx->scanning_lbl, "Scanning for networks...");
   lv_obj_clear_flag(ctx->scanning_lbl, LV_OBJ_FLAG_HIDDEN);
   wb_wifi_begin_scan();
 }
@@ -218,11 +226,27 @@ static void wb_wifi_screen_poll_cb(lv_timer_t *timer)
 
   if (ctx->uiState == WbWifiUiState::List && !ctx->rowsBuilt)
   {
-    if (wb_wifi_scan_status() == WbWifiScanStatus::Done)
+    WbWifiScanStatus status = wb_wifi_scan_status();
+    if (status == WbWifiScanStatus::Done)
     {
       wb_wifi_build_rows(ctx);
       ctx->rowsBuilt = true;
       lv_obj_add_flag(ctx->scanning_lbl, LV_OBJ_FLAG_HIDDEN);
+    }
+    else if (status == WbWifiScanStatus::Failed)
+    {
+      // The scan request itself failed to even start (STA driver was still
+      // busy) — retry a few times before asking the kid to tap Rescan
+      // themselves, rather than silently showing an empty list forever.
+      ctx->scanFailCount++;
+      if (ctx->scanFailCount <= WB_WIFI_SCAN_RETRY_LIMIT)
+      {
+        wb_wifi_begin_scan();
+      }
+      else
+      {
+        lv_label_set_text(ctx->scanning_lbl, "Couldn't scan for networks. Tap Rescan to try again.");
+      }
     }
   }
   else if (ctx->uiState == WbWifiUiState::Connecting)
@@ -266,6 +290,7 @@ void wb_build_wifi_screen(lv_obj_t *parent, WbWifiConnectedCallback onConnected)
   ctx->onConnected = onConnected;
   ctx->uiState = WbWifiUiState::List;
   ctx->rowsBuilt = false;
+  ctx->scanFailCount = 0;
 
   // ── list view ────────────────────────────────────────────────────────────
   lv_obj_t *list_view = lv_obj_create(card);

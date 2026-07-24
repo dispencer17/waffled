@@ -13,6 +13,17 @@
 
 void wb_wifi_begin_scan()
 {
+  // A prior WiFi.begin() against an out-of-range saved AP (e.g. the device
+  // booted somewhere other than home) can leave the STA driver mid-connect
+  // or auto-retrying even after this app's own connect attempt gives up —
+  // that timeout (see wb_wifi_connect_status() below) is a software-only
+  // flag, it never itself told the driver to stop. Scanning while the
+  // driver still considers itself busy connecting fails synchronously
+  // (WIFI_SCAN_FAILED) even with real networks in range. Disconnecting
+  // first guarantees a clean slate; safe to call unconditionally since this
+  // is only ever invoked while the WiFi picker is on screen, i.e. never
+  // while actually connected to anything.
+  WiFi.disconnect();
   WiFi.mode(WIFI_STA);
   WiFi.scanNetworks(true /* async */);
 }
@@ -23,7 +34,7 @@ WbWifiScanStatus wb_wifi_scan_status()
   if (n == WIFI_SCAN_RUNNING)
     return WbWifiScanStatus::Scanning;
   if (n == WIFI_SCAN_FAILED)
-    return WbWifiScanStatus::Done; // treat as "done, zero results" — wifi_screen.cpp's empty-state covers this
+    return WbWifiScanStatus::Failed; // wifi_screen.cpp retries on this, not the same as "done, zero results"
   if (n < 0)
     return WbWifiScanStatus::Idle; // scan never started
   return WbWifiScanStatus::Done;
@@ -64,6 +75,7 @@ WbWifiConnStatus wb_wifi_connect_status()
   }
   if (wb_tick_ms() - g_connectStartMs > WB_WIFI_CONNECT_TIMEOUT_MS)
   {
+    WiFi.disconnect(); // stop the driver's own retry against an AP we've given up on, so a later scan doesn't find it still "busy"
     g_connStatus = WbWifiConnStatus::Failed;
     return g_connStatus;
   }
