@@ -115,6 +115,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Recurring event edits now keep the whole series intact.** "This and following" carries
+  all-day, countdown, people, goal, and repeat settings into the new series, while changing
+  the time for "All events" no longer removes earlier occurrences. Locally synced web events
+  still offer the right edit scopes, "This event" is available only for changes one occurrence
+  can store, and failed iPhone/iPad saves stay open with an error.
+
 - **Countdown edits no longer disappear after a failed iPhone or iPad request.** Add and
   edit sheets now stay open with the entered details when saving or removal fails, and a
   failed quick-remove keeps the countdown visible instead of pretending the server
