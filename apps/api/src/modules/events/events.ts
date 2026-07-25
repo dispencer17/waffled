@@ -439,6 +439,44 @@ function durationMs(m: { starts_at: Date; ends_at: Date | null }): number | null
   return m.ends_at ? m.ends_at.getTime() - m.starts_at.getTime() : null
 }
 
+/** An "all events" edit starts from the occurrence the person opened, but updating
+ * the master to that later occurrence date would silently discard everything before
+ * it. Apply the selected occurrence's time delta to the original master instead. */
+async function rebaseAllSeriesTiming(
+  householdId: string,
+  seriesId: string,
+  occurrenceStart: string,
+  patch: Record<string, unknown>
+): Promise<Record<string, unknown> | null> {
+  if (typeof patch.startsAt !== 'string') return patch
+  const { rows } = await query<{ starts_at: Date; ends_at: Date | null }>(
+    `select m.starts_at, m.ends_at
+       from events m
+      where m.id = $1 and m.household_id = $2 and m.deleted_at is null and m.rrule is not null
+        and exists (
+          select 1 from event_occurrences o
+           where o.event_id = m.id and o.household_id = m.household_id and o.original_start = $3
+        )`,
+    [seriesId, householdId, occurrenceStart]
+  )
+  const master = rows[0]
+  if (!master) return null
+
+  const editedStartMs = new Date(patch.startsAt).getTime()
+  const occurrenceStartMs = new Date(occurrenceStart).getTime()
+  const rebasedStartMs = master.starts_at.getTime() + (editedStartMs - occurrenceStartMs)
+  const rebased: Record<string, unknown> = { ...patch, startsAt: new Date(rebasedStartMs).toISOString() }
+
+  if (typeof patch.endsAt === 'string') {
+    const editedDurationMs = new Date(patch.endsAt).getTime() - editedStartMs
+    rebased.endsAt = new Date(rebasedStartMs + editedDurationMs).toISOString()
+  } else if (!('endsAt' in patch) && master.ends_at) {
+    const masterDurationMs = master.ends_at.getTime() - master.starts_at.getTime()
+    rebased.endsAt = new Date(rebasedStartMs + masterDurationMs).toISOString()
+  }
+  return rebased
+}
+
 /** scope=this: upsert an override for one occurrence (edit fields, or cancel), then
  *  re-materialize. Returns false if the series doesn't exist for this household. */
 export async function overrideOccurrence(
@@ -716,6 +754,9 @@ export function registerEventRoutes(api: Api): void {
     if (!['this', 'following', 'all'].includes(scope)) {
       return res.status(400).json({ error: 'BadRequest', message: 'scope must be this, following, or all' })
     }
+    if (occurrenceStart && Number.isNaN(Date.parse(occurrenceStart))) {
+      return res.status(400).json({ error: 'BadRequest', message: 'occurrenceStart must be a valid timestamp' })
+    }
     if (scope === 'this') {
       const unsupported = SERIES_ONLY_FIELDS.filter((field) => field in patch)
       if (unsupported.length) {
@@ -748,7 +789,11 @@ export function registerEventRoutes(api: Api): void {
       if (!created) return res.status(404).json({ error: 'NotFound', message: 'recurring event not found' })
       return { event: presentEvent(created) }
     }
-    const event = await updateEvent(tenant.householdId, id, patch)
+    const updatePatch = scope === 'all' && occurrenceStart
+      ? await rebaseAllSeriesTiming(tenant.householdId, id, occurrenceStart, patch)
+      : patch
+    if (!updatePatch) return res.status(404).json({ error: 'NotFound', message: 'recurring event occurrence not found' })
+    const event = await updateEvent(tenant.householdId, id, updatePatch)
     if (!event) return res.status(404).json({ error: 'NotFound', message: 'event not found' })
     return { event: presentEvent(event) }
   }))

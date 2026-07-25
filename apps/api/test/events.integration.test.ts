@@ -400,6 +400,7 @@ describe('recurring events api', () => {
     seriesId: string
     occurrenceStart: string
     startsAt: string
+    endsAt: string | null
     title: string
     description: string | null
     location: string | null
@@ -496,6 +497,39 @@ describe('recurring events api', () => {
     const after = await list(sid, '2026-11-01', '2026-11-30')
     expect(after).toHaveLength(3)
     expect(after.some((o) => o.occurrenceStart === drop.occurrenceStart)).toBe(false)
+  })
+
+  it('scope=all preserves earlier occurrences when changing the series time', async () => {
+    const sid = await makeWeekly('Practice', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z', {
+      endsAt: '2026-10-06T15:00:00Z',
+    })
+    const before = await list(sid, '2026-10-01', '2026-10-31')
+    expect(before).toHaveLength(4)
+    const selected = before[2]
+
+    const resp = await call('PATCH', `/api/events/${sid}`, kevin, {
+      scope: 'all',
+      occurrenceStart: selected.occurrenceStart,
+      title: 'Practice (later)',
+      startsAt: '2026-10-20T16:00:00Z',
+      endsAt: '2026-10-20T17:00:00Z',
+    })
+    expect(resp.statusCode).toBe(200)
+
+    const after = await list(sid, '2026-10-01', '2026-10-31')
+    expect(after.map((o) => o.startsAt)).toEqual([
+      '2026-10-06T16:00:00.000Z',
+      '2026-10-13T16:00:00.000Z',
+      '2026-10-20T16:00:00.000Z',
+      '2026-10-27T16:00:00.000Z',
+    ])
+    expect(after.map((o) => o.endsAt)).toEqual([
+      '2026-10-06T17:00:00.000Z',
+      '2026-10-13T17:00:00.000Z',
+      '2026-10-20T17:00:00.000Z',
+      '2026-10-27T17:00:00.000Z',
+    ])
+    expect(after.every((o) => o.title === 'Practice (later)')).toBe(true)
   })
 
   it('scope=following splits the series and applies every editable series field', async () => {

@@ -182,6 +182,7 @@ export function EventModal({
   const [form, setForm] = useState(() => initialForm(event, date, time, prefill))
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const wasRecurring = !!event?.rrule || !!event?.occurrenceStart
   const [confirmDelete, setConfirmDelete] = useState(false)
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -189,15 +190,57 @@ export function EventModal({
   // separate: COUNT rides in the rrule, an end date rides in recurrenceEndAt. We
   // strip COUNT out of the stored rule before parsing so the freq builder reads
   // cleanly, then re-apply it from the end picker.
-  const initialCount = event?.rrule ? /;?COUNT=(\d+)/i.exec(event.rrule)?.[1] ?? null : null
-  const [repeat, setRepeat] = useState(() => parseRepeat(event?.rrule?.replace(/;?COUNT=\d+/i, '')))
+  const initialRrule = event?.rrule ?? null
+  const initialRecurrenceEndAt = event?.recurrenceEndAt ?? null
+  const initialCount = initialRrule ? /;?COUNT=(\d+)/i.exec(initialRrule)?.[1] ?? null : null
+  const [repeat, setRepeat] = useState(() => parseRepeat(initialRrule?.replace(/;?COUNT=\d+/i, '')))
   const [endMode, setEndMode] = useState<'never' | 'on' | 'after'>(
-    initialCount ? 'after' : event?.recurrenceEndAt ? 'on' : 'never'
+    initialCount ? 'after' : initialRecurrenceEndAt ? 'on' : 'never'
   )
-  const [until, setUntil] = useState(() => (event?.recurrenceEndAt ? localDateInput(event.recurrenceEndAt) : ''))
+  const [until, setUntil] = useState(() => (initialRecurrenceEndAt ? localDateInput(initialRecurrenceEndAt) : ''))
   const [count, setCount] = useState(initialCount ? Number(initialCount) : 10)
+  const [originalRrule, setOriginalRrule] = useState<string | null>(initialRrule)
+  const [originalRecurrenceEndAt, setOriginalRecurrenceEndAt] = useState<string | null>(initialRecurrenceEndAt)
+  const [seriesReady, setSeriesReady] = useState(!wasRecurring || !!initialRrule)
   const [scopePrompt, setScopePrompt] = useState<null | 'save' | 'delete'>(null)
-  const wasRecurring = !!event?.rrule
+
+  // PowerSync occurrence rows carry the series/occurrence handles but not the
+  // master's recurrence metadata. Hydrate it before enabling edits so a local
+  // occurrence can never fall through the one-off write path.
+  useEffect(() => {
+    if (!wasRecurring || initialRrule || !event) return
+    let alive = true
+    setSeriesReady(false)
+    void api.event(event.seriesId ?? event.id)
+      .then(({ event: master }) => {
+        if (!alive) return
+        if (!master.rrule) throw new Error('Recurring series metadata is unavailable')
+
+        const fetchedCount = /;?COUNT=(\d+)/i.exec(master.rrule)?.[1] ?? null
+        setRepeat(parseRepeat(master.rrule.replace(/;?COUNT=\d+/i, '')))
+        setOriginalRrule(master.rrule)
+        setOriginalRecurrenceEndAt(master.recurrenceEndAt ?? null)
+        if (fetchedCount) {
+          setEndMode('after')
+          setCount(Number(fetchedCount))
+          setUntil('')
+        } else if (master.recurrenceEndAt) {
+          setEndMode('on')
+          setUntil(localDateInput(master.recurrenceEndAt))
+        } else {
+          setEndMode('never')
+          setUntil('')
+        }
+        setSeriesReady(true)
+      })
+      .catch(() => {
+        if (!alive) return
+        setSaveError('Could not load this repeating series. Check your connection and try again.')
+        setSeriesReady(false)
+      })
+    return () => { alive = false }
+  }, [event, initialRrule, wasRecurring])
+
   // The event's start, used for the default weekly day and monthly nth-weekday.
   const startDate = new Date(`${form.day}T${form.time || '12:00'}`)
   const weekday = weekdayCode(startDate)
@@ -223,8 +266,8 @@ export function EventModal({
     !sameIds(form.participantIds, originalParticipantIds) ||
     form.goalId !== (event.goalId ?? '') ||
     form.goalStepId !== (event.goalStepId ?? '') ||
-    rrule !== (event.rrule ?? null) ||
-    !sameInstant(recurrenceEndAt, event.recurrenceEndAt)
+    rrule !== originalRrule ||
+    !sameInstant(recurrenceEndAt, originalRecurrenceEndAt)
   )
 
   // "Counts toward" is gated on who's attending: with nobody selected there's
@@ -520,7 +563,7 @@ export function EventModal({
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!form.title.trim() || saving) return
+    if (!form.title.trim() || saving || (wasRecurring && !seriesReady)) return
     setSaveError(null)
     // Recurring create/edit goes through REST. Editing an already-recurring event
     // first asks which occurrences to change.
@@ -979,7 +1022,7 @@ export function EventModal({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!form.title.trim() || saving}
+              disabled={!form.title.trim() || saving || (wasRecurring && !seriesReady)}
               style={{ flex: 1, justifyContent: 'center' }}
             >
               {saving ? 'Saving…' : editing ? 'Save' : 'Add event'}
