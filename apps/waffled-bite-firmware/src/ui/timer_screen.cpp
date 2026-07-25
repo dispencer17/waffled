@@ -283,11 +283,17 @@ static WbTimerCountdownCtx *wb_build_timer_countdown(lv_obj_t *parent, const WbT
   // -> 440 — capped a bit under quiet_screen's 480 since this screen also
   // has a top bar (the Home button, 72px) eating into the 600px panel
   // height that quiet_screen doesn't have to account for).
+  // CENTER, not SPACE_BETWEEN (was) — SPACE_BETWEEN pushed the ring and the
+  // text block to the row's opposite edges, leaving a big dead gap between
+  // them on this wide a panel. CENTER + a fixed pad_column brings them
+  // together near the middle as one unit instead, per direct feedback with
+  // a reference photo.
   lv_obj_t *content_row = lv_obj_create(parent);
   lv_obj_remove_style_all(content_row);
   lv_obj_set_size(content_row, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(content_row, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(content_row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_flex_align(content_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(content_row, 64, 0);
   lv_obj_set_flex_grow(content_row, 1);
   lv_obj_clear_flag(content_row, LV_OBJ_FLAG_SCROLLABLE);
 

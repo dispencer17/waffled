@@ -716,3 +716,15 @@ needed no changes across the v8→v9 migration — only *how* it's wired in chan
   centered as a block. `CENTER` centers the narrower button under the title
   instead. Native and esp32-p4 both build clean; verified no crash on real
   hardware post-flash.
+- **Timer screen's ring and text block brought together — direct follow-up,
+  reference photo.** `content_row`'s main-axis alignment was
+  `LV_FLEX_ALIGN_SPACE_BETWEEN`, which pushes its two children to the row's
+  opposite edges — fine at the ring's old 260px size, but once it grew to 440px
+  the ring sat hard against the left edge and `right_col` hard against the
+  right, leaving a big empty gap in the middle on this 1024px-wide panel
+  (visible in the photo: "Timer running"/"End timer" reading like an
+  afterthought far off to the side). Changed to `LV_FLEX_ALIGN_CENTER` with an
+  explicit `pad_column(64)` so the ring and `right_col` sit together as one
+  centered unit with a fixed, deliberate gap between them, instead of being
+  pulled apart by however much space the row happens to have. Native and
+  esp32-p4 both build clean; verified no crash on real hardware post-flash.

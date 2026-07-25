@@ -107,6 +107,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   app's warm serif font, "Stay cozy until…" is bigger too (though still smaller than
   the title), and on the timer screen, "Timer running" and the End-timer button are
   now centered under each other instead of looking left-aligned.
+- **Waffled-Bite device: the timer screen's ring and text no longer sit at opposite
+  edges.** Direct follow-up with a reference photo: the countdown ring and the
+  "Timer running"/End-timer text used to be pushed to the far left and far right of
+  the screen, leaving a big empty gap in the middle. They now sit together nearer
+  the center, with a consistent gap between them.
 
 ### Fixed
 
