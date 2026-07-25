@@ -115,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Family Night keeps its last confirmed assignments when a change fails on iPhone or
+  iPad.** Picking or clearing a person used to swallow server errors and could replace the
+  card with an unavailable state. The card now shows when it is saving, preserves the
+  confirmed schedule, and explains that the assignment can be tried again.
 - **Cook Mode timers now survive calendar-reminder cleanup on iPhone and iPad.** Turning
   off event reminders, losing an expired session, or signing out used to cancel every
   pending Waffled notification, including active kitchen timers. Cleanup now removes only
