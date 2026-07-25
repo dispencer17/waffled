@@ -115,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cook Mode timers now survive calendar-reminder cleanup on iPhone and iPad.** Turning
+  off event reminders, losing an expired session, or signing out used to cancel every
+  pending Waffled notification, including active kitchen timers. Cleanup now removes only
+  Calendar's event and snooze reminders.
 - **Stored chore photos stay visible when deletion fails on iPhone or iPad.** A failed
   single-photo or clear-all request used to remove the photos from the settings screen
   anyway, making a server or connection error look like success. The screen now keeps
