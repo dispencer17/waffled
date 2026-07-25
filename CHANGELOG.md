@@ -115,6 +115,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Recurring event edits no longer drop part of what you changed.** "This and following"
+  now carries all-day, countdown, people, goal, and repeat settings into the new series.
+  "This event" is offered only when every selected change can be stored on one occurrence,
+  and failed iPhone/iPad saves stay open with an error.
+
 - **Waffled-Bite device: the on-screen keyboard was covering the text field you were
   typing into.** On the setup screen, the "Server address" field was hidden entirely
   behind the keyboard once it popped up — you had no way to see what you were typing.

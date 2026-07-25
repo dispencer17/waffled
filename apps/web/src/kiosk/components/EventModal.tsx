@@ -66,6 +66,24 @@ function isWritable(c: CalendarLink): boolean {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+function localDateInput(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function sameInstant(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a && !b) return true
+  if (!a || !b) return false
+  return Date.parse(a) === Date.parse(b)
+}
+
+function sameIds(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  const left = [...a].sort()
+  const right = [...b].sort()
+  return left.every((id, index) => id === right[index])
+}
+
 // Build an ISO instant from a local date + time (browser tz = kiosk/household tz).
 function toIso(date: string, time: string): string {
   return new Date(`${date}T${time}`).toISOString()
@@ -163,6 +181,7 @@ export function EventModal({
   )
   const [form, setForm] = useState(() => initialForm(event, date, time, prefill))
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -172,8 +191,10 @@ export function EventModal({
   // cleanly, then re-apply it from the end picker.
   const initialCount = event?.rrule ? /;?COUNT=(\d+)/i.exec(event.rrule)?.[1] ?? null : null
   const [repeat, setRepeat] = useState(() => parseRepeat(event?.rrule?.replace(/;?COUNT=\d+/i, '')))
-  const [endMode, setEndMode] = useState<'never' | 'on' | 'after'>(initialCount ? 'after' : 'never')
-  const [until, setUntil] = useState('')
+  const [endMode, setEndMode] = useState<'never' | 'on' | 'after'>(
+    initialCount ? 'after' : event?.recurrenceEndAt ? 'on' : 'never'
+  )
+  const [until, setUntil] = useState(() => (event?.recurrenceEndAt ? localDateInput(event.recurrenceEndAt) : ''))
   const [count, setCount] = useState(initialCount ? Number(initialCount) : 10)
   const [scopePrompt, setScopePrompt] = useState<null | 'save' | 'delete'>(null)
   const wasRecurring = !!event?.rrule
@@ -183,12 +204,28 @@ export function EventModal({
   const baseRrule = buildRrule(repeat, startDate)
   // COUNT lives in the rule; an end date is passed separately as recurrenceEndAt.
   const rrule = baseRrule && endMode === 'after' && count > 0 ? `${baseRrule};COUNT=${count}` : baseRrule
-  const recurrenceEndAt = endMode === 'on' && until ? toIso(until, '23:59') : undefined
+  const recurrenceEndAt = endMode === 'on' && until ? toIso(until, '23:59') : null
   const ruleSummary = (() => {
     const s = describeRrule(rrule, startDate)
     return endMode === 'on' && until ? `${s}, until ${until}` : s
   })()
   const nowRecurring = !!rrule
+  const originalParticipantIds = event
+    ? event.participants.length
+      ? event.participants.map((p) => p.id)
+      : event.personId
+        ? [event.personId]
+        : []
+    : []
+  const hasSeriesOnlyChanges = !!event && (
+    form.allDay !== event.allDay ||
+    form.isCountdown !== (event.isCountdown ?? false) ||
+    !sameIds(form.participantIds, originalParticipantIds) ||
+    form.goalId !== (event.goalId ?? '') ||
+    form.goalStepId !== (event.goalStepId ?? '') ||
+    rrule !== (event.rrule ?? null) ||
+    !sameInstant(recurrenceEndAt, event.recurrenceEndAt)
+  )
 
   // "Counts toward" is gated on who's attending: with nobody selected there's
   // nothing to attribute, so the picker is hidden. Once people are chosen, only
@@ -435,7 +472,8 @@ export function EventModal({
       // Only a checklist link carries a step; clear it otherwise.
       goalStepId: isChecklistGoal ? form.goalStepId || null : null,
     }
-    const restPayload = { ...draft, participantIds: draft.personIds }
+    const { personIds, ...eventDraft } = draft
+    const restPayload = { ...eventDraft, participantIds: personIds }
     return { draft, restPayload, chosenCal }
   }
 
@@ -448,13 +486,20 @@ export function EventModal({
       if (!editing) {
         await api.createEvent({ ...restPayload, rrule, recurrenceEndAt })
       } else if (wasRecurring) {
-        // 'this'/'following' edit only the occurrence's own fields; only 'all'
-        // (editing the master) changes the rule itself.
+        const occurrencePayload = {
+          title: restPayload.title,
+          startsAt: restPayload.startsAt,
+          endsAt: restPayload.endsAt,
+          location: restPayload.location,
+        }
+        // A single occurrence has a deliberately narrow override schema. A split
+        // creates a complete new master, so following/all carry every series field.
         await api.updateEvent(event!.seriesId ?? event!.id, {
-          ...restPayload,
+          ...(scope === 'this'
+            ? occurrencePayload
+            : { ...restPayload, rrule, recurrenceEndAt }),
           scope,
           occurrenceStart: event!.occurrenceStart,
-          ...(scope === 'all' ? { rrule, recurrenceEndAt } : {}),
         })
         invalidateGetCache(`/api/events/${event!.id}/insight`)
       } else {
@@ -467,6 +512,7 @@ export function EventModal({
       onClose()
     } catch (err) {
       console.error('event save failed', err)
+      setSaveError(err instanceof Error ? err.message : 'Could not save this event. Try again.')
       setSaving(false)
       setScopePrompt(null)
     }
@@ -475,6 +521,7 @@ export function EventModal({
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!form.title.trim() || saving) return
+    setSaveError(null)
     // Recurring create/edit goes through REST. Editing an already-recurring event
     // first asks which occurrences to change.
     if (nowRecurring || wasRecurring) {
@@ -505,6 +552,7 @@ export function EventModal({
       onClose()
     } catch (err) {
       console.error('event save failed', err)
+      setSaveError(err instanceof Error ? err.message : 'Could not save this event. Try again.')
       setSaving(false)
     }
   }
@@ -557,6 +605,7 @@ export function EventModal({
 
   // The scope chooser picked an option — run the right action and dismiss it.
   function onScopeChosen(scope: EditScope) {
+    if (scopePrompt === 'save' && scope === 'this' && hasSeriesOnlyChanges) return
     setSaving(true)
     if (scopePrompt === 'delete') void deleteRecurring(scope)
     else void saveRecurring(scope)
@@ -572,6 +621,12 @@ export function EventModal({
         <div className="wf-serif" style={{ fontSize: 22, fontWeight: 600, marginBottom: 14 }}>
           {editing ? (isMeal ? 'Planned meal' : 'Edit event') : 'New event'}
         </div>
+
+        {saveError && (
+          <div role="alert" style={{ marginBottom: 14, color: 'var(--primary)', fontSize: 14, fontWeight: 650 }}>
+            {saveError}
+          </div>
+        )}
 
         {isMeal && recipeId && (
           <button
@@ -941,7 +996,19 @@ export function EventModal({
                 {scopePrompt === 'delete' ? 'Delete recurring event' : 'Edit recurring event'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                <button type="button" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={() => onScopeChosen('this')}>
+                {scopePrompt === 'save' && hasSeriesOnlyChanges && (
+                  <div style={{ color: 'var(--ink-2)', fontSize: 13, lineHeight: 1.45, marginBottom: 2 }}>
+                    Changes to all-day, countdown, people, goal, or repeat settings cannot apply to one event.
+                    Choose “This and following events” or “All events”.
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'center' }}
+                  disabled={scopePrompt === 'save' && hasSeriesOnlyChanges}
+                  onClick={() => onScopeChosen('this')}
+                >
                   This event
                 </button>
                 <button type="button" className="btn btn-ghost" style={{ justifyContent: 'center' }} onClick={() => onScopeChosen('following')}>

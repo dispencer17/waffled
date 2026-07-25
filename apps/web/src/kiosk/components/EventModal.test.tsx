@@ -129,5 +129,38 @@ describe('EventModal', () => {
     fireEvent.click(thisOne)
     await waitFor(() => expect(patched).toHaveLength(1))
     expect(patched[0]).toMatchObject({ title: 'New title', scope: 'this', occurrenceStart: '2026-06-22T22:00:00Z' })
+    expect(patched[0]).not.toHaveProperty('allDay')
+    expect(patched[0]).not.toHaveProperty('isCountdown')
+    expect(patched[0]).not.toHaveProperty('participantIds')
+    expect(patched[0]).not.toHaveProperty('goalId')
+    expect(patched[0]).not.toHaveProperty('rrule')
+  })
+
+  it('requires a series scope when series-only fields changed', async () => {
+    const patched: Array<Record<string, unknown>> = []
+    mockEventApi(patched, [])
+    const recurring = {
+      ...sampleEvent,
+      isCountdown: false,
+      rrule: 'FREQ=WEEKLY;BYDAY=MO',
+      seriesId: 'e1',
+      occurrenceStart: '2026-06-22T22:00:00Z',
+    }
+    renderModal(<EventModal event={recurring} onClose={vi.fn()} onSaved={vi.fn()} />)
+
+    fireEvent.click(screen.getByLabelText(/Show a countdown/))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const thisOne = await screen.findByRole('button', { name: 'This event' })
+    expect(thisOne).toBeDisabled()
+    expect(screen.getByText(/Choose “This and following events” or “All events”/)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'This and following events' }))
+    await waitFor(() => expect(patched).toHaveLength(1))
+    expect(patched[0]).toMatchObject({
+      scope: 'following',
+      isCountdown: true,
+      rrule: 'FREQ=WEEKLY;BYDAY=MO',
+    })
   })
 })
