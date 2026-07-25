@@ -115,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cook Mode timers now survive calendar-reminder cleanup on iPhone and iPad.** Turning
+  off event reminders, losing an expired session, or signing out used to cancel every
+  pending Waffled notification, including active kitchen timers. Cleanup now removes only
+  Calendar's event and snooze reminders.
 - **Waffled-Bite device: the on-screen keyboard was covering the text field you were
   typing into.** On the setup screen, the "Server address" field was hidden entirely
   behind the keyboard once it popped up — you had no way to see what you were typing.
