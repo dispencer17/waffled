@@ -115,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Countdown edits no longer disappear after a failed iPhone or iPad request.** Add and
+  edit sheets now stay open with the entered details when saving or removal fails, and a
+  failed quick-remove keeps the countdown visible instead of pretending the server
+  accepted it. Each failure explains that you can check the connection and try again.
 - **Family Night keeps its last confirmed assignments when a change fails on iPhone or
   iPad.** Picking or clearing a person used to swallow server errors and could replace the
   card with an unavailable state. The card now shows when it is saving, preserves the
