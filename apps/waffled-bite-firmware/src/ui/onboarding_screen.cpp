@@ -1,5 +1,6 @@
 #include "onboarding_screen.h"
 #include "../wb_http.h"
+#include "../icons/wb_icons.h"
 #include <ArduinoJson.h>
 #include <cstdio>
 
@@ -51,7 +52,16 @@ struct WbKeyboardCtx
   lv_obj_t *hide_chip;
   lv_obj_t *server_ta;
   lv_obj_t *code_ta;
+  lv_obj_t *card; // shifted up on focus so the keyboard can't cover the focused field — see wb_ta_focused_cb
 };
+
+// Undoes wb_ta_focused_cb's upward shift — shared by defocus and the
+// explicit "Hide keyboard" chip so the card always ends up back at its
+// natural position once the keyboard's gone, not left offset.
+static void wb_reset_card_offset(lv_obj_t *card)
+{
+  lv_obj_set_style_translate_y(card, 0, 0);
+}
 
 static void wb_hide_keyboard_cb(lv_event_t *e)
 {
@@ -60,21 +70,24 @@ static void wb_hide_keyboard_cb(lv_event_t *e)
   lv_obj_clear_state(kbCtx->code_ta, LV_STATE_FOCUSED);
   lv_obj_add_flag(kbCtx->kb, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(kbCtx->hide_chip, LV_OBJ_FLAG_HIDDEN);
+  wb_reset_card_offset(kbCtx->card);
 }
 
 static lv_obj_t *make_field_label(lv_obj_t *parent, const char *text)
 {
   lv_obj_t *lbl = lv_label_create(parent);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(lbl, WB_COLOR_MUTED, 0);
   return lbl;
 }
 
-// A small tappable pill — same pattern as wifi_screen.cpp's make_tap_chip
-// (duplicated rather than shared, same rationale as the palette macros
-// above): a real touch-target size and visible press feedback, versus a
-// plain clickable label's tiny hit-box matching only its rendered glyphs.
+// A big, chunky tappable pill — same pattern as wifi_screen.cpp's
+// make_tap_chip (duplicated rather than shared, same rationale as the
+// palette macros above): a real touch-target size and visible press
+// feedback, versus a plain clickable label's tiny hit-box matching only its
+// rendered glyphs. Sized up (font_14/pad 16x10 -> font_24/pad 32x18) per
+// direct request, same pass as every other utility-screen button in this app.
 static lv_obj_t *make_tap_chip(lv_obj_t *parent, const char *text, lv_color_t text_color)
 {
   lv_obj_t *chip = lv_obj_create(parent);
@@ -82,13 +95,13 @@ static lv_obj_t *make_tap_chip(lv_obj_t *parent, const char *text, lv_color_t te
   lv_obj_set_size(chip, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(chip, WB_COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(chip, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(chip, 14, 0);
-  lv_obj_set_style_pad_hor(chip, 16, 0);
-  lv_obj_set_style_pad_ver(chip, 10, 0);
+  lv_obj_set_style_radius(chip, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_hor(chip, 32, 0);
+  lv_obj_set_style_pad_ver(chip, 18, 0);
   lv_obj_clear_flag(chip, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *lbl = lv_label_create(chip);
   lv_label_set_text(lbl, text);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(lbl, text_color, 0);
   return chip;
 }
@@ -101,14 +114,26 @@ static lv_obj_t *make_textarea(lv_obj_t *parent)
   lv_obj_set_style_bg_color(ta, WB_COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(ta, LV_OPA_COVER, 0);
   lv_obj_set_style_border_width(ta, 0, 0);
-  lv_obj_set_style_radius(ta, 12, 0);
-  lv_obj_set_style_text_font(ta, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_radius(ta, 16, 0);
+  lv_obj_set_style_pad_all(ta, 14, 0);
+  lv_obj_set_style_text_font(ta, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(ta, WB_COLOR_INK, 0);
   return ta;
 }
 
 // Shared LV_EVENT_FOCUSED handler for both textareas: attaches the on-screen
-// keyboard (created once, hidden by default) to whichever field was tapped.
+// keyboard (created once, hidden by default) to whichever field was tapped,
+// then shifts `card` up if the focused field would otherwise sit under the
+// keyboard. The keyboard is a FLOATING overlay covering the bottom ~45% of
+// the screen — content "under" it in normal layout terms is still there,
+// just invisible, since the keyboard paints on top. Confirmed live: after
+// the chunky-button pass grew this card's content taller (bigger logo,
+// title, fields), the Server-address field ended up completely hidden
+// behind the keyboard with no way to see what was typed. Computed fresh on
+// every focus (not just once) since server_ta and code_ta sit at different
+// heights and need different amounts of shift — lv_obj_get_coords() always
+// reports the natural, untransformed layout position regardless of any
+// translate already applied from a previous focus, so this doesn't compound.
 static void wb_ta_focused_cb(lv_event_t *e)
 {
   lv_obj_t *ta = (lv_obj_t *)lv_event_get_target(e);
@@ -116,6 +141,12 @@ static void wb_ta_focused_cb(lv_event_t *e)
   lv_keyboard_set_textarea(kbCtx->kb, ta);
   lv_obj_clear_flag(kbCtx->kb, LV_OBJ_FLAG_HIDDEN);
   lv_obj_clear_flag(kbCtx->hide_chip, LV_OBJ_FLAG_HIDDEN);
+
+  lv_area_t ta_coords, kb_coords;
+  lv_obj_get_coords(ta, &ta_coords);
+  lv_obj_get_coords(kbCtx->kb, &kb_coords);
+  int32_t overflow = ta_coords.y2 - kb_coords.y1 + 16; // 16px breathing room above the keyboard
+  lv_obj_set_style_translate_y(kbCtx->card, overflow > 0 ? -overflow : 0, 0);
 }
 
 static void wb_ta_defocused_cb(lv_event_t *e)
@@ -123,6 +154,7 @@ static void wb_ta_defocused_cb(lv_event_t *e)
   WbKeyboardCtx *kbCtx = (WbKeyboardCtx *)lv_event_get_user_data(e);
   lv_obj_add_flag(kbCtx->kb, LV_OBJ_FLAG_HIDDEN);
   lv_obj_add_flag(kbCtx->hide_chip, LV_OBJ_FLAG_HIDDEN);
+  wb_reset_card_offset(kbCtx->card);
 }
 
 static void wb_show_error(lv_obj_t *error_lbl, const char *message)
@@ -192,22 +224,39 @@ void wb_build_onboarding_screen(lv_obj_t *parent, const char *defaultServerUrl, 
   lv_obj_set_style_pad_all(parent, 24, 0);
   lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
 
+  // Grown from 420 wide alongside the chunkier field/button sizing below.
   lv_obj_t *card = lv_obj_create(parent);
   lv_obj_remove_style_all(card);
-  lv_obj_set_size(card, 420, LV_SIZE_CONTENT);
+  lv_obj_set_size(card, 560, LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(card, WB_COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
   lv_obj_set_style_radius(card, 20, 0);
   lv_obj_set_style_pad_all(card, 24, 0);
   lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_row(card, 6, 0);
+  lv_obj_set_style_pad_row(card, 8, 0);
   lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+  // A plain row wrapper, not lv_obj_set_align on the image directly — `card`
+  // is a flex column and per-child lv_obj_set_align is ignored inside flex
+  // layouts (same reasoning as home_screen.cpp's dedicated alignment rows).
+  lv_obj_t *logo_row = lv_obj_create(card);
+  lv_obj_remove_style_all(logo_row);
+  lv_obj_set_size(logo_row, lv_pct(100), LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(logo_row, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(logo_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_bottom(logo_row, 4, 0);
+  lv_obj_clear_flag(logo_row, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *logo = lv_image_create(logo_row);
+  lv_image_set_src(logo, &wb_logo_96);
 
   lv_obj_t *title = lv_label_create(card);
   lv_label_set_text(title, "Set up your Waffled-Bite");
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_32, 0);
   lv_obj_set_style_text_color(title, WB_COLOR_INK, 0);
-  lv_obj_set_style_pad_bottom(title, 4, 0);
+  lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
+  lv_obj_set_width(title, lv_pct(100));
+  lv_obj_set_style_text_align(title, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_pad_bottom(title, 6, 0);
 
   // Once WiFi is saved, this screen was the only way forward — a kid/parent
   // who picked the wrong network (or moved the device to a new one) had no
@@ -229,7 +278,7 @@ void wb_build_onboarding_screen(lv_obj_t *parent, const char *defaultServerUrl, 
 
   lv_obj_t *error_lbl = lv_label_create(card);
   lv_label_set_text(error_lbl, "");
-  lv_obj_set_style_text_font(error_lbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_font(error_lbl, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(error_lbl, WB_COLOR_ERROR, 0);
   lv_label_set_long_mode(error_lbl, LV_LABEL_LONG_WRAP);
   lv_obj_set_width(error_lbl, lv_pct(100));
@@ -241,15 +290,15 @@ void wb_build_onboarding_screen(lv_obj_t *parent, const char *defaultServerUrl, 
   lv_obj_set_size(pair_btn, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_style_bg_color(pair_btn, WB_COLOR_GOLD, 0);
   lv_obj_set_style_bg_opa(pair_btn, LV_OPA_COVER, 0);
-  lv_obj_set_style_radius(pair_btn, 14, 0);
-  lv_obj_set_style_pad_ver(pair_btn, 12, 0);
+  lv_obj_set_style_radius(pair_btn, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_ver(pair_btn, 20, 0);
   lv_obj_set_flex_flow(pair_btn, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(pair_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_top(pair_btn, 16, 0);
+  lv_obj_set_style_pad_top(pair_btn, 20, 0);
   lv_obj_clear_flag(pair_btn, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_t *pair_lbl = lv_label_create(pair_btn);
   lv_label_set_text(pair_lbl, "Pair");
-  lv_obj_set_style_text_font(pair_lbl, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(pair_lbl, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(pair_lbl, lv_color_white(), 0);
 
   // The on-screen keyboard: one shared instance, hidden until a textarea is
@@ -278,7 +327,7 @@ void wb_build_onboarding_screen(lv_obj_t *parent, const char *defaultServerUrl, 
 
   // Heap-allocated and intentionally never freed — same lifetime rationale as
   // WbOnboardingCtx below.
-  WbKeyboardCtx *kbCtx = new WbKeyboardCtx{kb, hide_kb_chip, server_ta, code_ta};
+  WbKeyboardCtx *kbCtx = new WbKeyboardCtx{kb, hide_kb_chip, server_ta, code_ta, card};
   lv_obj_add_event_cb(hide_kb_chip, wb_hide_keyboard_cb, LV_EVENT_CLICKED, kbCtx);
   lv_obj_add_event_cb(server_ta, wb_ta_focused_cb, LV_EVENT_FOCUSED, kbCtx);
   lv_obj_add_event_cb(server_ta, wb_ta_defocused_cb, LV_EVENT_DEFOCUSED, kbCtx);

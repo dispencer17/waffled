@@ -34,17 +34,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so a device that's stopped checking in doesn't go unnoticed. This isn't an instant
   heartbeat — it's based on the device's regular check-in, so it can lag up to about
   15 minutes behind reality.
+- **Waffled-Bite device: a real "can't reach the server" screen.** Starting a timer,
+  checking off a chore, and every other on-device action needs to reach your Waffled
+  server — while it can't, those taps used to just silently do nothing. The device now
+  shows a plain "Can't reach the server" screen with a Try again button, a way to change
+  Wi-Fi networks, a way to change the server address directly, and a way to reach
+  Settings — instead of a dead tap with no explanation. It keeps coming back to this
+  screen while the device stays offline (it won't just quietly stay wherever you
+  navigated to), and goes away on its own the moment the device is back online. (It
+  never interrupts quiet time or a bedtime lock, and it won't pull you off the Wi-Fi
+  picker or the change-address screen while you're actively using them.) A sad,
+  unplugged waffle-iron mascot now sits alongside the message so it reads as
+  friendly rather than like an error dialog.
+- **Waffled-Bite device: no more white box around the logo/mascot, and a bigger boot
+  screen.** The Waffled logo and the offline mascot used to sit on a visible white
+  rectangle instead of blending into the app's cream background — now transparent
+  everywhere they appear (onboarding, the Wi-Fi "Connecting…" screen, the home
+  screen's clock corner, and the offline screen). The very first boot screen (shown
+  while the device connects to Wi-Fi) also got the same bigger-everything treatment
+  as the rest of the app — a much bigger logo and bigger "Waffled"/"Connecting…" text.
 
 ### Changed
 
+- **Waffled-Bite device: home + grown-up-controls screen polish.** The "Hi, {name}!"
+  greeting now renders in the same warm serif (Newsreader) used across the rest of
+  Waffled instead of a generic sans font, the greeting card and routine tiles now have
+  soft drop shadows for a bit of depth, and a fully-completed routine
+  (Morning/Afternoon/Evening/Chores) now shows a small green checkmark badge
+  overlapping its count pill instead of a checkmark crammed into the pill's text. The
+  Morning/Afternoon/Evening/Chores tiles, the Sounds/Nightlight/Set-a-timer/Bedtime
+  grown-up controls, the settings gear, and the stars badges now show real icons
+  (sun/sun-high/moon/broom/sound/timer/bed/gear/star) instead of text placeholders, the
+  routine tile colors match the design mock's exact values, and the home screen's
+  subtitle now reads "Let's have a great morning/afternoon/evening" instead of a
+  hardcoded "day". The Waffled logo now appears on the setup screen and the
+  Wi-Fi "Connecting…" screen.
+- **Waffled-Bite device: quiet-time and grown-up-controls screens match the updated
+  design mock.** Quiet time switches from a single centered column to a split
+  layout — a gold crescent moon, the "Quiet time" title in the same warm serif used
+  elsewhere, and the "Stay cozy until…" line on the left, the countdown ring on the
+  right. The grown-up-controls tiles are now compact and vertically centered instead
+  of stretched to fill the screen's height, matching the mock's proportions.
+- **Waffled-Bite device: the "Set a timer" countdown now matches quiet time's split
+  layout.** The countdown ring is bigger and moved to the left, with the "Timer
+  running" title and End-timer button on the right, instead of a single stacked
+  column — the same split-row treatment as the quiet-time screen above, mirrored.
+- **Waffled-Bite device: bigger, chunkier buttons everywhere.** Direct feedback: the
+  WiFi setup, "can't reach the server," timer, pairing, and grown-up-controls screens
+  all had small, adult-app-sized buttons and text that didn't match the big, fun home
+  screen. Every button on those screens — Rescan, Connect, Try again, Change Wi-Fi,
+  Pair, Start/End timer, the +/- steppers, Home/Back — is now noticeably bigger with
+  larger text, along with the on/off switches, color swatches, and the volume/
+  brightness slider's knob. The chore rows themselves (Morning/Afternoon/Evening/
+  Chores) got the same treatment — a bigger checkbox and bigger title text, more
+  breathing room between rows. The one thing left deliberately small: the "For a
+  grown-up" chip in Settings, so it stays easy to overlook for a kid.
+- **Waffled-Bite device: bigger icons and text on the home screen's routine tiles.**
+  Direct follow-up: the Morning/Afternoon/Evening/Chores tiles' sun/sun-high/moon/
+  broom icons and "X of Y" count pills were still their original size and looked
+  small next to everything else that's gotten bigger. Icons are now noticeably
+  bigger, and the tile name and count text are bigger too.
+- **Waffled-Bite device: Morning/Afternoon/Evening icons moved to the center and made
+  even bigger.** Direct follow-up: the sun/sun-high/moon icons used to sit in the
+  tile's top-left corner next to the count pill; they're now the big centerpiece of
+  each tile, front and center.
+- **Waffled-Bite device: the quiet-time and timer countdown rings are much bigger.**
+  Direct feedback: both rings were small and hard to read from across a room. The
+  quiet-time ring is now roughly half the screen's width, the timer's ring nearly
+  so, and the countdown numbers inside them are noticeably bigger too.
+- **Waffled-Bite device: quiet time's title is bigger, and the timer screen's text
+  is centered.** Direct follow-up: "Quiet time" now uses a bigger version of the
+  app's warm serif font, "Stay cozy until…" is bigger too (though still smaller than
+  the title), and on the timer screen, "Timer running" and the End-timer button are
+  now centered under each other instead of looking left-aligned.
+- **Waffled-Bite device: the timer screen's ring and text no longer sit at opposite
+  edges.** Direct follow-up with a reference photo: the countdown ring and the
+  "Timer running"/End-timer text used to be pushed to the far left and far right of
+  the screen, leaving a big empty gap in the middle. They now sit together nearer
+  the center, with a consistent gap between them.
+
 ### Fixed
 
+- **Waffled-Bite device: the on-screen keyboard was covering the text field you were
+  typing into.** On the setup screen, the "Server address" field was hidden entirely
+  behind the keyboard once it popped up — you had no way to see what you were typing.
+  The screen now shifts up just enough to keep whichever field you tapped visible
+  above the keyboard, and settles back down once you're done. Fixed on the setup
+  screen (confirmed) and the Wi-Fi password screen (same underlying issue, fixed
+  proactively).
+- **Waffled-Bite device: WiFi picker showed a stray blank box in network subtitles.**
+  Each row's "Secured · Strong signal" line used a middle-dot character the device's
+  font doesn't have, which rendered as an empty square instead. Now a plain hyphen.
+- **Waffled-Bite device: chores that need a photo or a grown-up's OK no longer look
+  broken.** Tapping any row on the Chores/Morning/Afternoon/Evening list worked, but a
+  chore requiring approval silently reverted to unchecked once the server queued it for
+  a parent's OK, and one requiring a photo (which the device can't capture) reverted
+  with no explanation at all — both read as "tapping does nothing." Approval-required
+  chores now show "Waiting on a parent's approval" instead of reverting; photo-required
+  chores are hidden from the device's list entirely — completed from a parent's
+  phone/web instead — with a note when a whole routine is nothing but those. A routine
+  tile's "X of Y done" count and progress ring now exclude hidden photo-required
+  chores too, so the numbers match what's actually shown and a routine can still
+  reach "all done" once every visible chore is checked.
 - **Waffled-Bite device: WiFi now connects reliably.** The device's WiFi chip could
   crash-loop unpredictably on boot. Fixed by changing how the firmware is built (the
   underlying networking software is now compiled fresh instead of using a flaky
   pre-packaged version) and disabling an overly aggressive failure-recovery setting that
   rebooted the whole device over a single transient WiFi hiccup — verified across 30+
   real-device reboots with no failures.
+- **Waffled-Bite device: WiFi picker no longer shows zero networks in a new location.**
+  On boot the device always retries its previously-saved home network first; if that
+  network isn't in range, the radio gets stuck reporting "no network found" and refuses
+  to scan — even after backing out to the picker, tapping Rescan, or a full power cycle.
+  The scan just silently failed and rendered as an empty list, with no way out short of
+  a reflash. The device now fully resets the WiFi radio before every scan attempt, which
+  clears the stuck state, and a scan that still fails to start is retried automatically
+  instead of being shown as "no networks found." Also: a network broadcast from more
+  than one access point (mesh WiFi, dual-band routers) used to appear once per access
+  point in the list — it now appears once, using its strongest signal. Fixed a related
+  latent bug found during this work: reopening the WiFi picker (the "Change Wi-Fi
+  network" option) while a previous attempt was still in flight leaked memory and left
+  a background timer running against already-closed screens.
+- **Waffled-Bite device: the whole screen no longer freezes every few seconds while
+  offline.** If the device can't reach your Waffled server (e.g. it's paired to a
+  self-hosted server that's only reachable on your home network, and the device is
+  currently somewhere else), it checks in every 5 seconds — and each failed check-in
+  was blocking the entire touchscreen for up to several seconds, making the whole
+  device feel frozen. Once it's been offline for a couple of checks in a row, it now
+  backs off to checking in every 30 seconds instead, and snaps back to normal as soon
+  as it reconnects — so it stays responsive to touch even while waiting to get back
+  online. A self-hosted server that's only reachable on your home network showing
+  "Offline" away from home is expected; this fix is about the device staying usable
+  while it waits.
+- **Waffled-Bite device: "Set a timer" and "Bedtime" could white-screen and strand
+  you.** Both screens were only ever filled in the first time the device successfully
+  checked in with the server after opening the app — if that first check-in failed
+  (e.g. the device is offline, as above), tapping into either from Settings landed on
+  a completely blank screen with no back button and no way out short of a power cycle.
+  Both now show right away, and fill in with real data as soon as the device is back
+  online — no more blank dead end.
 - **Waffled-Bite device: touchscreen input was mirrored left-right.** Most taps landed
   fine, but the on-screen keyboard's narrow, side-by-side keys made it obvious — tapping
   a key hit its mirror on the opposite side. Also added a visible way to dismiss the

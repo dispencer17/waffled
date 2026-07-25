@@ -24,6 +24,9 @@ enum class WbWifiScanStatus
   Idle,     // wb_wifi_begin_scan() not called yet
   Scanning,
   Done,
+  Failed,   // the scan request itself failed (e.g. STA radio still busy from
+            // a prior connect attempt) — distinct from Done-with-zero-results
+            // so callers retry instead of silently rendering an empty list
 };
 
 enum class WbWifiConnStatus
