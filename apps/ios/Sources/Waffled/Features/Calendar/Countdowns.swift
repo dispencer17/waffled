@@ -54,6 +54,7 @@ final class CountdownsModel {
     private let createCountdown: CreateCountdown
     private let updateCountdown: UpdateCountdown
     private let deleteCountdown: DeleteCountdown
+    private var deletingIDs: Set<String> = []
 
     init(
         fetchCountdowns: @escaping FetchCountdowns = {
@@ -91,7 +92,8 @@ final class CountdownsModel {
 
     /// Only standalone items can be removed (events/birthdays are managed at their source).
     func remove(_ c: WaffledAPI.Countdown) async throws {
-        guard c.isStandalone else { return }
+        guard c.isStandalone, deletingIDs.insert(c.id).inserted else { return }
+        defer { deletingIDs.remove(c.id) }
         try await deleteCountdown(c.id)
         items.removeAll { $0.id == c.id }
     }
