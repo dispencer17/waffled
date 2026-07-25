@@ -119,6 +119,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-photo or clear-all request used to remove the photos from the settings screen
   anyway, making a server or connection error look like success. The screen now keeps
   every unconfirmed photo in place and explains that you can try again.
+- **Public website builds now use patched dependencies.** The documentation and
+  home-site toolchains have been upgraded to versions that resolve known Astro,
+  Sharp, PostCSS, and SVGO advisories.
 - **Waffled-Bite device: the on-screen keyboard was covering the text field you were
   typing into.** On the setup screen, the "Server address" field was hidden entirely
   behind the keyboard once it popped up — you had no way to see what you were typing.
