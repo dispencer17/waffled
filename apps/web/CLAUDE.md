@@ -5,6 +5,22 @@ Folder-scoped notes; loads when working under `apps/web`. See the repo-root
 
 ## Web app (React/kiosk, `apps/web`)
 
+### Fork rule: keep the UI layout aligned with upstream (menus especially)
+
+**This is a fork — every structural UI difference is a merge conflict we pay for again on
+every upstream release.** So default to upstream's arrangement: the Settings `NAV` array
+(order, grouping, `admin` gating), which panel owns which controls, tab keys, and route
+shapes. Add fork-specific *options* inside upstream's containers rather than moving
+upstream's controls somewhere new.
+
+Concretely: the fork's extra appearance options (**Follow the sun**, the **color themes**
+picker) live *inside* upstream's standalone `AppearancePanel`; the Smart Home tab is a new
+entry in upstream's nav, not a re-organization of it. We once folded Appearance into
+Display & Kiosk and had to undo it — it conflicted on the v0.12.0 merge and bought nothing.
+
+Diverge only when the fork genuinely needs different behavior, and leave a comment saying
+so (`// fork`) at the divergence point.
+
 ### Design system — REUSE, don't hand-roll (this bit us — polish it once, use it everywhere)
 
 **Two hard rules for any web UI you build:**

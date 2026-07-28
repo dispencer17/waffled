@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spot with each row's **↻ Sync** button; recurring events expand like any other series, and
   events removed from the feed disappear on the next refresh. The perfect plan B when a
   workplace won't approve calendar OAuth access.
-- **Color themes — pick your palette.** Alongside light and dark, Settings → Display & Kiosk
+- **Color themes — pick your palette.** Alongside light and dark, Settings → Appearance
   now offers eight color themes: the classic Golden Waffle plus Flamingo, Cherry Sundae, Honey,
   Matcha, Tide Pool, Blueberry, and Lavender. A theme re-hues buttons and accents and gives the
   whole canvas a subtle wash of the color — in both light and dark — while per-person colors and
@@ -163,11 +163,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
-  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
-  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
-  looks is in one place. The tab is visible to every member (theme and color are per-device
-  choices); the kiosk & screensaver configuration below it remains admin-only.
+- **Appearance is its own Settings tab again.** Light/dark, "Match system", "Follow the sun"
+  and the eight color themes have moved back out of Display & Kiosk into a standalone
+  **Appearance** tab — where upstream keeps them, and where the iPhone/iPad app already had
+  them. Nothing was lost: the fork's own options are all still there. Display & Kiosk goes
+  back to being purely the admin-only kiosk and screensaver configuration.
 - **Caught up with upstream Waffled v0.12.0.** Three upstream releases (v0.10–v0.12) are
   now in, bringing their fixes and features alongside this fork's own — see the
   `[0.10.0]`–`[0.12.0]` sections below for what they added. The empty **Notifications**

@@ -70,9 +70,7 @@ describe('Settings screen', () => {
 
     const menu = screen.getByLabelText('Settings section')
     expect(menu).toHaveClass('sel')
-    // Fork: Appearance is folded into Display & Kiosk (theme is per-device, so that
-    // tab is not admin-gated) — upstream's standalone 'appearance' tab is gone.
-    fireEvent.change(menu, { target: { value: 'display' } })
+    fireEvent.change(menu, { target: { value: 'appearance' } })
     expect(screen.getByText('Match system')).toBeInTheDocument()
   })
 
@@ -548,7 +546,7 @@ describe('Settings screen', () => {
     expect(await screen.findByText('Kiosk Devices')).toBeInTheDocument()
   })
 
-  it('hides admin-only tabs from non-admins but keeps Display & Kiosk (appearance lives there)', async () => {
+  it('hides admin-only tabs from non-admins but keeps the Appearance tab', async () => {
     // Same data, but the signed-in person is not an admin.
     globalThis.fetch = vi.fn(async (url: string) => {
       if (String(url).includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
@@ -561,32 +559,33 @@ describe('Settings screen', () => {
     expect(await screen.findByText('Waffled — Family Hub')).toBeInTheDocument() // About panel content (default landing)
     expect(screen.getByText('About', { selector: '.set-navitem' })).toBeInTheDocument()
     expect(screen.getByText(/Sign out/, { selector: '.set-signout' })).toBeInTheDocument()
-    // The standalone Appearance tab is gone — its options moved under Display & Kiosk,
-    // which stays visible to everyone because the theme is a per-device preference.
-    expect(screen.queryByText('Appearance', { selector: '.set-navitem' })).not.toBeInTheDocument()
-    expect(screen.getByText('Display & Kiosk', { selector: '.set-navitem' })).toBeInTheDocument()
+    // Appearance is its own tab (upstream's layout) and is per-device, so every
+    // member gets it; Display & Kiosk is admin-only configuration.
+    expect(screen.getByText('Appearance', { selector: '.set-navitem' })).toBeInTheDocument()
+    expect(screen.queryByText('Display & Kiosk', { selector: '.set-navitem' })).not.toBeInTheDocument()
     expect(screen.queryByText('Family & People')).not.toBeInTheDocument()
     expect(screen.queryByText('Sign-in & Security')).not.toBeInTheDocument()
 
-    // A non-admin opening Display & Kiosk gets the appearance controls…
-    fireEvent.click(screen.getByText('Display & Kiosk', { selector: '.set-navitem' }))
+    // A non-admin opening Appearance gets the theme controls…
+    fireEvent.click(screen.getByText('Appearance', { selector: '.set-navitem' }))
     expect(await screen.findByText('Match system')).toBeInTheDocument()
     expect(screen.getByText('COLOR THEME')).toBeInTheDocument()
-    // …but not the admin-only kiosk/screensaver configuration.
+    // …but never the admin-only kiosk/screensaver configuration.
     expect(screen.queryByText('Use this browser as the family display')).not.toBeInTheDocument()
     expect(screen.queryByText('Screensaver after')).not.toBeInTheDocument()
   })
 
-  it('Display & Kiosk hosts the appearance options and the color-theme picker (admin)', async () => {
+  it('Appearance keeps the fork options (follow the sun + color themes) in upstream\'s standalone tab', async () => {
     localStorage.removeItem('waffled:palette')
     document.documentElement.removeAttribute('data-palette')
     mockApi()
     renderSettings()
     await screen.findByText('Kevin')
-    fireEvent.click(screen.getByText('Display & Kiosk'))
+    fireEvent.click(screen.getByText('Appearance', { selector: '.set-navitem' }))
 
-    // Light/dark controls moved in from the old Appearance tab.
+    // Upstream's theme controls…
     expect(await screen.findByText('Match system')).toBeInTheDocument()
+    // …plus the fork's additions.
     expect(screen.getByText('Follow the sun')).toBeInTheDocument()
 
     // The color-theme picker lists the palettes and applies one on tap.
@@ -598,8 +597,34 @@ describe('Settings screen', () => {
     fireEvent.click(screen.getByText('Golden Waffle'))
     expect(localStorage.getItem('waffled:palette')).toBe('waffle')
 
-    // Admins still get the kiosk configuration below.
+    // Kiosk configuration is NOT here any more — it lives in Display & Kiosk,
+    // matching upstream's layout so future merges stay cheap.
+    expect(screen.queryByText('Use this browser as the family display')).not.toBeInTheDocument()
+    expect(screen.queryByText('Screensaver after')).not.toBeInTheDocument()
+  })
+
+  it('Display & Kiosk keeps the kiosk configuration and drops the theme controls', async () => {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/kiosk/display')) return { ok: true, json: async () => displayConfig }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('Display & Kiosk', { selector: '.set-navitem' }))
+
+    // Await a card that renders only once the kiosk config resolves — the
+    // "family display" card above it paints before that fetch lands, so awaiting
+    // that one instead races the config-gated assertions below.
+    expect(await screen.findByText('Night dimming')).toBeInTheDocument()
     expect(screen.getByText('Use this browser as the family display')).toBeInTheDocument()
+    // Theme + palettes moved back out to the Appearance tab.
+    expect(screen.queryByText('Match system')).not.toBeInTheDocument()
+    expect(screen.queryByText('Follow the sun')).not.toBeInTheDocument()
+    expect(screen.queryByText('COLOR THEME')).not.toBeInTheDocument()
   })
 
   it('Meals: the thaw reminder toggle enables the time + meal chips and auto-saves', async () => {

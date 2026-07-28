@@ -34,7 +34,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | Feature | Web / Kiosk | iPhone | iPad | Status |
 | --- | :---: | :---: | :---: | --- |
 | First-run **setup wizard** (create household + admin) | ✅ | ❌ N/A | ❌ N/A | ✅ Done — **web/server-only by design**, not planned for mobile (mobile shows a "finish setup on the web" notice) |
-| **Dark mode** — web appearance controls in Settings → Display & Kiosk (Light / Dark / Match system / Follow the sun); iOS in Settings → Appearance | ✅ | ✅ | ✅ | ✅ Done — web/kiosk **and** iPhone/iPad share one warm-dark palette (`apps/ios/DARK_MODE.md`) |
+| **Dark mode** — web appearance controls in Settings → Appearance (Light / Dark / Match system / Follow the sun); iOS in Settings → Appearance | ✅ | ✅ | ✅ | ✅ Done — web/kiosk **and** iPhone/iPad share one warm-dark palette (`apps/ios/DARK_MODE.md`) |
 | **Color themes** — 8 palettes (Golden Waffle, Flamingo, Cherry Sundae, Honey, Matcha, Tide Pool, Blueberry, Lavender), per device, independent of light/dark; [guide](/features/appearance/) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | **Email/password** login (built-in) | ✅ | ✅ | ✅ | ✅ Done |
 | Rotating refresh tokens + transparent 401-refresh | ✅ | ✅ | ✅ | ✅ Done (Keychain token store) |

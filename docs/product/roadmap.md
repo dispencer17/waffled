@@ -21,7 +21,7 @@ Legend: ✅ done · 🟡 partial / in progress · 🚧 planned · ⛔ dropped (s
   alongside light on every surface, plus eight color themes on the web/kiosk (Golden Waffle
   default, Flamingo, Cherry Sundae, Honey, Matcha, Tide Pool, Blueberry, Lavender) that re-hue
   the accent and subtly tint every surface in both modes. On the web it's chosen from
-  **Settings → Display & Kiosk** (Light / Dark / Match system / Follow the sun + a color-theme
+  **Settings → Appearance** (Light / Dark / Match system / Follow the sun + a color-theme
   picker; the old standalone Appearance tab merged in), on iOS from **Settings → Appearance**;
   saved per device and applied instantly. Built on a consolidated design-token layer (web: one
   canonical `:root` + a `[data-theme="dark"]` override + per-palette `[data-palette]` overrides;

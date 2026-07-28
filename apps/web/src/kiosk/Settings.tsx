@@ -19,8 +19,12 @@ import '../styles/settings.css'
 // Grouped into three tiers: Account (you) · Family (shared config an admin sets) ·
 // System (the self-host/deployment). Order = who you are → the features you use →
 // account/operator. Account is thin today; it grows with per-member self-service later.
+// Keep this array structurally identical to upstream's wherever the fork doesn't
+// need a difference — matching menus is what keeps upstream merges cheap. The only
+// fork addition here is the Smart Home tab.
 const NAV = [
   // Account — you
+  { key: 'appearance', icon: '🌗', label: 'Appearance', group: 'account' },
   { key: 'profile', icon: '🙂', label: 'My Profile', group: 'account' },
   { key: 'account', icon: '🔒', label: 'My Account', group: 'account' },
   { key: 'households', icon: '🏠', label: 'Households', group: 'account' },
@@ -30,11 +34,8 @@ const NAV = [
   { key: 'chores', icon: '⭐', label: 'Chores & Rewards', admin: true, group: 'family' },
   { key: 'meals', icon: '🍽️', label: 'Meals', admin: true, group: 'family' },
   { key: 'modules', icon: '🧩', label: 'Modules', admin: true, group: 'family' },
-  // Display & Kiosk is NOT admin-gated: it hosts the per-device appearance
-  // (theme + color palette) for everyone; the kiosk/screensaver configuration
-  // inside the panel is still admin-only.
-  { key: 'display', icon: '🖥️', label: 'Display & Kiosk', group: 'family' },
-  { key: 'smarthome', icon: '💡', label: 'Smart Home', admin: true, group: 'family' },
+  { key: 'display', icon: '🖥️', label: 'Display & Kiosk', admin: true, group: 'family' },
+  { key: 'smarthome', icon: '💡', label: 'Smart Home', admin: true, group: 'family' }, // fork
   // System — the self-hosted deployment (admin/operator)
   { key: 'security', icon: '🔐', label: 'Sign-in & Security', admin: true, group: 'system' },
   { key: 'ai', icon: '✨', label: 'AI & Capture', admin: true, group: 'system' },
@@ -3240,8 +3241,6 @@ function DisplayKioskPanel() {
   const { events } = useEventsToday()
   const { photos } = usePhotos()
   const { household, person } = useHousehold()
-  // Everyone gets the appearance section; the kiosk/screensaver configuration
-  // below it stays admin-only (the tab itself is no longer admin-gated).
   const isAdmin = person?.isAdmin ?? false
   const nextEvent = events.find((e) => new Date(e.startsAt).getTime() > Date.now()) ?? null
   // Distinct album names (a photo's `memory`), for the "Specific album" picker.
@@ -3298,7 +3297,6 @@ function DisplayKioskPanel() {
         {isAdmin && <span className="tiny muted" style={{ marginLeft: 'auto', fontWeight: 600 }}>Screensaver settings save automatically</span>}
       </div>
 
-      <AppearanceSection />
 
       {isAdmin && (
         <>
@@ -3614,12 +3612,17 @@ function SmartHomePanel() {
 // plus the color theme (palette). Lives at the top of Display & Kiosk so every
 // member can reach it; stored in localStorage via the theme store — applies
 // instantly, no server round-trip.
-function AppearanceSection() {
+// Its own tab, laid out exactly like upstream's AppearancePanel so the two stay
+// mergeable; the fork's additions are the "Follow the sun" row and the COLOR THEME
+// picker below it. Per-device (localStorage), so it is not admin-gated.
+function AppearancePanel() {
   const { pref, resolved, palette, setPref, setPalette } = useThemePref()
   const matchSystem = pref === 'system'
   const followSun = pref === 'sun'
   return (
-    <>
+    <div className="set-panel">
+      <div className="set-head"><div className="wf-serif set-head-t">Appearance</div></div>
+
       <div className="flabel" style={{ padding: '0 2px 10px' }}>THEME</div>
       <div className="appr-grid">
         <ThemePreview
@@ -3671,7 +3674,7 @@ function AppearanceSection() {
       <div className="tiny muted" style={{ padding: '12px 2px 0', fontWeight: 600 }}>
         Theme &amp; color choices are saved on this device only.
       </div>
-    </>
+    </div>
   )
 }
 
@@ -3700,10 +3703,7 @@ export function Settings() {
   const { household, person, memberships, pendingInvites } = useHousehold()
   // Tab lives in the URL (?tab=) so a refresh returns to where you were.
   const [params, setParams] = useSearchParams()
-  const rawTab = params.get('tab') ?? 'family'
-  // The old standalone Appearance tab merged into Display & Kiosk — keep stale
-  // links/bookmarks landing on the right panel.
-  const tab = rawTab === 'appearance' ? 'display' : rawTab
+  const tab = params.get('tab') ?? 'family'
   const setTab = (key: string) => setParams({ tab: key }, { replace: true })
 
   // Your own account, for the self-service Account panels. Only a real personal
@@ -3761,7 +3761,7 @@ export function Settings() {
         </div>
       </div>
       <div className="set-content">
-        {activeTab === 'profile' ? <MyProfilePanel /> : activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'smarthome' ? <SmartHomePanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : <AboutPanel />}
+        {activeTab === 'appearance' ? <AppearancePanel /> : activeTab === 'profile' ? <MyProfilePanel /> : activeTab === 'account' ? <MyAccountPanel /> : activeTab === 'family' ? <FamilyPanel /> : activeTab === 'ai' ? <AiPanel /> : activeTab === 'calendars' ? <><CalendarsPanel /><CountdownsSettings /></> : activeTab === 'meals' ? <MealsPanel /> : activeTab === 'chores' ? <RewardsSettingsPanel /> : activeTab === 'security' ? <SecurityPanel /> : activeTab === 'display' ? <DisplayKioskPanel /> : activeTab === 'smarthome' ? <SmartHomePanel /> : activeTab === 'health' ? <SystemHealthPanel /> : activeTab === 'modules' ? <ModulesPanel /> : activeTab === 'apikeys' ? <ApiKeysPanel /> : activeTab === 'households' ? <HouseholdsPanel /> : <AboutPanel />}
       </div>
     </div>
   )

@@ -1,16 +1,15 @@
 ---
 title: Appearance, dark mode & color themes
-description: Light or dark, plus eight color themes — pick a look per device from Settings → Display & Kiosk.
+description: Light or dark, plus eight color themes — pick a look per device from Settings → Appearance.
 ---
 
 Waffled ships with a **warm dark theme** alongside the original light one, and **eight color
-themes** that re-hue the whole app. On the web, pick how it looks from **Settings → Display &
-Kiosk** — the appearance controls sit at the top of that tab, above the kiosk options. (They
-used to be a standalone *Appearance* tab; old links land in the right place.) On iPhone/iPad
-the same choice lives under **Settings → Appearance**.
+themes** that re-hue the whole app. On the web, pick how it looks from **Settings →
+Appearance**; on iPhone/iPad the same choice lives under **Settings → Appearance** too.
 
-Everyone in the family can open Display & Kiosk to set the theme — only the kiosk and
-screensaver configuration further down is admin-only.
+Everyone in the family can open Appearance and set their own look — it is a per-device
+choice, not a household setting. The kiosk and screensaver configuration is separate, under
+the admin-only **Display & Kiosk** tab.
 
 ## Choosing light or dark
 - **Light** — the warm-white canvas Waffled has always had.
@@ -26,7 +25,7 @@ independent.
 
 ## Night dimming can follow the sun too
 
-The kiosk's **Night dimming** schedule (further down in Display & Kiosk, admin-only) learned
+The kiosk's **Night dimming** schedule (in Display & Kiosk, admin-only) learned
 the same trick: with dimming on, flip **"Sunset to sunrise"** and the dim window follows your
 household location's sun times instead of fixed hours — so it tracks the seasons on its own.
 Turn the toggle off to go back to a fixed from → to window. Until the first weather fetch
