@@ -75,8 +75,25 @@ describe('PATCH /api/household/display', () => {
     expect(JSON.parse(back.body).display).toEqual({ eventStyle: 'solid' })
   })
 
+  it('persists weekCard alongside eventStyle without clobbering it', async () => {
+    expect((await call('PATCH', '/api/household/display', kevin, { eventStyle: 'solid' })).statusCode).toBe(200)
+    const r = await call('PATCH', '/api/household/display', kevin, { weekCard: 'plain' })
+    expect(r.statusCode).toBe(200)
+    expect(JSON.parse(r.body).display).toEqual({ eventStyle: 'solid', weekCard: 'plain' })
+
+    const h = JSON.parse((await call('GET', '/api/household', kevin)).body).household
+    expect(h.settings?.display?.weekCard).toBe('plain')
+    expect(h.settings?.display?.eventStyle).toBe('solid') // sibling survived the merge
+
+    // Flip back to separated (the default look).
+    const back = await call('PATCH', '/api/household/display', kevin, { weekCard: 'separated' })
+    expect(back.statusCode).toBe(200)
+    expect(JSON.parse(back.body).display.weekCard).toBe('separated')
+  })
+
   it('rejects unknown values and empty patches', async () => {
     expect((await call('PATCH', '/api/household/display', kevin, { eventStyle: 'plaid' })).statusCode).toBe(400)
+    expect((await call('PATCH', '/api/household/display', kevin, { weekCard: 'zigzag' })).statusCode).toBe(400)
     expect((await call('PATCH', '/api/household/display', kevin, {})).statusCode).toBe(400)
     expect((await call('PATCH', '/api/household/display', kevin, { bogus: true })).statusCode).toBe(400)
   })

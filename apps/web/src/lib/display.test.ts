@@ -1,6 +1,6 @@
 // Household display settings — event chip style resolver + root stamping.
 import { afterEach, describe, expect, it } from 'vitest'
-import { eventStyle, applyEventStyle } from './display'
+import { eventStyle, applyEventStyle, weekCardStyle } from './display'
 import type { Household } from './api'
 
 const h = (settings?: Household['settings']) => ({ id: 'h', name: 'Home', timezone: 'UTC', weekStart: 'sunday', location: null, ownerPersonId: null, settings }) as Household
@@ -17,6 +17,21 @@ describe('eventStyle', () => {
   it('honors an explicit tinted choice', () => {
     expect(eventStyle(h({ display: { eventStyle: 'tinted' } }))).toBe('tinted')
     expect(eventStyle(h({ display: { eventStyle: 'solid' } }))).toBe('solid')
+  })
+})
+
+describe('weekCardStyle', () => {
+  it('defaults to separated (no household, no settings, unknown values)', () => {
+    expect(weekCardStyle(null)).toBe('separated')
+    expect(weekCardStyle(h())).toBe('separated')
+    expect(weekCardStyle(h({}))).toBe('separated')
+    expect(weekCardStyle(h({ display: {} }))).toBe('separated')
+    expect(weekCardStyle(h({ display: { weekCard: 'zigzag' } } as unknown as Household['settings']))).toBe('separated')
+  })
+
+  it('honors an explicit plain choice', () => {
+    expect(weekCardStyle(h({ display: { weekCard: 'plain' } }))).toBe('plain')
+    expect(weekCardStyle(h({ display: { weekCard: 'separated' } }))).toBe('separated')
   })
 })
 

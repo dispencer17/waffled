@@ -112,6 +112,24 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .wkc-ev.allday .wkc-ev-t { text-transform: uppercase; letter-spacing: .03em; font-size: 9.5px; }
 
+/* Separated days (household display setting `weekCard: separated`, the default) —
+   each day is a distinct bordered cell with a soft fill, and today's whole cell is
+   ringed in the accent color, matching the FamilyBoard look. `plain` drops these. */
+.wkc-grid.wkc-separated { gap: 10px; }
+.wkc-separated .wkc-col {
+  border: 1px solid var(--hair);
+  border-radius: var(--r-md);
+  background: var(--card-2);
+  padding: 8px 8px 10px;
+}
+.wkc-separated .wkc-day-h { border-bottom: 1px solid var(--hair-2); border-radius: 0; margin-bottom: 6px; padding-bottom: 8px; }
+.wkc-separated .wkc-day-h:hover { background: none; }
+.wkc-separated .wkc-col-today {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, var(--card-2));
+}
+
 /* =====================  DAY VIEW  ===================== */
 .dv-screen { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 14px; --dv-rail: 64px; }
 .dv-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
