@@ -281,33 +281,36 @@ body {
 }
 
 /* Full-width band above the columns (the week calendar by default). Cards stack
-   full-width; on a roomy landscape display the band takes a user-resizable height
-   (--band-h, set by the Customize divider) and scrolls its card internally, so a
-   busy week never pushes the columns off-screen. Narrow screens size to content. */
+   full-width and the band sizes to its content by default. When the user pins a
+   height with the Customize divider (`today-full--fixed`), the band takes that
+   fixed height on a roomy landscape display and scrolls its card internally, so a
+   busy week never pushes the columns off-screen. Narrow screens always size to
+   content and scroll the page. */
 .today-full {
   display: flex;
   flex-direction: column;
   gap: 18px;
   padding: 6px 30px 0;
+  flex: 0 0 auto;
 }
 .today-full > .today-slot { width: 100%; }
 @media (min-width: 1101px) and (min-height: 680px) {
-  .today-full { min-height: var(--band-h, auto); }
-  .today-wrap:not(.today-editing) .today-full {
-    flex: 0 0 auto;
-    height: var(--band-h, auto);
-    min-height: 0;
+  .today-wrap:not(.today-editing) .today-full--fixed {
+    height: var(--band-h);
+    overflow: hidden;
   }
-  .today-wrap:not(.today-editing) .today-full > .today-slot.fill {
+  .today-wrap:not(.today-editing) .today-full--fixed > .today-slot.fill {
     flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
   }
-  .today-wrap:not(.today-editing) .today-full > .today-slot.fill > .card {
+  .today-wrap:not(.today-editing) .today-full--fixed > .today-slot.fill > .card {
     height: 100%;
     min-height: 0;
     overflow: auto;
   }
+  /* In Customize the band shows its pinned height so the divider resize is WYSIWYG. */
+  .today-editing .today-full--fixed { min-height: var(--band-h); }
 }
 
 /* On a roomy landscape display, fill the height like the design. Content cards

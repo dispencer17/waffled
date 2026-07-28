@@ -458,7 +458,7 @@ export function Today() {
       )}
 
       {showBand && (
-        <div className="today-full" data-region="full" style={{ '--band-h': curBandHeight ? `${curBandHeight}px` : 'auto' } as CSSProperties}>
+        <div className={`today-full ${curBandHeight ? 'today-full--fixed' : ''}`} data-region="full" style={{ '--band-h': curBandHeight ? `${curBandHeight}px` : 'auto' } as CSSProperties}>
           {displayLayout.full.map((card, idx) => renderCard(card, 'full', idx))}
           {renderZoneTail(displayLayout.full, 'full')}
         </div>
