@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useEventsRange, useHousehold, type AgendaEvent } from '../../lib/api'
+import { weekCardStyle } from '../../lib/display'
 import { DOW, ymd, addDays, localDate, startOfWeekFor, fmtTimeShort, eventDetailPath } from './cal-utils'
 
 // FamilyBoard-style week strip for the Today board: 7 day columns (honoring the
@@ -8,8 +9,11 @@ import { DOW, ymd, addDays, localDate, startOfWeekFor, fmtTimeShort, eventDetail
 // top-to-bottom as solid person-color blocks — no hour grid, maximum color.
 // Blocks are ALWAYS solid regardless of the household event-style setting;
 // at this size a tint wash is illegible, and the solid look is the point.
+// The household `weekCard` display setting picks the day treatment: 'separated'
+// (distinct bordered day cells, the default FamilyBoard look) or 'plain'.
 export function WeekCalendarCard() {
   const { household } = useHousehold()
+  const separated = weekCardStyle(household) === 'separated'
   const navigate = useNavigate()
   const ws = useMemo(() => startOfWeekFor(new Date(), household?.weekStart), [household?.weekStart])
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(ws, i)), [ws])
@@ -37,12 +41,12 @@ export function WeekCalendarCard() {
       </div>
       {error && <div className="muted tiny wkc-note">Couldn't load the calendar — try reloading.</div>}
       {loading && events.length === 0 && !error && <div className="muted tiny wkc-note">Loading…</div>}
-      <div className="wkc-grid">
+      <div className={`wkc-grid ${separated ? 'wkc-separated' : ''}`}>
         {days.map((d) => {
           const key = ymd(d)
           const list = byDay[key] ?? []
           return (
-            <div className="wkc-col" data-date={key} key={key}>
+            <div className={`wkc-col ${key === today ? 'wkc-col-today' : ''}`} data-date={key} key={key}>
               <button type="button" className={`wkc-day-h ${key === today ? 'today' : ''}`} onClick={() => navigate('/calendar')}>
                 <div className="wkc-dow">{DOW[d.getDay()]}</div>
                 <div className="wkc-dn">{d.getDate()}</div>

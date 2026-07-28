@@ -277,6 +277,9 @@ export async function updateDisplay(
 // How event chips render across the calendar views: 'solid' (full person-color
 // blocks, the default) or 'tinted' (the soft wash).
 const EVENT_STYLES = new Set(['solid', 'tinted'])
+// How the Today week-calendar card draws its days: 'separated' (distinct bordered
+// day cells, the FamilyBoard look — the default) or 'plain' (continuous columns).
+const WEEK_CARD_STYLES = new Set(['separated', 'plain'])
 
 export function registerPersonRoutes(api: Api): void {
   // Household settings: the household + its members (with login/owner flags).
@@ -335,8 +338,9 @@ export function registerPersonRoutes(api: Api): void {
     return { modules: (h.settings as { modules?: unknown })?.modules ?? {} }
   }))
 
-  // Display preferences (admins only). Stored in settings.display; today just
-  // eventStyle — how event chips color across the calendar views.
+  // Display preferences (admins only). Stored in settings.display: eventStyle (how
+  // event chips color across the calendar views) and weekCard (how the Today week
+  // card draws its days).
   api.patch('/api/household/display', adminRoute(async (tenant, req: Request, res: Response) => {
     const body = (req.body ?? {}) as Record<string, unknown>
     const patch: Record<string, string> = {}
@@ -345,6 +349,12 @@ export function registerPersonRoutes(api: Api): void {
         return res.status(400).json({ error: 'BadRequest', message: 'eventStyle must be solid|tinted' })
       }
       patch.eventStyle = body.eventStyle
+    }
+    if (body.weekCard !== undefined) {
+      if (typeof body.weekCard !== 'string' || !WEEK_CARD_STYLES.has(body.weekCard)) {
+        return res.status(400).json({ error: 'BadRequest', message: 'weekCard must be separated|plain' })
+      }
+      patch.weekCard = body.weekCard
     }
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ error: 'BadRequest', message: 'no valid display settings provided' })

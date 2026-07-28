@@ -20,7 +20,9 @@ always there, whatever modules you've turned on.
   its person's color** with a compact time ("1p"), all-day events pinned on top. Tap an
   event to open it, tap a day header for the full [calendar](/features/calendar/). By
   default it spans the **full-width band across the top** of the board — drag it into a
-  column, or hide it, in Customize.
+  column, or hide it, in Customize. Days show as **distinct bordered cells** (today's
+  ringed) by default; **Settings → Family → Week calendar → Continuous** switches to a
+  plainer, borderless look.
 - 🧱 **Full-width band + columns** (web) — the board is a full-width **band** on top over
   three **columns**. Drag any card up into the band to span the whole width, or back down
   into a column. The week calendar lives in the band by default.

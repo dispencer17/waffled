@@ -85,6 +85,10 @@ plan B when a workplace won't approve calendar OAuth access.
   across the Month/Week/Day views: **Solid colors** (the default — full
   person-color blocks with readable text, maximum at-a-glance color) or
   **Tinted** (the softer pale wash). Applies to the whole household, instantly.
+- **Settings → Family → Week calendar** (admins, web) — how the Today
+  [dashboard](/features/today/)'s week card draws its days: **Separated days**
+  (the default — distinct bordered day cells with today ringed, the family-board
+  look) or **Continuous** (plain borderless columns). Household-wide, instant.
 - **Household settings** — week start, timezone, and location (which also feeds
   weather). Provider sync and feed polling run **server-side**, on a schedule.
 

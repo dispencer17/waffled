@@ -19,7 +19,7 @@ const EVENTS = [
   { id: 'e3', title: 'Breakfast', startsAt: `${ymd(ws)}T09:00:00`, endsAt: null, allDay: false, personId: 'p2', personName: 'Riley', personColor: '#25A368', personEmoji: '🐢', participants: [] },
 ]
 
-function mockAll(weekStart = 'monday') {
+function mockAll(weekStart = 'monday', settings: Record<string, unknown> = {}) {
   globalThis.fetch = vi.fn(async (url: string) => {
     const u = String(url)
     if (u.includes('/api/events?from=')) return { ok: true, json: async () => ({ events: EVENTS }) }
@@ -28,7 +28,7 @@ function mockAll(weekStart = 'monday') {
         ok: true,
         json: async () => ({
           provisioned: true,
-          household: { id: 'h', name: 'Home', timezone: TZ, weekStart, settings: {} },
+          household: { id: 'h', name: 'Home', timezone: TZ, weekStart, settings },
           person: { id: 'me', name: 'Kevin', memberType: 'adult', isAdmin: false, capabilities: [] },
         }),
       }
@@ -112,5 +112,20 @@ describe('WeekCalendarCard', () => {
       const first = document.querySelector('.wkc-col')
       expect(first?.querySelector('.wkc-dow')?.textContent).toBe('Sun')
     })
+  })
+
+  it('separates the days into bordered cells by default', async () => {
+    mockAll('monday')
+    renderCard()
+    await screen.findByText('Dentist')
+    await waitFor(() => expect(document.querySelector('.wkc-grid.wkc-separated')).toBeTruthy())
+  })
+
+  it('uses the plain continuous style when the household chose it', async () => {
+    mockAll('monday', { display: { weekCard: 'plain' } })
+    renderCard()
+    await screen.findByText('Dentist')
+    await waitFor(() => expect(document.querySelector('.wkc-grid')).toBeTruthy())
+    expect(document.querySelector('.wkc-grid.wkc-separated')).toBeNull()
   })
 })

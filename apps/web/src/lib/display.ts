@@ -6,11 +6,18 @@
 import type { Household } from './api/persons'
 
 export type EventStyle = 'solid' | 'tinted'
+export type WeekCardStyle = 'separated' | 'plain'
 
 /** Resolve the household's event style; anything but an explicit 'tinted' is solid. */
 export function eventStyle(household: Household | null | undefined): EventStyle {
   const v = (household?.settings as { display?: { eventStyle?: unknown } } | undefined)?.display?.eventStyle
   return v === 'tinted' ? 'tinted' : 'solid'
+}
+
+/** How the Today week card draws its days; anything but an explicit 'plain' is separated. */
+export function weekCardStyle(household: Household | null | undefined): WeekCardStyle {
+  const v = (household?.settings as { display?: { weekCard?: unknown } } | undefined)?.display?.weekCard
+  return v === 'plain' ? 'plain' : 'separated'
 }
 
 /** Stamp the style onto <html data-ev-style> (always, so CSS keys stay simple). */

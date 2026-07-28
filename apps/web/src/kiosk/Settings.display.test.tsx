@@ -38,4 +38,23 @@ describe('Settings — Event style', () => {
       expect(JSON.parse(String((patches[0][1] as RequestInit).body))).toEqual({ eventStyle: 'tinted' })
     })
   })
+
+  it('shows the Week calendar select defaulting to Separated days, and saves Continuous', async () => {
+    mockAll()
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Settings />
+      </MemoryRouter>
+    )
+    expect(await screen.findByText('Week calendar')).toBeInTheDocument()
+    const sel = screen.getByDisplayValue('Separated days') as HTMLSelectElement
+    fireEvent.change(sel, { target: { value: 'plain' } })
+    await waitFor(() => {
+      const patches = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([u, init]) => String(u).includes('/api/household/display') && (init as RequestInit)?.method === 'PATCH' && String((init as RequestInit).body).includes('weekCard')
+      )
+      expect(patches.length).toBe(1)
+      expect(JSON.parse(String((patches[0][1] as RequestInit).body))).toEqual({ weekCard: 'plain' })
+    })
+  })
 })

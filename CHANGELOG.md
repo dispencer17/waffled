@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   week-start day, today's date ringed, and every event a solid block in its person's
   color with a compact time ("1p") — all-day events pinned on top, tap any block to open
   the event. By default it spans the **full width across the top** of the dashboard; drag
-  it into a column, or hide it, in Customize.
+  it into a column, or hide it, in Customize. The days show as **distinct bordered day
+  cells** (today's cell ringed) by default, matching the family board — flip
+  **Settings → Family → Week calendar → Continuous** for the plainer look.
 - **Rearrange the dashboard into a full-width band + columns, with resizable zones and
   presets.** The Today board is now a full-width band on top (the week calendar by default)
   over three columns — drag any card up into the band to span the whole width, or back down
