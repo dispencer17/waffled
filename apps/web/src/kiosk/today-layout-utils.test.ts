@@ -6,7 +6,8 @@ import {
   appendToColumn,
   applyModuleCard,
   hideModuleCard,
-  insertAt,
+  removeCardEverywhere,
+  insertAtRegion,
   dropTargetAt,
 } from './today-layout-utils'
 
@@ -65,21 +66,43 @@ describe('hideModuleCard', () => {
   })
 })
 
-describe('insertAt', () => {
-  it('moves a card into the target column at the given index', () => {
-    expect(insertAt(layout(), 'agenda', 1, 1)).toEqual([['countdowns'], ['tonight', 'agenda'], ['chores', 'grocery', 'pantry']])
-  })
-  it('inserts at the top and bottom of a column', () => {
-    expect(insertAt(layout(), 'grocery', 0, 0)[0]).toEqual(['grocery', 'agenda', 'countdowns'])
-    expect(insertAt(layout(), 'grocery', 0, 2)[0]).toEqual(['agenda', 'countdowns', 'grocery'])
-  })
-  it('falls back to the last column when the target column does not exist', () => {
-    expect(insertAt(layout(), 'agenda', 9, 0)[2]).toEqual(['agenda', 'chores', 'grocery', 'pantry'])
+const regionLayout = () => ({ full: ['weekCalendar'], cols: [['agenda', 'countdowns'], ['tonight'], ['chores', 'grocery', 'pantry']] })
+
+describe('removeCardEverywhere', () => {
+  it('drops the card from the band and every column', () => {
+    expect(removeCardEverywhere(regionLayout(), 'weekCalendar').full).toEqual([])
+    expect(removeCardEverywhere(regionLayout(), 'tonight').cols[1]).toEqual([])
   })
   it('does not mutate the input', () => {
-    const input = layout()
-    insertAt(input, 'agenda', 1, 0)
-    expect(input).toEqual(layout())
+    const input = regionLayout()
+    removeCardEverywhere(input, 'agenda')
+    expect(input).toEqual(regionLayout())
+  })
+})
+
+describe('insertAtRegion', () => {
+  it('moves a card into a column at the given index (removing it from wherever it was)', () => {
+    const out = insertAtRegion(regionLayout(), 'agenda', 1, 1)
+    expect(out.cols).toEqual([['countdowns'], ['tonight', 'agenda'], ['chores', 'grocery', 'pantry']])
+    expect(out.full).toEqual(['weekCalendar'])
+  })
+  it('moves a card up into the full-width band', () => {
+    const out = insertAtRegion(regionLayout(), 'agenda', 'full', 0)
+    expect(out.full).toEqual(['agenda', 'weekCalendar'])
+    expect(out.cols[0]).toEqual(['countdowns'])
+  })
+  it('moves the calendar out of the band down into a column', () => {
+    const out = insertAtRegion(regionLayout(), 'weekCalendar', 0, 0)
+    expect(out.full).toEqual([])
+    expect(out.cols[0]).toEqual(['weekCalendar', 'agenda', 'countdowns'])
+  })
+  it('falls back to the last column when the target column does not exist', () => {
+    expect(insertAtRegion(regionLayout(), 'agenda', 9, 0).cols[2]).toEqual(['agenda', 'chores', 'grocery', 'pantry'])
+  })
+  it('does not mutate the input', () => {
+    const input = regionLayout()
+    insertAtRegion(input, 'agenda', 'full', 0)
+    expect(input).toEqual(regionLayout())
   })
 })
 
@@ -96,9 +119,11 @@ describe('dropTargetAt', () => {
     vi.restoreAllMocks()
   })
 
-  function board(): HTMLElement {
-    const col = document.createElement('div')
-    col.setAttribute('data-col', '1')
+  // A region container (data-region) holding 3 stacked cards. `region` is the
+  // attribute value ('full' for the band, '0'|'1'|… for a column).
+  function board(region: string): HTMLElement {
+    const el = document.createElement('div')
+    el.setAttribute('data-region', region)
     const tops = [0, 100, 200]
     for (let i = 0; i < 3; i++) {
       const card = document.createElement('div')
@@ -106,33 +131,39 @@ describe('dropTargetAt', () => {
       vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
         top: tops[i], height: 80, bottom: tops[i] + 80, left: 0, right: 300, width: 300, x: 0, y: tops[i], toJSON: () => ({}),
       } as DOMRect)
-      col.appendChild(card)
+      el.appendChild(card)
     }
-    document.body.appendChild(col)
-    return col
+    document.body.appendChild(el)
+    return el
   }
 
-  it('returns the column and the index of the card whose midpoint is below the pointer', () => {
-    const col = board()
+  it('returns the column region and the index of the card whose midpoint is below the pointer', () => {
+    const col = board('1')
     stubPoint(col)
-    expect(dropTargetAt(10, 30)).toEqual({ col: 1, index: 0 }) // above card0 midpoint (40)
-    expect(dropTargetAt(10, 90)).toEqual({ col: 1, index: 1 }) // past card0, above card1 midpoint (140)
+    expect(dropTargetAt(10, 30)).toEqual({ region: 1, index: 0 }) // above card0 midpoint (40)
+    expect(dropTargetAt(10, 90)).toEqual({ region: 1, index: 1 }) // past card0, above card1 midpoint (140)
   })
 
-  it('returns the end of the column when the pointer is below every midpoint', () => {
-    const col = board()
-    stubPoint(col)
-    expect(dropTargetAt(10, 500)).toEqual({ col: 1, index: 3 })
+  it('recognizes the full-width band as a region', () => {
+    const band = board('full')
+    stubPoint(band)
+    expect(dropTargetAt(10, 30)).toEqual({ region: 'full', index: 0 })
   })
 
-  it('resolves the column from a descendant element under the pointer', () => {
-    const col = board()
+  it('returns the end of the region when the pointer is below every midpoint', () => {
+    const col = board('1')
+    stubPoint(col)
+    expect(dropTargetAt(10, 500)).toEqual({ region: 1, index: 3 })
+  })
+
+  it('resolves the region from a descendant element under the pointer', () => {
+    const col = board('2')
     stubPoint(col.children[1] as Element)
-    expect(dropTargetAt(10, 90)).toEqual({ col: 1, index: 1 })
+    expect(dropTargetAt(10, 90)).toEqual({ region: 2, index: 1 })
   })
 
   it('returns null off the board', () => {
-    board()
+    board('0')
     stubPoint(document.body)
     expect(dropTargetAt(999, 999)).toBeNull()
     stubPoint(null)

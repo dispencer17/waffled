@@ -262,7 +262,7 @@ body {
   align-items: stretch;
 }
 .today-col {
-  flex: 1 1 0;
+  flex: var(--col-w, 1) 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -278,6 +278,36 @@ body {
 }
 .today-slot > .card {
   width: 100%;
+}
+
+/* Full-width band above the columns (the week calendar by default). Cards stack
+   full-width; on a roomy landscape display the band takes a user-resizable height
+   (--band-h, set by the Customize divider) and scrolls its card internally, so a
+   busy week never pushes the columns off-screen. Narrow screens size to content. */
+.today-full {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 6px 30px 0;
+}
+.today-full > .today-slot { width: 100%; }
+@media (min-width: 1101px) and (min-height: 680px) {
+  .today-full { min-height: var(--band-h, auto); }
+  .today-wrap:not(.today-editing) .today-full {
+    flex: 0 0 auto;
+    height: var(--band-h, auto);
+    min-height: 0;
+  }
+  .today-wrap:not(.today-editing) .today-full > .today-slot.fill {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .today-wrap:not(.today-editing) .today-full > .today-slot.fill > .card {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
 }
 
 /* On a roomy landscape display, fill the height like the design. Content cards
@@ -311,7 +341,7 @@ body {
 }
 
 /* Below the kiosk width, stack the columns into a single feed (cards keep their
-   per-column grouping order). */
+   per-column grouping order). The band already stacks full-width above them. */
 @media (max-width: 1100px) {
   .today-board {
     flex-direction: column;
@@ -320,6 +350,9 @@ body {
 @media (max-width: 720px) {
   .today-board {
     padding: 6px 16px 22px;
+  }
+  .today-full {
+    padding: 6px 16px 0;
   }
   .topbar {
     padding: 16px 16px 10px;
@@ -335,6 +368,19 @@ body {
   justify-content: flex-end;
 }
 .today-toolbar-hint { margin-right: auto; }
+/* Customize preset picker — one-tap starting layouts. */
+.today-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 30px 0;
+}
+.today-presets-h { margin-right: 2px; }
+.today-preset-pill { cursor: pointer; }
+@media (max-width: 720px) {
+  .today-presets { padding: 8px 16px 0; }
+}
 /* Customize button + the Add-anything bar share the topbar's right slot. */
 .tb-today-actions { display: flex; align-items: center; gap: 12px; }
 .today-customize { font-weight: 700; cursor: pointer; }
@@ -476,6 +522,60 @@ body {
   outline: 1.5px dashed var(--hair);
   outline-offset: 4px;
   border-radius: var(--r-lg);
+}
+/* While a card is lifted, slots don't scroll (the gesture is a drag, not a pan) —
+   this also stops touch from starting a native scroll that cancels the drag. */
+.today-wrap.today-dragging .today-slot { touch-action: none; }
+/* The lifted card stays mounted in place (so a touch pointer's implicit capture
+   isn't lost — removing it would fire pointercancel and snap the drag back), just
+   dimmed while its ghost follows the pointer. */
+.today-slot.dragging-source,
+.today-card-wrap.dragging-source {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Customize-only zone dividers — drag to resize the band (horizontal) or
+   rebalance columns (vertical). Hidden in the normal view so the dashboard stays
+   uncluttered; only meaningful on the roomy landscape breakpoint where the band +
+   columns have resizable space (below it everything stacks and scrolls). */
+.today-divider-h,
+.today-divider-v { display: none; }
+@media (min-width: 1101px) and (min-height: 680px) {
+  .today-editing .today-divider-h {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 16px;
+    margin: 2px 30px;
+    cursor: ns-resize;
+    touch-action: none;
+  }
+  .today-editing .today-divider-v {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 14px;
+    align-self: stretch;
+    cursor: ew-resize;
+    touch-action: none;
+  }
+  .today-divider-h .today-divider-grip {
+    width: 46px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--ink-3);
+    opacity: 0.5;
+  }
+  .today-divider-v .today-divider-grip {
+    width: 5px;
+    height: 46px;
+    border-radius: 999px;
+    background: var(--ink-3);
+    opacity: 0.5;
+  }
+  .today-divider-h:hover .today-divider-grip,
+  .today-divider-v:hover .today-divider-grip { opacity: 0.9; background: var(--primary); }
 }
 
 /* Insertion indicator between cards while dragging. */

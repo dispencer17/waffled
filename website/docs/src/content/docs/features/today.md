@@ -18,21 +18,31 @@ always there, whatever modules you've turned on.
 - 🗓️ **Week calendar card** (web) — a glanceable week strip: seven day columns starting
   on the household's week-start day, today's date ringed, every event a **solid block in
   its person's color** with a compact time ("1p"), all-day events pinned on top. Tap an
-  event to open it, tap a day header for the full [calendar](/features/calendar/). It
-  joins the board automatically (bottom of the third column) — drag it where you like,
-  or hide it in Customize.
+  event to open it, tap a day header for the full [calendar](/features/calendar/). By
+  default it spans the **full-width band across the top** of the board — drag it into a
+  column, or hide it, in Customize.
+- 🧱 **Full-width band + columns** (web) — the board is a full-width **band** on top over
+  three **columns**. Drag any card up into the band to span the whole width, or back down
+  into a column. The week calendar lives in the band by default.
 - 🎯 **Goals card** — shows one goal's progress; pick **My spotlight**, **Family
   spotlight**, or a **specific goal** from a grouped picker. See [Goals](/features/goals/).
 - ✋ **Drag cards right on the board** (web) — press and **hold a card ~half a second**
-  and it lifts; drag between columns and drop, and the layout saves as **your personal
-  layout** automatically. A finger that moves early scrolls instead of lifting, and
-  buttons inside cards are never drag handles — so the board can't be rearranged by
-  accident. For hiding cards, resetting, or saving for everyone, use Customize mode.
+  and it lifts; drag between the band and columns and drop, and the layout saves as **your
+  personal layout** automatically. A finger that moves early scrolls instead of lifting,
+  and buttons inside cards are never drag handles — so the board can't be rearranged by
+  accident. For hiding cards, resizing zones, presets, resetting, or saving for everyone,
+  use Customize mode.
 - 🎛️ **Customize mode** (web / iPhone):
   - **drag** a card by its bar to reorder; each card also has an **× to hide it** —
     hidden cards drop into a tray below the board where a tap adds them back
+  - **layout presets** (web) — one tap on **Calendar on top**, **Classic columns**,
+    **Agenda focus**, or **Meals focus** fills the board with that arrangement to tweak
+    and save
+  - **resize zones** (web) — draggable dividers between the band and the columns (band
+    height) and between columns (widths); the handles appear **only while customizing**,
+    so the normal dashboard stays uncluttered, and the sizes save with your layout
   - save the layout **"for me"** (per-user) or **"for everyone"** (family default);
-    both your arrangement **and** which cards you've hidden save per person
+    your arrangement, zone sizes, **and** which cards you've hidden all save per person
   - a hidden card **stays hidden** — including module cards (Chores, Meals, Grocery,
     Pantry, Goals, Family Night) that would otherwise reappear when their module is on
   - iPhone keeps a separate mobile `{order, hidden}` config
