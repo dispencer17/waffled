@@ -64,9 +64,11 @@ The new machine has a new IP/hostname, so update the sync address:
 ./waffled up      # apply it
 ```
 
-Browsers pick up the new address on their own (each device is told the host it
-connected to); `setup` pins `PUBLIC_BASE_URL` and, for a fixed hostname or the
-iOS app, `POWERSYNC_PUBLIC_URL`. Hostname/HTTPS details:
+Sync follows the new address on its own — every client (kiosk, browsers, the iOS
+app) is told the host it connected to, so only the address you *open* has to
+change. `setup` pins `PUBLIC_BASE_URL` for calendar/sign-in redirects, and
+`POWERSYNC_PUBLIC_URL` only if you front sync with a fixed hostname.
+Hostname/HTTPS details:
 [Reverse proxy & TLS](/install/reverse-proxy/).
 
 ## Verify

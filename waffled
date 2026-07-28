@@ -440,10 +440,10 @@ case "$cmd" in
     echo "${c_grn}Restore complete.${c_reset}"
     ;;
   setup)
-    # Guided setup for how devices reach this server. The sync URL now derives
-    # itself per request (so LAN devices work without this step); use setup to
-    # pin an explicit address — needed for the iOS app and for auto-TLS
-    # hostnames. Everything else — Google, AI, OIDC — lives in app Settings.
+    # Guided setup for how devices reach this server. The sync URL derives itself
+    # per request, so LAN devices (kiosk, phones, iOS app) work without this
+    # step; setup pins PUBLIC_BASE_URL for calendar/sign-in redirects and sets up
+    # auto-TLS hostnames. Everything else — Google, AI, OIDC — lives in Settings.
     ensure_env
     if [ ! -t 0 ]; then
       echo "${c_ylw}./waffled setup is interactive — run it in a terminal.${c_reset}"; exit 1

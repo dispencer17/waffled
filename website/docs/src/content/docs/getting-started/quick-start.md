@@ -123,11 +123,11 @@ The easiest path is **`./waffled setup`** — it asks how devices will reach the
 writes the address settings for you:
 
 - **Just this computer (localhost)** — the default; nothing to do.
-- **Other devices on my network** — a tablet/phone/laptop on your LAN. Browsers need
-  nothing: open `http://<ip>:8080` and realtime sync follows the address you used.
-  Running `setup` detects this machine's IP and pins `PUBLIC_BASE_URL` +
-  `POWERSYNC_PUBLIC_URL`, which the [iOS app](/features/mobile/) needs. *(Reserve a
-  static IP for this machine in your router so the address doesn't drift.)*
+- **Other devices on my network** — a tablet/phone/laptop on your LAN. Nothing to
+  configure for sync: open `http://<ip>:8080` (or set that address in the
+  [iOS app](/features/mobile/)) and realtime sync follows the address the device used.
+  Run `setup` to pin `PUBLIC_BASE_URL`, which calendar and sign-in redirects need.
+  *(Reserve a static IP for this machine in your router so the address doesn't drift.)*
 - **A hostname with automatic HTTPS** — `setup` sets `CADDY_SITE_ADDRESS` (Caddy
   auto-TLS) + `PUBLIC_BASE_URL`. Enable the `443` mapping in
   `infra/compose/docker-compose.yml`, point DNS at the machine, and (for remote sync)
