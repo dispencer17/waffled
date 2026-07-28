@@ -2,7 +2,7 @@
 // them on/off in Settings → Modules (stored in households.settings.modules). See
 // docs/product/extensibility.md for the A/B/C pattern model.
 
-export type ModuleKey = 'pantry' | 'chores' | 'goals' | 'meals' | 'lists' | 'familyNight' | 'smartHome' | 'quotes'
+export type ModuleKey = 'pantry' | 'chores' | 'goals' | 'meals' | 'lists' | 'familyNight' | 'smartHome' | 'quotes' | 'waffledBites'
 
 export interface ModuleDef {
   key: ModuleKey
@@ -83,6 +83,14 @@ export const MODULES: ModuleDef[] = [
     icon: '💬',
     description: 'A preloadable daily quote or snippet on the Today tab.',
     status: 'planned',
+    defaultOn: false,
+  },
+  {
+    key: 'waffledBites',
+    name: 'Waffled-Bites',
+    icon: '🧇',
+    description: "Pair a kid's Waffled-Bite device — quiet time, night light, wake-up light, sound machine, and their routines, controlled from Family.",
+    status: 'available',
     defaultOn: false,
   },
 ]

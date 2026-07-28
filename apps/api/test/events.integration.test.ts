@@ -13,6 +13,14 @@ let url: string
 let app: any
 let closePool: () => Promise<void>
 let kevinId = ''
+let householdId = ''
+let localPersonId = ''
+let foreignPersonId = ''
+let localGoalId = ''
+let localGoalStepId = ''
+let foreignGoalId = ''
+let foreignGoalStepId = ''
+let foreignCalendarId = ''
 
 function mint(sub: string): string {
   return jwt.sign({}, SECRET, {
@@ -70,7 +78,7 @@ beforeAll(async () => {
   })
   expect(setup.statusCode).toBe(201)
   kevinId = JSON.parse(setup.body).person.id
-  const householdId = JSON.parse(setup.body).household.id
+  householdId = JSON.parse(setup.body).household.id
   // Seed an identity so the legacy mint('dev|kevin') token resolves to the owner.
   await withClient((c) =>
     c.query(
@@ -78,6 +86,53 @@ beforeAll(async () => {
       [householdId, kevinId]
     )
   )
+  await withClient(async (c) => {
+    localGoalId = (await c.query<{ id: string }>(
+      `insert into goals (household_id, title, goal_type, tracking_mode)
+       values ($1,'Local goal','checklist','shared_total') returning id`,
+      [householdId]
+    )).rows[0].id
+    localGoalStepId = (await c.query<{ id: string }>(
+      `insert into goal_steps (household_id, goal_id, label) values ($1,$2,'Local step') returning id`,
+      [householdId, localGoalId]
+    )).rows[0].id
+    localPersonId = (await c.query<{ id: string }>(
+      `insert into persons (household_id, name, member_type) values ($1,'Alex','adult') returning id`,
+      [householdId]
+    )).rows[0].id
+    const h = await c.query<{ id: string }>(
+      `insert into households (name, timezone) values ('Other events','UTC') returning id`
+    )
+    const foreignHouseholdId = h.rows[0].id
+    const p = await c.query<{ id: string }>(
+      `insert into persons (household_id, name, member_type) values ($1,'Outsider','adult') returning id`,
+      [foreignHouseholdId]
+    )
+    foreignPersonId = p.rows[0].id
+    const g = await c.query<{ id: string }>(
+      `insert into goals (household_id, title, goal_type, tracking_mode)
+       values ($1,'Foreign goal','checklist','shared_total') returning id`,
+      [foreignHouseholdId]
+    )
+    foreignGoalId = g.rows[0].id
+    const s = await c.query<{ id: string }>(
+      `insert into goal_steps (household_id, goal_id, label) values ($1,$2,'Foreign step') returning id`,
+      [foreignHouseholdId, foreignGoalId]
+    )
+    foreignGoalStepId = s.rows[0].id
+    const a = await c.query<{ id: string }>(
+      `insert into calendar_accounts
+         (household_id, person_id, google_sub, refresh_token_encrypted)
+       values ($1,$2,'foreign-sub','encrypted') returning id`,
+      [foreignHouseholdId, foreignPersonId]
+    )
+    const cal = await c.query<{ id: string }>(
+      `insert into calendars (household_id, account_id, person_id, google_calendar_id, summary)
+       values ($1,$2,$3,'foreign-primary','Foreign calendar') returning id`,
+      [foreignHouseholdId, a.rows[0].id, foreignPersonId]
+    )
+    foreignCalendarId = cal.rows[0].id
+  })
 })
 
 afterAll(async () => {
@@ -173,6 +228,31 @@ describe('events api', () => {
   it('400 without title or with a bad startsAt', async () => {
     expect((await call('POST', '/api/events', kevin, { startsAt: '2026-06-08T13:30:00Z' })).statusCode).toBe(400)
     expect((await call('POST', '/api/events', kevin, { title: 'X', startsAt: 'not-a-date' })).statusCode).toBe(400)
+  })
+
+  it('rejects foreign people, goals, steps, and calendars on create and update', async () => {
+    const base = { title: 'Boundary event', startsAt: '2026-06-08T18:00:00Z' }
+    for (const foreignRef of [
+      { personId: foreignPersonId },
+      { participantIds: [kevinId, foreignPersonId] },
+      { goalId: foreignGoalId },
+      { goalId: localGoalId, goalStepId: foreignGoalStepId },
+      { calendarId: foreignCalendarId },
+    ]) {
+      expect((await call('POST', '/api/events', kevin, { ...base, ...foreignRef })).statusCode).toBe(404)
+    }
+
+    const created = await call('POST', '/api/events', kevin, base)
+    expect(created.statusCode).toBe(201)
+    const id = JSON.parse(created.body).event.id as string
+    for (const foreignRef of [
+      { personId: foreignPersonId },
+      { participantIds: [foreignPersonId] },
+      { goalId: foreignGoalId },
+      { goalId: localGoalId, goalStepId: foreignGoalStepId },
+    ]) {
+      expect((await call('PATCH', `/api/events/${id}`, kevin, foreignRef)).statusCode).toBe(404)
+    }
   })
 
   it('creates an event and lists it in today with the person color', async () => {
@@ -315,14 +395,34 @@ describe('recurring events api', () => {
   })
 
   // Fresh series per edit-scope test (Oct/Nov 2026) to avoid cross-test coupling.
-  interface Occ { id: string; seriesId: string; occurrenceStart: string; startsAt: string; title: string }
-  async function makeWeekly(title: string, firstTueIso: string, endIso: string): Promise<string> {
+  interface Occ {
+    id: string
+    seriesId: string
+    occurrenceStart: string
+    startsAt: string
+    endsAt: string | null
+    title: string
+    description: string | null
+    location: string | null
+    allDay: boolean
+    isCountdown: boolean
+    goalId: string | null
+    goalStepId: string | null
+    participants: Array<{ id: string; name: string }>
+  }
+  async function makeWeekly(
+    title: string,
+    firstTueIso: string,
+    endIso: string,
+    extra: Record<string, unknown> = {}
+  ): Promise<string> {
     const add = await call('POST', '/api/events', kevin, {
       title,
       startsAt: firstTueIso,
       endsAt: null,
       rrule: 'FREQ=WEEKLY;BYDAY=TU',
       recurrenceEndAt: endIso,
+      ...extra,
     })
     return JSON.parse(add.body).event.id
   }
@@ -332,23 +432,59 @@ describe('recurring events api', () => {
   }
 
   it('scope=this edits a single occurrence without touching its siblings', async () => {
-    const sid = await makeWeekly('Yoga', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z') // Oct 6,13,20,27
+    const sid = await makeWeekly('Yoga', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z', {
+      description: 'Weekly class',
+      location: 'Studio',
+    }) // Oct 6,13,20,27
     const before = await list(sid, '2026-10-01', '2026-10-31')
     expect(before).toHaveLength(4)
     const target = before[1] // Oct 13
-    await call('PATCH', `/api/events/${sid}`, kevin, {
+    const resp = await call('PATCH', `/api/events/${sid}`, kevin, {
       scope: 'this',
       occurrenceStart: target.occurrenceStart,
       title: 'Yoga (special)',
+      description: 'Bring a yoga block',
+      location: null,
       startsAt: '2026-10-13T16:00:00Z', // moved +2h
     })
+    expect(resp.statusCode).toBe(200)
     const after = await list(sid, '2026-10-01', '2026-10-31')
     expect(after).toHaveLength(4)
     const moved = after.find((o) => o.occurrenceStart === target.occurrenceStart)!
     expect(moved.startsAt).toBe('2026-10-13T16:00:00.000Z')
     expect(moved.title).toBe('Yoga (special)')
+    expect(moved.description).toBe('Bring a yoga block')
+    expect(moved.location).toBeNull()
     // siblings unchanged
     expect(after.filter((o) => o.title === 'Yoga')).toHaveLength(3)
+    expect(after.filter((o) => o.title === 'Yoga').every((o) => o.location === 'Studio')).toBe(true)
+  })
+
+  it('scope=this rejects series-only fields instead of silently ignoring them', async () => {
+    const sid = await makeWeekly('Run club', '2026-12-01T14:00:00Z', '2026-12-22T23:59:59Z', {
+      participantIds: [kevinId],
+    })
+    const target = (await list(sid, '2026-12-01', '2026-12-31'))[1]
+    const resp = await call('PATCH', `/api/events/${sid}`, kevin, {
+      scope: 'this',
+      occurrenceStart: target.occurrenceStart,
+      title: 'Run club special',
+      allDay: true,
+      isCountdown: true,
+      personId: localPersonId,
+      participantIds: [localPersonId],
+      goalId: localGoalId,
+      goalStepId: localGoalStepId,
+      rrule: 'FREQ=DAILY',
+      recurrenceEndAt: null,
+    })
+
+    expect(resp.statusCode).toBe(400)
+    expect(JSON.parse(resp.body)).toEqual({
+      error: 'UnsupportedOccurrenceFields',
+      message: 'scope=this cannot update fields that belong to the recurring series',
+      fields: ['allDay', 'goalId', 'goalStepId', 'isCountdown', 'participantIds', 'personId', 'recurrenceEndAt', 'rrule'],
+    })
   })
 
   it('scope=this delete cancels a single occurrence', async () => {
@@ -363,27 +499,90 @@ describe('recurring events api', () => {
     expect(after.some((o) => o.occurrenceStart === drop.occurrenceStart)).toBe(false)
   })
 
-  it('scope=following splits the series at the occurrence', async () => {
-    const sid = await makeWeekly('Standup', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z')
+  it('scope=all preserves earlier occurrences when changing the series time', async () => {
+    const sid = await makeWeekly('Practice', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z', {
+      endsAt: '2026-10-06T15:00:00Z',
+    })
+    const before = await list(sid, '2026-10-01', '2026-10-31')
+    expect(before).toHaveLength(4)
+    const selected = before[2]
+
+    const resp = await call('PATCH', `/api/events/${sid}`, kevin, {
+      scope: 'all',
+      occurrenceStart: selected.occurrenceStart,
+      title: 'Practice (later)',
+      startsAt: '2026-10-20T16:00:00Z',
+      endsAt: '2026-10-20T17:00:00Z',
+    })
+    expect(resp.statusCode).toBe(200)
+
+    const after = await list(sid, '2026-10-01', '2026-10-31')
+    expect(after.map((o) => o.startsAt)).toEqual([
+      '2026-10-06T16:00:00.000Z',
+      '2026-10-13T16:00:00.000Z',
+      '2026-10-20T16:00:00.000Z',
+      '2026-10-27T16:00:00.000Z',
+    ])
+    expect(after.map((o) => o.endsAt)).toEqual([
+      '2026-10-06T17:00:00.000Z',
+      '2026-10-13T17:00:00.000Z',
+      '2026-10-20T17:00:00.000Z',
+      '2026-10-27T17:00:00.000Z',
+    ])
+    expect(after.every((o) => o.title === 'Practice (later)')).toBe(true)
+  })
+
+  it('scope=following splits the series and applies every editable series field', async () => {
+    const sid = await makeWeekly('Standup', '2026-10-06T14:00:00Z', '2026-10-27T23:59:59Z', {
+      participantIds: [kevinId],
+    })
     const before = await list(sid, '2026-10-01', '2026-10-31')
     const splitAt = before[2] // Oct 20 — this and following change
     const resp = await call('PATCH', `/api/events/${sid}`, kevin, {
       scope: 'following',
       occurrenceStart: splitAt.occurrenceStart,
       title: 'Standup (new format)',
+      description: 'Bring an update',
+      location: 'Library',
+      startsAt: '2026-10-20T12:00:00Z',
+      endsAt: null,
+      allDay: true,
+      isCountdown: true,
+      personId: localPersonId,
+      participantIds: [localPersonId],
+      goalId: localGoalId,
+      goalStepId: localGoalStepId,
+      rrule: 'FREQ=DAILY;COUNT=2',
+      recurrenceEndAt: null,
     })
     expect(resp.statusCode).toBe(200)
-    const newSeriesId = JSON.parse(resp.body).event.id
+    const master = JSON.parse(resp.body).event
+    const newSeriesId = master.id
     expect(newSeriesId).not.toBe(sid)
+    expect(master).toMatchObject({
+      title: 'Standup (new format)',
+      description: 'Bring an update',
+      location: 'Library',
+      allDay: true,
+      isCountdown: true,
+      personId: localPersonId,
+      goalId: localGoalId,
+      goalStepId: localGoalStepId,
+      rrule: 'FREQ=DAILY;COUNT=2',
+      recurrenceEndAt: null,
+    })
 
     const all = JSON.parse((await call('GET', '/api/events?from=2026-10-01&to=2026-10-31', kevin)).body).events as Occ[]
     const old = all.filter((e) => e.seriesId === sid).sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     const fresh = all.filter((e) => e.seriesId === newSeriesId).sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    // original keeps Oct 6, 13; new series carries Oct 20, 27 with the new title
+    // Original keeps Oct 6, 13; the replacement cadence starts at the split point.
     expect(old.map((o) => o.startsAt)).toEqual(['2026-10-06T14:00:00.000Z', '2026-10-13T14:00:00.000Z'])
     expect(old.every((o) => o.title === 'Standup')).toBe(true)
-    expect(fresh.map((o) => o.startsAt)).toEqual(['2026-10-20T14:00:00.000Z', '2026-10-27T14:00:00.000Z'])
+    expect(fresh.map((o) => o.startsAt)).toEqual(['2026-10-20T12:00:00.000Z', '2026-10-21T12:00:00.000Z'])
     expect(fresh.every((o) => o.title === 'Standup (new format)')).toBe(true)
+    expect(fresh.every((o) => o.allDay && o.isCountdown)).toBe(true)
+    expect(fresh.every((o) => o.goalId === localGoalId && o.goalStepId === localGoalStepId)).toBe(true)
+    expect(fresh.every((o) => o.participants.map((p) => p.name).join(',') === 'Alex')).toBe(true)
   })
 
   it('scope=following delete drops the occurrence and everything after it', async () => {

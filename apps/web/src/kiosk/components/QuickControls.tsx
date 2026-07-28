@@ -34,7 +34,8 @@ function entityEmoji(e: HaEntity): string {
 export function QuickControlsCard() {
   const [entities, setEntities] = useState<HaEntity[] | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const timer = useRef<ReturnType<typeof setTimeout>>()
+  // React 19 requires an explicit initial value for useRef.
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     let alive = true

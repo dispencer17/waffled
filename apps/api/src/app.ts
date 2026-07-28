@@ -7,6 +7,7 @@ import { query } from './platform/db'
 import { log } from './platform/logger'
 import { version } from './platform/version'
 import { recordHttpRequest } from './platform/telemetry'
+import { sensitiveRouteRateLimit } from './platform/rate-limit'
 import { registerHealthRoutes } from './modules/health/health'
 import { registerUpdateRoutes } from './modules/updates/updates'
 import {
@@ -48,6 +49,7 @@ import { listMemberships, pendingInvitesForEmail } from './modules/auth/accounts
 import { registerInviteRoutes } from './modules/auth/invites'
 import { registerOidcRoutes } from './modules/auth/oidc'
 import { registerKioskRoutes } from './modules/kiosk/kiosk'
+import { registerWaffledBiteRoutes } from './modules/waffledBites/waffledBites'
 import { registerTodayLayoutRoutes } from './modules/layout/today-layout'
 import { registerMobileTodayLayoutRoutes } from './modules/layout/mobile-today-layout'
 import { registerPhotoRoutes } from './modules/photos/photos'
@@ -69,6 +71,11 @@ api.use((req: Request, _res: Response, next: NextFunction) => {
   ;(req as Request & { startTime?: number }).startTime = Date.now()
   next()
 })
+
+// Bound credential guessing and expensive public flows before authentication so
+// failed attempts consume quota too. The limiter is intentionally process-local:
+// the bundled self-hosted stack runs one API process.
+api.use(sensitiveRouteRateLimit)
 
 // Routes that skip auth. /api/auth/keys is the JWKS PowerSync fetches; the Google
 // calendar callback is hit by Google's browser redirect (no Authorization header)
@@ -93,6 +100,9 @@ const PUBLIC_PATHS = new Set([
   // Kiosk pairing: both authenticate via a code/secret in the body, pre-session.
   '/api/kiosk/pair',
   '/api/kiosk/device/token',
+  // Waffled-Bites pairing: same shape, pre-session.
+  '/api/waffled-bites/pair',
+  '/api/waffled-bites/device/token',
 ])
 
 // Auth gate — authenticates every non-public route. An `x-api-key` header takes the
@@ -268,6 +278,9 @@ registerOidcRoutes(api)
 
 // Kiosk device pairing + profile tokens (/api/kiosk/*)
 registerKioskRoutes(api)
+
+// Waffled-Bites device pairing + parent control panel (/api/waffled-bites/*)
+registerWaffledBiteRoutes(api)
 
 // Person + family overviews (/api/persons/:id/overview, /api/family/overview)
 registerOverviewRoutes(api)

@@ -40,6 +40,7 @@ import {
   todayDate,
 } from './meals.service'
 import { parseRecipe } from './recipe-markdown'
+import { serializeRecipe, recipeFilename } from './recipe-serialize'
 import {
   ingestRecipeFromText,
   ingestRecipeFromPhotos,
@@ -49,6 +50,11 @@ import {
   type IngestPhotoInput,
 } from './recipe-ingest.service'
 import { getAiConfig, availability, visionAvailable } from '../../platform/llm'
+import {
+  assertPersonInHousehold,
+  assertPersonsInHousehold,
+  assertRecipeInHousehold,
+} from '../../platform/household-refs'
 import { mediaKeyBelongsToHousehold } from '../../platform/storage'
 
 type Api = ReturnType<typeof createAPI>
@@ -112,6 +118,22 @@ export function registerMealRoutes(api: Api): void {
       note: stepNotes[String(s.stepNumber)] ?? null,
     }))
     return { recipe: presentRecipe(recipe), ingredients, steps }
+  }))
+
+  // Compile a recipe into the blessed Markdown format (docs/RECIPE_FORMAT.md) for
+  // sharing — the inverse of parse-markdown. Returns the markdown text (as-presented,
+  // so user overrides are included) plus a suggested .md filename; clients hand it to
+  // the native share sheet / clipboard / download.
+  api.get('/api/recipes/:id/markdown', tenantRoute(async (tenant, req: Request, res: Response) => {
+    const id = req.params.id ?? ''
+    if (!UUID_RE.test(id)) return res.status(404).json({ error: 'NotFound', message: 'recipe not found' })
+    const recipe = await getRecipe(tenant.householdId, id)
+    if (!recipe) return res.status(404).json({ error: 'NotFound', message: 'recipe not found' })
+    const presented = presentRecipe(recipe)
+    const ingredients = (await listIngredients(tenant.householdId, id)).map(presentIngredient)
+    const steps = await listSteps(tenant.householdId, id)
+    const markdown = serializeRecipe({ recipe: presented, ingredients, steps })
+    return { markdown, filename: recipeFilename(presented.title) }
   }))
 
   // Update a recipe — favorite/rename/rating/notes/overrides (non-destructive) and
@@ -318,6 +340,7 @@ export function registerMealRoutes(api: Api): void {
         return res.status(400).json({ error: 'BadRequest', message: 'recipeId must be a uuid' })
       }
       recipeId = body.recipeId
+      await assertRecipeInHousehold(tenant.householdId, recipeId)
     }
     let cookPersonId: string | null = null
     if (body.cookPersonId != null && body.cookPersonId !== '') {
@@ -325,6 +348,7 @@ export function registerMealRoutes(api: Api): void {
         return res.status(400).json({ error: 'BadRequest', message: 'cookPersonId must be a uuid' })
       }
       cookPersonId = body.cookPersonId
+      await assertPersonInHousehold(tenant.householdId, cookPersonId)
     }
     const plan = await getOrCreateActivePlan(tenant)
     const entry = await upsertEntry(plan.id, tenant, {
@@ -378,6 +402,12 @@ export function registerMealRoutes(api: Api): void {
     if (typeof b.pushToGoogle === 'boolean') patch.pushToGoogle = b.pushToGoogle
     if (b.calendarPersonId === null || (typeof b.calendarPersonId === 'string' && UUID_RE.test(b.calendarPersonId))) patch.calendarPersonId = b.calendarPersonId
     if (b.participantIds === null || (Array.isArray(b.participantIds) && b.participantIds.every((p) => typeof p === 'string' && UUID_RE.test(p)))) patch.participantIds = b.participantIds
+    if (typeof patch.calendarPersonId === 'string') {
+      await assertPersonInHousehold(tenant.householdId, patch.calendarPersonId)
+    }
+    if (Array.isArray(patch.participantIds)) {
+      await assertPersonsInHousehold(tenant.householdId, patch.participantIds as string[])
+    }
     if (b.times && typeof b.times === 'object') {
       const t: Record<string, string> = {}
       for (const [k, v] of Object.entries(b.times as Record<string, unknown>)) {

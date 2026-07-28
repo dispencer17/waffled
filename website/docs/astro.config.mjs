@@ -59,6 +59,7 @@ export default defineConfig({
 						{ label: 'Voice assistant', slug: 'features/voice' },
 						{ label: 'Smart Home (Home Assistant)', slug: 'features/smart-home' },
 						{ label: 'Kiosk & display', slug: 'features/kiosk' },
+						{ label: 'Waffled-Bites', slug: 'features/waffled-bites' },
 						{ label: 'Appearance & dark mode', slug: 'features/appearance' },
 						{ label: 'Mobile app (iOS)', slug: 'features/mobile' },
 					],
