@@ -67,11 +67,32 @@ describe('today-layout routes', () => {
     expect(resolved.cols.flat()).toContain('smartHome')
   })
 
-  it('surfaces weekCalendar via the missing-append pass for layouts saved before it existed', async () => {
+  it('surfaces weekCalendar in the full-width band for layouts saved before it existed', async () => {
     const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout: { cols: [['agenda'], ['tonight'], ['chores']], hidden: [] } })
     expect(put.statusCode).toBe(200)
-    // The reconciled layout appends unplaced, unhidden cards to the last column.
-    expect(JSON.parse(put.body).layout.cols[2]).toContain('weekCalendar')
+    // The unplaced calendar defaults to the band; other unplaced cards to the last column.
+    expect(JSON.parse(put.body).layout.full).toContain('weekCalendar')
+  })
+
+  it('round-trips a {full, cols, bandHeight, colWidths} layout with the sizes clamped', async () => {
+    const layout = {
+      full: ['weekCalendar'],
+      cols: [['agenda', 'countdowns'], ['tonight', 'week'], ['chores', 'grocery']],
+      hidden: [],
+      bandHeight: 5000, // clamped to 900
+      colWidths: [2, 1, 1],
+    }
+    const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout })
+    expect(put.statusCode).toBe(200)
+    const saved = JSON.parse(put.body).layout
+    expect(saved.full).toEqual(['weekCalendar'])
+    expect(saved.bandHeight).toBe(900)
+    expect(saved.colWidths).toEqual([2, 1, 1])
+
+    const resolved = JSON.parse((await call('GET', '/api/today-layout', kevin)).body).resolved
+    expect(resolved.full).toEqual(['weekCalendar'])
+    expect(resolved.bandHeight).toBe(900)
+    expect(resolved.colWidths).toEqual([2, 1, 1])
   })
 
   it('still 400s a layout with an unknown card key', async () => {

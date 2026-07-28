@@ -6,12 +6,17 @@ import { apiGet, apiSend, apiDelete } from './client'
 
 export type LayoutScope = 'user' | 'family'
 
-// A normalized layout: the 3-column grid + the cards the user explicitly hid from
-// Today. `hidden` is what lets a removed card (esp. a module card that would
+// A normalized layout: a full-width band (`full`, spanning above the columns),
+// the 3-column grid, the cards the user explicitly hid from Today, and optional
+// zone sizes (band height + per-column width ratios, set via the Customize
+// dividers). `hidden` is what lets a removed card (esp. a module card that would
 // otherwise auto-reappear) stay gone until the user shows it again.
 export interface StoredLayout {
+  full: string[]
   cols: string[][]
   hidden: string[]
+  bandHeight?: number
+  colWidths?: number[]
 }
 
 export interface TodayLayoutResponse {
@@ -41,7 +46,7 @@ export interface TodayLayoutState {
   refetch: () => void
 }
 
-const FALLBACK: StoredLayout = { cols: [['agenda'], ['tonight', 'week'], ['chores', 'grocery']], hidden: [] }
+const FALLBACK: StoredLayout = { full: ['weekCalendar'], cols: [['agenda'], ['tonight', 'week'], ['chores', 'grocery']], hidden: [] }
 
 export function useTodayLayout(): TodayLayoutState {
   const [data, setData] = useState<TodayLayoutResponse | null>(null)

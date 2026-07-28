@@ -35,24 +35,47 @@ export function hideModuleCard(layout: string[][], card: string, show: boolean):
   return show ? layout : removeCard(layout, card)
 }
 
-// Move a card to (col, index). Indices are relative to the layout WITHOUT the
-// card (the board renders drags that way, so dropTargetAt's indices map
-// straight in). An out-of-range column falls back to the last one.
-export function insertAt(layout: string[][], card: string, col: number, index: number): string[][] {
-  const base = removeCard(layout, card).map((c) => [...c])
-  ;(base[col] ?? base[base.length - 1]).splice(index, 0, card)
-  return base
+// A drop region: the full-width band, or a column by index.
+export type Region = 'full' | number
+// The card arrangement across the two zone kinds: the full-width band + columns.
+export interface RegionLayout {
+  full: string[]
+  cols: string[][]
 }
 
-// Which column + insertion index is under the pointer, read from the live DOM
-// (columns carry data-col, cards data-card). The dragged card isn't rendered
-// during a drag, so indices map straight into the card's would-be position.
-export function dropTargetAt(x: number, y: number): { col: number; index: number } | null {
+// Drop a card from the band and from every column (a card lives in one place).
+export function removeCardEverywhere(layout: RegionLayout, card: string): RegionLayout {
+  return {
+    full: layout.full.filter((c) => c !== card),
+    cols: layout.cols.map((col) => col.filter((c) => c !== card)),
+  }
+}
+
+// Move a card to (region, index). Indices are relative to the layout WITHOUT the
+// card (the board renders the dragged card as a no-`data-card` placeholder, so
+// dropTargetAt's indices map straight in). 'full' targets the band; a number
+// targets that column, out-of-range falling back to the last.
+export function insertAtRegion(layout: RegionLayout, card: string, region: Region, index: number): RegionLayout {
+  const base = removeCardEverywhere(layout, card)
+  const full = [...base.full]
+  const cols = base.cols.map((c) => [...c])
+  if (region === 'full') full.splice(index, 0, card)
+  else (cols[region] ?? cols[cols.length - 1]).splice(index, 0, card)
+  return { full, cols }
+}
+
+// Which region ('full' or a column index) + insertion index is under the pointer,
+// read from the live DOM (zones carry data-region, cards data-card). The dragged
+// card renders as a placeholder with no data-card, so it's skipped and indices map
+// straight into its would-be position. Band + columns both stack their cards, so
+// the y-midpoint test works for either.
+export function dropTargetAt(x: number, y: number): { region: Region; index: number } | null {
   const el = document.elementFromPoint(x, y)
-  const colEl = el && (el as Element).closest('[data-col]')
-  if (!colEl) return null
-  const col = Number(colEl.getAttribute('data-col'))
-  const cards = [...colEl.querySelectorAll('[data-card]')]
+  const regionEl = el && (el as Element).closest('[data-region]')
+  if (!regionEl) return null
+  const raw = regionEl.getAttribute('data-region')
+  const region: Region = raw === 'full' ? 'full' : Number(raw)
+  const cards = [...regionEl.querySelectorAll('[data-card]')]
   let index = cards.length
   for (let k = 0; k < cards.length; k++) {
     const r = cards[k].getBoundingClientRect()
@@ -61,5 +84,5 @@ export function dropTargetAt(x: number, y: number): { col: number; index: number
       break
     }
   }
-  return { col, index }
+  return { region, index }
 }
