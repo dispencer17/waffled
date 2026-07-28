@@ -163,6 +163,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
+  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
+  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
+  looks is in one place. The tab is visible to every member (theme and color are per-device
+  choices); the kiosk & screensaver configuration below it remains admin-only.
 - **Caught up with upstream Waffled v0.12.0.** Three upstream releases (v0.10–v0.12) are
   now in, bringing their fixes and features alongside this fork's own — see the
   `[0.10.0]`–`[0.12.0]` sections below for what they added. The empty **Notifications**
@@ -227,6 +232,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Voice commands actually run now.** A recorder bug made every spoken clip come back
+  empty — the kiosk would hear the wake word (or the mic button), listen, and then
+  silently do nothing. The recording is captured correctly now, and if the mic truly
+  hears nothing the kiosk says "I didn't catch that" instead of going quiet.
+- **The Live Sync card no longer reads "off" while the engine is just booting.** The
+  sync engine takes a few seconds to start on every page load, and the System Health
+  card used to call that window "off — reading over REST" — indistinguishable from a
+  crashed engine. It now shows "starting…" during boot, and if the engine genuinely
+  fails to start it says "failed to start" **with the actual error**, so a glance tells
+  you whether to wait, or what broke.
+- **Saving a customized dashboard works with the Smart Home card placed.** The server's
+  card allowlist was missing the Smart Home card, so households using that module got a
+  silent "Bad Request" when saving a rearranged Today layout that included it.
+- **Realtime sync now works on tablets and phones, not just the server.** Every device was
+  told to reach the sync service at `localhost`, which is only correct on the machine
+  running Waffled — the kitchen tablet and phones resolved it to themselves, never
+  connected, and silently fell back to reload-to-see-changes with no offline cache. The
+  server now tells each device the address *it* actually used, so the kiosk syncs live out
+  of the box and keeps working when the server's IP changes. Pin `POWERSYNC_PUBLIC_URL`
+  only if you front sync with its own hostname; `./waffled setup`'s localhost option no
+  longer writes a value that would break other devices.
+- **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
+  Today views used the same pale color wash and text in both themes, which went murky with the
+  lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
+  on dark — so every person's events pass accessibility contrast in both modes (and under any
+  color theme).
+- **A wedged local sync copy can no longer stall forever.** The watchdog's restart
+  ladder gains a final rung: after a gentle reconnect and a full rebuild both fail, it
+  wipes this browser's local mirror and re-downloads it fresh (skipped if unsent local
+  changes are queued — family data is never destroyed). While stalled, System Health
+  also offers a one-click **Reset local copy**.
+- **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
+  sync replica stops updating (or never finished its first sync), the calendar now falls
+  back to reading straight from the server instead of trusting the stale/empty local copy —
+  so an empty screen means there are genuinely no events, not that sync silently died.
+  Previously a stalled engine could leave the kiosk showing a blank calendar while the
+  server had all the data.
 - **Recurring event edits now keep the whole series intact.** "This and following" carries
   all-day, countdown, people, goal, and repeat settings into the new series, while changing
   the time for "All events" no longer removes earlier occurrences. Locally synced web events
@@ -432,50 +474,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   soon as a fast-follow; web ships first.
 
 ### Changed
-- **Appearance settings moved into Display & Kiosk.** The standalone Appearance tab is gone —
-  the light/dark theme cards, "Match system", "Follow the sun", and the new color themes all
-  live at the top of **Settings → Display & Kiosk** now, so everything about how the screen
-  looks is in one place. The tab is visible to every member (theme and color are per-device
-  choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
-- **Realtime sync now works on tablets and phones, not just the server.** Every device was
-  told to reach the sync service at `localhost`, which is only correct on the machine
-  running Waffled — the kitchen tablet and phones resolved it to themselves, never
-  connected, and silently fell back to reload-to-see-changes with no offline cache. The
-  server now tells each device the address *it* actually used, so the kiosk syncs live out
-  of the box and keeps working when the server's IP changes. Pin `POWERSYNC_PUBLIC_URL`
-  only if you front sync with its own hostname; `./waffled setup`'s localhost option no
-  longer writes a value that would break other devices.
-- **Saving a customized dashboard works with the Smart Home card placed.** The server's
-  card allowlist was missing the Smart Home card, so households using that module got a
-  silent "Bad Request" when saving a rearranged Today layout that included it.
-- **Voice commands actually run now.** A recorder bug made every spoken clip come back
-  empty — the kiosk would hear the wake word (or the mic button), listen, and then
-  silently do nothing. The recording is captured correctly now, and if the mic truly
-  hears nothing the kiosk says "I didn't catch that" instead of going quiet.
-- **A wedged local sync copy can no longer stall forever.** The watchdog's restart
-  ladder gains a final rung: after a gentle reconnect and a full rebuild both fail, it
-  wipes this browser's local mirror and re-downloads it fresh (skipped if unsent local
-  changes are queued — family data is never destroyed). While stalled, System Health
-  also offers a one-click **Reset local copy**.
-- **The Live Sync card no longer reads "off" while the engine is just booting.** The
-  sync engine takes a few seconds to start on every page load, and the System Health
-  card used to call that window "off — reading over REST" — indistinguishable from a
-  crashed engine. It now shows "starting…" during boot, and if the engine genuinely
-  fails to start it says "failed to start" **with the actual error**, so a glance tells
-  you whether to wait, or what broke.
-- **A wedged live-sync engine can no longer blank the calendar.** If the browser's local
-  sync replica stops updating (or never finished its first sync), the calendar now falls
-  back to reading straight from the server instead of trusting the stale/empty local copy —
-  so an empty screen means there are genuinely no events, not that sync silently died.
-  Previously a stalled engine could leave the kiosk showing a blank calendar while the
-  server had all the data.
-- **Calendar events are readable in dark mode.** Event chips on the Month, Week, Day, and
-  Today views used the same pale color wash and text in both themes, which went murky with the
-  lights off. Chip colors now adapt to the active theme — richer text on light, a bright pastel
-  on dark — so every person's events pass accessibility contrast in both modes (and under any
-  color theme).
 
 ## [0.10.0] - 2026-07-22
 
