@@ -538,14 +538,18 @@ body {
   pointer-events: none;
 }
 
-/* Customize-only zone dividers — drag to resize the band (horizontal) or
-   rebalance columns (vertical). Hidden in the normal view so the dashboard stays
-   uncluttered; only meaningful on the roomy landscape breakpoint where the band +
-   columns have resizable space (below it everything stacks and scrolls). */
+/* Zone dividers — drag to resize the band (horizontal) or rebalance columns
+   (vertical). They live on the normal dashboard AND in Customize; only meaningful
+   on the roomy landscape breakpoint where the band + columns have resizable space
+   (below it everything stacks and scrolls, so they're hidden). The vertical
+   dividers sit BETWEEN columns and provide the column separation themselves, so the
+   board drops its gap where they're shown. Grips stay faint so they don't clutter,
+   brightening on hover; they're wide enough to grab on a touchscreen. */
 .today-divider-h,
 .today-divider-v { display: none; }
 @media (min-width: 1101px) and (min-height: 680px) {
-  .today-editing .today-divider-h {
+  .today-board { gap: 0; }
+  .today-divider-h {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -554,11 +558,11 @@ body {
     cursor: ns-resize;
     touch-action: none;
   }
-  .today-editing .today-divider-v {
+  .today-divider-v {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 14px;
+    flex: 0 0 18px;
     align-self: stretch;
     cursor: ew-resize;
     touch-action: none;
@@ -568,14 +572,14 @@ body {
     height: 5px;
     border-radius: 999px;
     background: var(--ink-3);
-    opacity: 0.5;
+    opacity: 0.45;
   }
   .today-divider-v .today-divider-grip {
     width: 5px;
     height: 46px;
     border-radius: 999px;
     background: var(--ink-3);
-    opacity: 0.5;
+    opacity: 0.45;
   }
   .today-divider-h:hover .today-divider-grip,
   .today-divider-v:hover .today-divider-grip { opacity: 0.9; background: var(--primary); }

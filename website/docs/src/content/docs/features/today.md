@@ -30,10 +30,11 @@ always there, whatever modules you've turned on.
   spotlight**, or a **specific goal** from a grouped picker. See [Goals](/features/goals/).
 - ✋ **Drag cards right on the board** (web) — press and **hold a card ~half a second**
   and it lifts; drag between the band and columns and drop, and the layout saves as **your
-  personal layout** automatically. A finger that moves early scrolls instead of lifting,
-  and buttons inside cards are never drag handles — so the board can't be rearranged by
-  accident. For hiding cards, resizing zones, presets, resetting, or saving for everyone,
-  use Customize mode.
+  personal layout** automatically. **Resize zones the same way** — drag the faint dividers
+  between the band and the columns (and between columns) right on the dashboard; that saves
+  automatically too. A finger that moves early scrolls instead of lifting, and buttons
+  inside cards are never drag handles — so the board can't be rearranged by accident. For
+  hiding cards, presets, resetting, or saving for everyone, use Customize mode.
 - 🎛️ **Customize mode** (web / iPhone):
   - **drag** a card by its bar to reorder; each card also has an **× to hide it** —
     hidden cards drop into a tray below the board where a tap adds them back
@@ -41,8 +42,9 @@ always there, whatever modules you've turned on.
     **Agenda focus**, or **Meals focus** fills the board with that arrangement to tweak
     and save
   - **resize zones** (web) — draggable dividers between the band and the columns (band
-    height) and between columns (widths); the handles appear **only while customizing**,
-    so the normal dashboard stays uncluttered, and the sizes save with your layout
+    height) and between columns (widths); the sizes save with your layout. The handles
+    also live **right on the normal dashboard** (faint until you hover/grab them) — a
+    drag there saves to your personal layout automatically, like moving a card
   - save the layout **"for me"** (per-user) or **"for everyone"** (family default);
     your arrangement, zone sizes, **and** which cards you've hidden all save per person
   - a hidden card **stays hidden** — including module cards (Chores, Meals, Grocery,
