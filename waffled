@@ -440,10 +440,10 @@ case "$cmd" in
     echo "${c_grn}Restore complete.${c_reset}"
     ;;
   setup)
-    # Guided setup for the one thing that isn't auto-derivable and silently breaks the
-    # tablet/iOS app if wrong: how devices reach this server. (A localhost
-    # POWERSYNC_PUBLIC_URL makes every non-local client show "Offline".) Everything else
-    # — Google, AI, OIDC — is configured in the app's Settings, not here.
+    # Guided setup for how devices reach this server. The sync URL now derives
+    # itself per request (so LAN devices work without this step); use setup to
+    # pin an explicit address — needed for the iOS app and for auto-TLS
+    # hostnames. Everything else — Google, AI, OIDC — lives in app Settings.
     ensure_env
     if [ ! -t 0 ]; then
       echo "${c_ylw}./waffled setup is interactive — run it in a terminal.${c_reset}"; exit 1
@@ -463,7 +463,10 @@ case "$cmd" in
     case "$choice" in
       1)
         set_env_var PUBLIC_BASE_URL ""
-        set_env_var POWERSYNC_PUBLIC_URL "http://localhost:$ps_port"
+        # Empty, not localhost: the api derives a reachable sync URL from the
+        # address each device used, so this still works if a tablet or phone
+        # opens the kiosk later. A pinned localhost would leave them REST-only.
+        set_env_var POWERSYNC_PUBLIC_URL ""
         set_env_var CADDY_SITE_ADDRESS ":80"
         echo "${c_grn}Set for localhost.${c_reset} Run ${c_dim}./waffled up${c_reset}, then open http://localhost:$http_port"
         ;;

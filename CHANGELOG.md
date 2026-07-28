@@ -130,6 +130,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choices); the kiosk & screensaver configuration below it remains admin-only.
 
 ### Fixed
+- **Realtime sync now works on tablets and phones, not just the server.** Every device was
+  told to reach the sync service at `localhost`, which is only correct on the machine
+  running Waffled — the kitchen tablet and phones resolved it to themselves, never
+  connected, and silently fell back to reload-to-see-changes with no offline cache. The
+  server now tells each device the address *it* actually used, so the kiosk syncs live out
+  of the box and keeps working when the server's IP changes. Pin `POWERSYNC_PUBLIC_URL`
+  only if you front sync with its own hostname; `./waffled setup`'s localhost option no
+  longer writes a value that would break other devices.
 - **Saving a customized dashboard works with the Smart Home card placed.** The server's
   card allowlist was missing the Smart Home card, so households using that module got a
   silent "Bad Request" when saving a rearranged Today layout that included it.

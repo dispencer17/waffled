@@ -64,8 +64,9 @@ The new machine has a new IP/hostname, so update the sync address:
 ./waffled up      # apply it
 ```
 
-This sets `POWERSYNC_PUBLIC_URL` correctly so tablets and the iOS app can find
-the new host. Hostname/HTTPS details:
+Browsers pick up the new address on their own (each device is told the host it
+connected to); `setup` pins `PUBLIC_BASE_URL` and, for a fixed hostname or the
+iOS app, `POWERSYNC_PUBLIC_URL`. Hostname/HTTPS details:
 [Reverse proxy & TLS](/install/reverse-proxy/).
 
 ## Verify

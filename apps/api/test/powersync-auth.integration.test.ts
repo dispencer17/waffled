@@ -1,7 +1,7 @@
 // PowerSync auth: our api serves a JWKS and mints short-lived RS256 tokens that
 // carry the caller's real household_id (resolved from the DB). PowerSync validates
 // those tokens against the JWKS; sync rules scope buckets by the household_id claim.
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from './helpers/pg'
 import { createPublicKey } from 'node:crypto'
 import jwt from 'jsonwebtoken'
@@ -119,5 +119,73 @@ describe('powersync auth', () => {
   it('refuses a PowerSync token for an unprovisioned caller (403)', async () => {
     const res = await call('GET', '/api/powersync/token', mint('dev|nobody'))
     expect(res.statusCode).toBe(403)
+  })
+})
+
+// The URL the client is told to connect to must reflect how THAT device reached
+// us. A hardcoded localhost works only on the server itself: every other device
+// (kiosk tablet, phone) resolves localhost to itself, fails to connect, and
+// silently degrades to REST-only — the 2026-07-24 "Live Sync never connects"
+// bug. Mirrors the request-derived baseUrl() the OIDC flow already uses.
+describe('GET /api/powersync/token — connection URL', () => {
+  function callWithHeaders(headers: Record<string, string>) {
+    return app.run(
+      {
+        httpMethod: 'GET',
+        path: '/api/powersync/token',
+        headers: { authorization: `Bearer ${kevin}`, ...headers },
+        queryStringParameters: {},
+        body: null,
+        isBase64Encoded: false,
+      },
+      {}
+    ) as Promise<RunResult>
+  }
+  const urlFrom = async (headers: Record<string, string>) =>
+    JSON.parse((await callWithHeaders(headers)).body).powerSyncUrl as string | null
+
+  const saved = { url: process.env.POWERSYNC_PUBLIC_URL, port: process.env.POWERSYNC_PORT }
+  beforeEach(() => {
+    delete process.env.POWERSYNC_PUBLIC_URL
+    delete process.env.POWERSYNC_PORT
+  })
+  afterAll(() => {
+    if (saved.url === undefined) delete process.env.POWERSYNC_PUBLIC_URL
+    else process.env.POWERSYNC_PUBLIC_URL = saved.url
+    if (saved.port === undefined) delete process.env.POWERSYNC_PORT
+    else process.env.POWERSYNC_PORT = saved.port
+  })
+
+  it('derives the host from the request so a LAN device gets a reachable URL', async () => {
+    expect(await urlFrom({ host: '10.118.24.88:8080' })).toBe('http://10.118.24.88:8090')
+  })
+
+  it('never hands a LAN device a localhost URL it cannot reach', async () => {
+    expect(await urlFrom({ host: '10.118.24.88:8080' })).not.toContain('localhost')
+  })
+
+  it('honors the proxy forwarding headers (proto + host) over the raw Host', async () => {
+    expect(
+      await urlFrom({ host: 'api:3000', 'x-forwarded-host': 'waffled.example', 'x-forwarded-proto': 'https' })
+    ).toBe('https://waffled.example:8090')
+  })
+
+  it('keeps working when the host carries no port', async () => {
+    expect(await urlFrom({ host: 'kiosk.local' })).toBe('http://kiosk.local:8090')
+  })
+
+  it('uses POWERSYNC_PORT when the service is published elsewhere', async () => {
+    process.env.POWERSYNC_PORT = '9999'
+    expect(await urlFrom({ host: '10.118.24.88:8080' })).toBe('http://10.118.24.88:9999')
+  })
+
+  it('lets an explicit POWERSYNC_PUBLIC_URL override the derivation', async () => {
+    process.env.POWERSYNC_PUBLIC_URL = 'https://sync.example.com'
+    expect(await urlFrom({ host: '10.118.24.88:8080' })).toBe('https://sync.example.com')
+  })
+
+  it('treats an empty POWERSYNC_PUBLIC_URL as unset (compose passes "" when the var is blank)', async () => {
+    process.env.POWERSYNC_PUBLIC_URL = '   '
+    expect(await urlFrom({ host: '10.118.24.88:8080' })).toBe('http://10.118.24.88:8090')
   })
 })

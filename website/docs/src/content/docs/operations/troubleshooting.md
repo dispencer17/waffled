@@ -86,9 +86,13 @@ Then restart PowerSync to re-validate:
 ./waffled restart powersync     # unstick waffled-powersync
 ```
 
-**Also check `POWERSYNC_PUBLIC_URL`** — it must be the address clients actually use
-to reach PowerSync (e.g. your LAN IP / hostname, not `localhost`). A mismatch also
-manifests as clients that can't sync.
+**Also check `POWERSYNC_PUBLIC_URL`** — when it is **empty** (the default) each device
+is told the address it reached the server on, which is what you want on a home LAN. If
+it *is* set, it must be an address every client can reach: a value like
+`http://localhost:8090` works only on the server itself — every other device resolves
+`localhost` to itself, fails to connect, and quietly falls back to REST-only (no
+realtime updates, no offline cache). Clearing it restores the automatic behavior.
+Settings → System Health → **Live Sync** shows what the browser you're on is doing.
 
 ### Google Calendar sync failing
 

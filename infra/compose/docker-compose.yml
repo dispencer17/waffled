@@ -96,8 +96,15 @@ services:
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       MEDIA_DIR: ${MEDIA_DIR:-/data/media}
       MEDIA_BASE_URL: ${MEDIA_BASE_URL:-/media}
-      # Returned by /api/powersync/token so clients know where to connect.
-      POWERSYNC_PUBLIC_URL: ${POWERSYNC_PUBLIC_URL:-http://localhost:8090}
+      # Returned by /api/powersync/token so clients know where to connect. Leave
+      # EMPTY by default: the api then derives it from the host each device
+      # actually used, so a tablet/phone on the LAN gets a reachable address. A
+      # hardcoded localhost here only ever works on the server itself (every
+      # other device resolves it to itself → no realtime sync, silent REST-only
+      # fallback). Set it explicitly only when fronting PowerSync with its own
+      # hostname/TLS. POWERSYNC_PORT tells the api which published port to use.
+      POWERSYNC_PUBLIC_URL: ${POWERSYNC_PUBLIC_URL:-}
+      POWERSYNC_PORT: ${POWERSYNC_PORT:-8090}
       # Stable RS256 signing key for PowerSync tokens (base64 of a PEM, or raw PEM).
       POWERSYNC_JWT_PRIVATE_KEY: ${POWERSYNC_JWT_PRIVATE_KEY:?Run ./waffled up to generate POWERSYNC_JWT_PRIVATE_KEY}
       # --- AI capture bar (6.6): set any subset; pick the active one in Settings.

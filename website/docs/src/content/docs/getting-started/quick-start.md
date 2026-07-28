@@ -123,17 +123,18 @@ The easiest path is **`./waffled setup`** — it asks how devices will reach the
 writes the address settings for you:
 
 - **Just this computer (localhost)** — the default; nothing to do.
-- **Other devices on my network** — a tablet/phone/laptop on your LAN. `setup` detects
-  this machine's IP and sets `POWERSYNC_PUBLIC_URL` + `PUBLIC_BASE_URL` to it, so the
-  kiosk and [iOS app](/features/mobile/) can sync. Open `http://<ip>:8080` on the device. *(Reserve a static
-  IP for this machine in your router so the address doesn't drift.)*
+- **Other devices on my network** — a tablet/phone/laptop on your LAN. Browsers need
+  nothing: open `http://<ip>:8080` and realtime sync follows the address you used.
+  Running `setup` detects this machine's IP and pins `PUBLIC_BASE_URL` +
+  `POWERSYNC_PUBLIC_URL`, which the [iOS app](/features/mobile/) needs. *(Reserve a
+  static IP for this machine in your router so the address doesn't drift.)*
 - **A hostname with automatic HTTPS** — `setup` sets `CADDY_SITE_ADDRESS` (Caddy
   auto-TLS) + `PUBLIC_BASE_URL`. Enable the `443` mapping in
   `infra/compose/docker-compose.yml`, point DNS at the machine, and (for remote sync)
   expose/proxy PowerSync's port with TLS too.
 
 Prefer to edit by hand? The same three vars in `infra/compose/.env` do it:
-`POWERSYNC_PUBLIC_URL` (the sync endpoint clients connect to — the common trap),
+`POWERSYNC_PUBLIC_URL` (the sync endpoint; leave it empty unless you need a fixed one),
 `PUBLIC_BASE_URL` (public origin for calendar/OIDC redirects), and `CADDY_SITE_ADDRESS`
 (hostname for auto-TLS). Run `./waffled up` after changing them.
 

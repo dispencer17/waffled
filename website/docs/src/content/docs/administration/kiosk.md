@@ -61,10 +61,13 @@ setting does.
 
 ## Real-device tips
 
-- Set the tablet's **server address** to the **Mac/host LAN IP**, and make sure
-  **`POWERSYNC_PUBLIC_URL` matches** it — see
-  [Reverse proxy & TLS](/install/reverse-proxy/). A mismatch shows an **"Offline"**
-  banner (see [Troubleshooting](/operations/troubleshooting/)).
+- Set the tablet's **server address** to the **host's LAN IP**. The sync endpoint
+  follows automatically — the server tells each device the address that device
+  used — so realtime sync works without extra configuration. If you pinned
+  **`POWERSYNC_PUBLIC_URL`** yourself, it must match or the tablet shows an
+  **"Offline"** banner (see [Troubleshooting](/operations/troubleshooting/)); clearing
+  it restores the automatic behavior. Details:
+  [Reverse proxy & TLS](/install/reverse-proxy/).
 - **Web camera / barcode scanning** needs a **secure context** — HTTPS or `localhost`.
 - **iPhone is never a kiosk** — kiosk mode is for tablets.
 - 🚧 **PWA offline caching** for the web kiosk is partial/planned.

@@ -34,7 +34,7 @@ calling Compose directly so newly required values can be generated before valida
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `POWERSYNC_PUBLIC_URL` | The sync URL clients connect to — **must be reachable by the device** (LAN IP / hostname, not `localhost`) | `http://localhost:8090` |
+| `POWERSYNC_PUBLIC_URL` | The sync URL clients connect to. **Leave empty** and each device is told the address *it* used (plus `POWERSYNC_PORT`), so LAN tablets and phones just work. Set it only to pin a fixed hostname/TLS endpoint | empty (derived per request) |
 | `PUBLIC_BASE_URL` | Public origin for OIDC + Google redirect URLs; empty = derived from request | empty |
 | `CADDY_SITE_ADDRESS` | `:80` (plain HTTP) or a hostname (triggers Caddy auto-TLS) | `:80` |
 
