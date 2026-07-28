@@ -70,13 +70,45 @@ const LAYOUT: Layout = { full: ['weekCalendar'], cols: [['agenda'], ['countdowns
 afterEach(() => vi.restoreAllMocks())
 
 describe('Today customize dividers', () => {
-  it('shows zone dividers only in Customize mode', async () => {
+  it('shows zone dividers in the normal view AND in Customize', async () => {
     await renderToday(LAYOUT)
-    expect(document.querySelector('.today-divider-h')).toBeNull()
-    expect(document.querySelector('.today-divider-v')).toBeNull()
-    await enterCustomize()
+    // Resizers live on the main dashboard now, not just in Customize.
     expect(document.querySelector('.today-divider-h')).toBeTruthy()
     expect(document.querySelectorAll('.today-divider-v').length).toBe(2) // between 3 columns
+    await enterCustomize()
+    expect(document.querySelector('.today-divider-h')).toBeTruthy()
+    expect(document.querySelectorAll('.today-divider-v').length).toBe(2)
+  })
+
+  it('resizes the band on the normal dashboard (no Customize) and auto-saves', async () => {
+    await renderToday(LAYOUT)
+    // enough time for the layout GET to resolve so the save carries the served layout
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/api/today-layout'))).toBe(true))
+    const h = document.querySelector('.today-divider-h') as HTMLElement
+    act(() => {
+      fireEvent(h, pointer('pointerdown', 500, 400))
+      fireEvent(window, pointer('pointermove', 500, 520)) // +120 from a 320 default → 440
+      fireEvent(window, pointer('pointerup', 500, 520))
+    })
+    await waitFor(() => expect(puts().length).toBe(1))
+    const body = lastPutBody()
+    expect(body.scope).toBe('user')
+    expect(body.layout.bandHeight).toBe(440)
+  })
+
+  it('resizes columns on the normal dashboard (no Customize) and auto-saves', async () => {
+    await renderToday(LAYOUT)
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/api/today-layout'))).toBe(true))
+    const v = document.querySelectorAll('.today-divider-v')[0] as HTMLElement
+    act(() => {
+      fireEvent(v, pointer('pointerdown', 400, 300))
+      fireEvent(window, pointer('pointermove', 620, 300)) // +220px ≈ +1 ratio unit
+      fireEvent(window, pointer('pointerup', 620, 300))
+    })
+    await waitFor(() => expect(puts().length).toBe(1))
+    const body = lastPutBody()
+    expect(body.scope).toBe('user')
+    expect(body.layout.colWidths).toEqual([2, 0.4, 1])
   })
 
   it('dragging the horizontal divider then saving persists a clamped bandHeight', async () => {

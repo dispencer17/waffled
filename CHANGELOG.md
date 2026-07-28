@@ -30,10 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rearrange the dashboard into a full-width band + columns, with resizable zones and
   presets.** The Today board is now a full-width band on top (the week calendar by default)
   over three columns — drag any card up into the band to span the whole width, or back down
-  into a column. In Customize, draggable dividers between the zones let you resize the band's
-  height and rebalance the column widths (the handles show only while customizing, so the
-  normal dashboard stays clean), and a row of one-tap **layout presets** — Calendar on top,
-  Classic columns, Agenda focus, Meals focus — gives you a starting point to tweak and save.
+  into a column. **Draggable dividers** between the zones (right on the dashboard, and in
+  Customize) let you resize the band's height and rebalance the column widths; a drag on the
+  normal board saves to your personal layout automatically, just like moving a card. In
+  Customize, a row of one-tap **layout presets** — Calendar on top, Classic columns, Agenda
+  focus, Meals focus — gives you a starting point to tweak and save.
 - **Fully colored events, everywhere — with an "Event style" setting.** Event chips
   across the calendar's Month, Week, and Day views now fill solid with their person's
   color (readable white text, dark-mode aware) instead of the pale wash — the more color,

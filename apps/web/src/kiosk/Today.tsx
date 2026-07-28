@@ -132,13 +132,17 @@ export function Today() {
   resolvedRef.current = effectiveResolved
   const saveRef = useRef(save)
   saveRef.current = save
+  // True while a zone divider is being dragged, so the resolved→working sync below
+  // doesn't clobber the in-progress size (and, in view mode, the just-saved one).
+  const resizingRef = useRef(false)
   // The current working region layout (edit mode) — read on drop without a stale closure.
   const workingRef = useRef<RegionLayout>({ full, cols: layout })
   workingRef.current = { full, cols: layout }
 
-  // Keep the working copy in sync with the server layout (+ module cards) when not editing.
+  // Keep the working copy in sync with the server layout (+ module cards) when not
+  // editing — but never mid-resize, so a live divider drag isn't reverted.
   useEffect(() => {
-    if (!editing) {
+    if (!editing && !resizingRef.current) {
       setFull(effectiveResolved.full)
       setLayout(effectiveResolved.cols)
       setHidden(effectiveResolved.hidden)
@@ -265,18 +269,40 @@ export function Today() {
     window.addEventListener('pointercancel', stop)
   }
 
-  // Customize-only zone dividers. Dragging updates the working size; it persists
-  // with "Save for me" (like the rest of the Customize edits), not on release.
+  // Zone dividers live on the normal dashboard AND in Customize. Dragging updates
+  // the working size live; on the normal board it auto-saves to the personal layout
+  // on release (like live card drag), while in Customize it persists with Save.
+  function persistSizes(patch: { bandHeight?: number; colWidths?: number[] }) {
+    const base = resolvedRef.current
+    const nextBand = patch.bandHeight ?? base.bandHeight
+    const nextCols = patch.colWidths ?? base.colWidths
+    saveRef
+      .current('user', {
+        full: base.full,
+        cols: base.cols,
+        hidden: base.hidden,
+        ...(nextBand != null ? { bandHeight: nextBand } : {}),
+        ...(nextCols ? { colWidths: nextCols } : {}),
+      })
+      .catch(() => {})
+  }
   function startBandResize(e: ReactPointerEvent) {
     e.preventDefault()
     e.stopPropagation()
     const startY = e.clientY
     const startH = bandHeight ?? BAND_DEFAULT
-    const move = (ev: PointerEvent) => setBandHeight(clamp(startH + (ev.clientY - startY), BAND_MIN, BAND_MAX))
+    let latest = startH
+    resizingRef.current = true
+    const move = (ev: PointerEvent) => {
+      latest = clamp(startH + (ev.clientY - startY), BAND_MIN, BAND_MAX)
+      setBandHeight(latest)
+    }
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       document.body.style.userSelect = ''
+      resizingRef.current = false
+      if (!editing) persistSizes({ bandHeight: latest })
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
@@ -290,17 +316,21 @@ export function Today() {
     const base = colWidths ?? layout.map(() => 1)
     const wi = base[i] ?? 1
     const wj = base[i + 1] ?? 1
+    let latest = base
+    resizingRef.current = true
     const move = (ev: PointerEvent) => {
       const d = (ev.clientX - startX) / COL_RESIZE_REF
-      const next = base.slice()
-      next[i] = clamp(wi + d, COLW_MIN, COLW_MAX)
-      next[i + 1] = clamp(wj - d, COLW_MIN, COLW_MAX)
-      setColWidths(next)
+      latest = base.slice()
+      latest[i] = clamp(wi + d, COLW_MIN, COLW_MAX)
+      latest[i + 1] = clamp(wj - d, COLW_MIN, COLW_MAX)
+      setColWidths(latest)
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       document.body.style.userSelect = ''
+      resizingRef.current = false
+      if (!editing) persistSizes({ colWidths: latest })
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
@@ -375,8 +405,10 @@ export function Today() {
   const displayLayout: RegionLayout = editing
     ? { full, cols: layout }
     : liveOverride ?? { full: effectiveResolved.full, cols: effectiveResolved.cols }
-  const curBandHeight = editing ? bandHeight : effectiveResolved.bandHeight
-  const curColWidths = editing ? colWidths : effectiveResolved.colWidths
+  // Render zone sizes from the working state in both modes (it mirrors the resolved
+  // layout while not editing, and reflects an in-progress live resize immediately).
+  const curBandHeight = bandHeight
+  const curColWidths = colWidths
   // Show the band whenever it holds a card, or while dragging/editing so it's a drop zone.
   const showBand = displayLayout.full.length > 0 || !!drag || editing
   // Hidden cards the user could bring back — only those whose module is on.
@@ -463,8 +495,8 @@ export function Today() {
           {renderZoneTail(displayLayout.full, 'full')}
         </div>
       )}
-      {/* Horizontal divider (Customize only) — drag to resize the band vs the columns. */}
-      {editing && showBand && (
+      {/* Horizontal divider — drag to resize the band vs the columns (view + Customize). */}
+      {showBand && (
         <div className="today-divider-h" onPointerDown={startBandResize} title="Drag to resize the calendar band">
           <span className="today-divider-grip" />
         </div>
@@ -473,8 +505,8 @@ export function Today() {
       <div className={`today-board ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}>
         {displayLayout.cols.map((col, ci) => (
           <Fragment key={ci}>
-            {/* Vertical dividers (Customize only) — drag to rebalance column widths. */}
-            {editing && ci > 0 && (
+            {/* Vertical dividers — drag to rebalance column widths (view + Customize). */}
+            {ci > 0 && (
               <div className="today-divider-v" onPointerDown={(e) => startColResize(e, ci - 1)} title="Drag to resize columns">
                 <span className="today-divider-grip" />
               </div>
