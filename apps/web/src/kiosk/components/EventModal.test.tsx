@@ -34,6 +34,31 @@ describe('EventModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('selects the whole family with the Everyone chip', async () => {
+    const calls: Array<{ body: Record<string, unknown> }> = []
+    globalThis.fetch = vi.fn(async (url: string, opts?: { method?: string; body?: string }) => {
+      const u = String(url)
+      if (u.includes('/api/persons'))
+        return { ok: true, json: async () => ({ persons: [
+          { id: 'p1', name: 'Kevin', colorHex: '#2F7FED', avatarEmoji: null },
+          { id: 'p2', name: 'Kelly', colorHex: '#EC6049', avatarEmoji: null },
+        ] }) }
+      if (u.includes('/api/events') && opts?.method === 'POST') {
+        calls.push({ body: JSON.parse(opts.body!) })
+        return { ok: true, json: async () => ({ event: { id: 'e1' } }) }
+      }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderModal(<EventModal date="2026-06-09" onClose={vi.fn()} onSaved={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('Soccer practice'), { target: { value: 'Beach day' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Everyone/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Add event/ }))
+
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(calls[0].body.participantIds).toEqual(expect.arrayContaining(['p1', 'p2']))
+  })
+
   const sampleEvent = {
     id: 'e1',
     title: 'Old title',

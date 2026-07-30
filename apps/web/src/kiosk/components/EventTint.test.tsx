@@ -52,6 +52,44 @@ function expectTinted(el: Element | null) {
   expect(chip.style.color).toBe('')
 }
 
+describe('whole-family events render in the household family color', () => {
+  it('MonthView colors an everyone-event with settings.display.familyColorHex', async () => {
+    const FAMILY = '#ABC123'
+    globalThis.fetch = vi.fn(async (url: string) => {
+      if (String(url).includes('/api/persons'))
+        return { ok: true, json: async () => ({ persons: [{ id: 'p1', name: 'Kevin', colorHex: COLOR, avatarEmoji: null }, { id: 'p2', name: 'Kelly', colorHex: '#EC6049', avatarEmoji: null }] }) }
+      if (String(url).includes('/api/household'))
+        return { ok: true, json: async () => ({ provisioned: true, household: { id: 'h1', name: 'S', timezone: 'UTC', weekStart: 'sunday', location: null, ownerPersonId: null, settings: { display: { familyColorHex: FAMILY } } } }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    const events = makeEvents()
+    events[0] = { ...events[0], participants: [{ id: 'p1', name: 'Kevin', colorHex: COLOR, avatarEmoji: null }, { id: 'p2', name: 'Kelly', colorHex: '#EC6049', avatarEmoji: null }] } as AgendaEvent
+
+    const now = new Date()
+    render(
+      <MonthView
+        year={now.getFullYear()}
+        month={now.getMonth()}
+        events={events}
+        tz={TZ}
+        selectedDay={ymd(now)}
+        onSelectDay={() => {}}
+        onOpenEvent={() => {}}
+        onCreateOnDay={() => {}}
+        onMore={() => {}}
+      />
+    )
+    // The family event picks up the family color once members/household resolve…
+    const chips = await screen.findAllByText('Swim practice')
+    const chip = chips.map((c) => c.closest('.ev')).find(Boolean) as HTMLElement
+    await vi.waitFor(() => expect(chip.style.getPropertyValue('--ev')).toBe(FAMILY))
+    // …while the partial event (all-day, only implicit owner) keeps the person color.
+    const partial = (await screen.findAllByText('Spirit week')).map((c) => c.closest('.ev')).find(Boolean) as HTMLElement
+    expect(partial.style.getPropertyValue('--ev')).toBe(COLOR)
+  })
+})
+
 describe('calendar event chips are theme-aware', () => {
   it('MonthView .ev chips tint via --ev, not a hardcoded wash', async () => {
     const now = new Date()

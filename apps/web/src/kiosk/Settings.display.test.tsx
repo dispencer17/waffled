@@ -19,6 +19,37 @@ function mockAll() {
   }) as unknown as typeof fetch
 }
 
+describe('Settings — Family color', () => {
+  it('saves a preset swatch and a custom color via PATCH /api/household/display', async () => {
+    mockAll()
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <Settings />
+      </MemoryRouter>
+    )
+    expect(await screen.findByText('Family color')).toBeInTheDocument()
+
+    // Preset swatch.
+    fireEvent.click(screen.getByRole('button', { name: 'color #E0A500' }))
+    await waitFor(() => {
+      const patches = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([u, init]) => String(u).includes('/api/household/display') && (init as RequestInit)?.method === 'PATCH'
+      )
+      expect(patches.length).toBe(1)
+      expect(JSON.parse(String((patches[0][1] as RequestInit).body))).toEqual({ familyColorHex: '#E0A500' })
+    })
+
+    // Custom color (the free picker next to the swatches).
+    fireEvent.change(screen.getByLabelText('Pick a custom color'), { target: { value: '#123456' } })
+    await waitFor(() => {
+      const patches = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([u, init]) => String(u).includes('/api/household/display') && (init as RequestInit)?.method === 'PATCH'
+      )
+      expect(JSON.parse(String((patches[patches.length - 1][1] as RequestInit).body))).toEqual({ familyColorHex: '#123456' })
+    })
+  })
+})
+
 describe('Settings — Event style', () => {
   it('shows the select on the Family tab defaulting to Solid, and saves Tinted', async () => {
     mockAll()

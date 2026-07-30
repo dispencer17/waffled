@@ -91,6 +91,21 @@ describe('PATCH /api/household/display', () => {
     expect(JSON.parse(back.body).display.weekCard).toBe('separated')
   })
 
+  it('persists familyColorHex (whole-family event color) and validates the hex', async () => {
+    const r = await call('PATCH', '/api/household/display', kevin, { familyColorHex: '#E0A500' })
+    expect(r.statusCode).toBe(200)
+    expect(JSON.parse(r.body).display.familyColorHex).toBe('#E0A500')
+
+    const h = JSON.parse((await call('GET', '/api/household', kevin)).body).household
+    expect(h.settings?.display?.familyColorHex).toBe('#E0A500')
+    expect(h.settings?.display?.weekCard).toBe('separated') // sibling survived the merge
+
+    // Only #RRGGBB is accepted.
+    expect((await call('PATCH', '/api/household/display', kevin, { familyColorHex: 'gold' })).statusCode).toBe(400)
+    expect((await call('PATCH', '/api/household/display', kevin, { familyColorHex: '#FFF' })).statusCode).toBe(400)
+    expect((await call('PATCH', '/api/household/display', kevin, { familyColorHex: '#GGGGGG' })).statusCode).toBe(400)
+  })
+
   it('rejects unknown values and empty patches', async () => {
     expect((await call('PATCH', '/api/household/display', kevin, { eventStyle: 'plaid' })).statusCode).toBe(400)
     expect((await call('PATCH', '/api/household/display', kevin, { weekCard: 'zigzag' })).statusCode).toBe(400)

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { api, usePersons, useGoals, goalsApi, goalCalendarApi, calendarsApi, mealsApi, localToday, invalidateGetCache, type AgendaEvent, type CalendarLink, type GoalStep } from '../../lib/api'
+import { api, usePersons, useHousehold, useGoals, goalsApi, goalCalendarApi, calendarsApi, mealsApi, localToday, invalidateGetCache, type AgendaEvent, type CalendarLink, type GoalStep } from '../../lib/api'
+import { familyColorHex } from '../../lib/event-color'
 import { suggestGoalForEvent } from '../../lib/goal-match'
 import { Icon } from '../icons'
 import { createEventLocal, updateEventLocal, deleteEventLocal, tombstoneEvent } from '../../lib/powersync/events-local'
@@ -171,6 +172,7 @@ export function EventModal({
   const editing = !!event
   const navigate = useNavigate()
   const { persons } = usePersons()
+  const { household } = useHousehold()
   // Goals that opted into calendar auto-counting (the "Counts toward" picker).
   // total/count/habit add an amount; a checklist instead ticks a chosen step.
   const { goals } = useGoals()
@@ -843,6 +845,35 @@ export function EventModal({
           <div className="field">
             <span>Who</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {persons.length > 1 && (() => {
+                // One tap for a whole-family event — selects everyone (and renders
+                // in the household's family color on the calendar).
+                const allIds = persons.map((p) => p.id)
+                const allOn = allIds.every((id) => form.participantIds.includes(id))
+                const famColor = familyColorHex(household)
+                return (
+                  <button
+                    type="button"
+                    onClick={() => set('participantIds', allOn ? [] : allIds)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      borderRadius: 999,
+                      border: `1.5px solid ${allOn ? famColor : 'transparent'}`,
+                      background: allOn ? `${famColor}22` : 'var(--card-2)',
+                      color: 'var(--ink)',
+                      font: 'inherit',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    👨‍👩‍👧‍👦 Everyone
+                  </button>
+                )
+              })()}
               {persons.map((p) => {
                 const on = form.participantIds.includes(p.id)
                 const color = p.colorHex ?? '#6B6B70'

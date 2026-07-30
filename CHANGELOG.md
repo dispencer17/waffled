@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **A family color for whole-family events.** When an event includes *everyone* in the
+  household it now renders in a dedicated **family color** across every calendar view
+  (Month, Week, Day, agenda, and the Today week card) — so a glance tells you whether
+  something is for the whole family, just some of you, or one person. Pick the color in
+  **Settings → Family → Family color** (eight presets or any custom color), and use the
+  new **👨‍👩‍👧‍👦 Everyone** chip in the event form's "Who" row to put the whole family on an
+  event in one tap.
 - **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
   Today card for half a second and it lifts; drag it where you want and let go — the new
   arrangement saves as your personal layout automatically. Scrolling still scrolls (a

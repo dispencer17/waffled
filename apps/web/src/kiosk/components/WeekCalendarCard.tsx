@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useEventsRange, useHousehold, type AgendaEvent } from '../../lib/api'
+import { useEventColor } from '../../lib/event-color'
 import { weekCardStyle } from '../../lib/display'
 import { DOW, ymd, addDays, localDate, startOfWeekFor, fmtTimeShort, eventDetailPath } from './cal-utils'
 
@@ -13,6 +14,7 @@ import { DOW, ymd, addDays, localDate, startOfWeekFor, fmtTimeShort, eventDetail
 // (distinct bordered day cells, the default FamilyBoard look) or 'plain'.
 export function WeekCalendarCard() {
   const { household } = useHousehold()
+  const colorOf = useEventColor()
   const separated = weekCardStyle(household) === 'separated'
   const navigate = useNavigate()
   const ws = useMemo(() => startOfWeekFor(new Date(), household?.weekStart), [household?.weekStart])
@@ -56,7 +58,7 @@ export function WeekCalendarCard() {
                   <div
                     key={e.id + (e.occurrenceStart ?? '')}
                     className={`wkc-ev ${e.allDay ? 'allday' : ''}`}
-                    style={{ '--ev': e.personColor ?? '#6B6B70' } as React.CSSProperties}
+                    style={{ '--ev': colorOf(e) } as React.CSSProperties}
                     role="button"
                     tabIndex={0}
                     onClick={() => navigate(eventDetailPath(e))}

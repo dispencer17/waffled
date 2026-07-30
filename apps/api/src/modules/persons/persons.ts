@@ -280,6 +280,9 @@ const EVENT_STYLES = new Set(['solid', 'tinted'])
 // How the Today week-calendar card draws its days: 'separated' (distinct bordered
 // day cells, the FamilyBoard look — the default) or 'plain' (continuous columns).
 const WEEK_CARD_STYLES = new Set(['separated', 'plain'])
+// The whole-family event color must be a full #RRGGBB hex — it goes straight
+// into CSS custom properties on every calendar view.
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 
 export function registerPersonRoutes(api: Api): void {
   // Household settings: the household + its members (with login/owner flags).
@@ -355,6 +358,12 @@ export function registerPersonRoutes(api: Api): void {
         return res.status(400).json({ error: 'BadRequest', message: 'weekCard must be separated|plain' })
       }
       patch.weekCard = body.weekCard
+    }
+    if (body.familyColorHex !== undefined) {
+      if (typeof body.familyColorHex !== 'string' || !HEX_COLOR.test(body.familyColorHex)) {
+        return res.status(400).json({ error: 'BadRequest', message: 'familyColorHex must be a #RRGGBB hex color' })
+      }
+      patch.familyColorHex = body.familyColorHex
     }
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ error: 'BadRequest', message: 'no valid display settings provided' })
