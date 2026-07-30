@@ -17,6 +17,14 @@ gated off**.
 ## Highlights
 - 📅 **Native events** — create / edit / delete, with **multiple participants per
   event** (stacked avatars, each in the person's color) and a **per-person filter**.
+  The event form's length field toggles **Duration** (quick presets) ⇄ **End time**
+  (an exact HH:MM — an end at or before the start rolls to the next day), and
+  editing an event whose length isn't a tidy preset keeps its exact end.
+- 👨‍👩‍👧‍👦 **Family color** — an event that includes *everyone* renders in a dedicated
+  household color on every view, so a glance tells you whole-family vs some-of-us
+  vs one person. Tap the **Everyone** chip in the event form's "Who" row to put
+  the whole family on an event; pick the color in
+  [Settings → Family → Family color](#settings).
 - **Four views** — Month / Week / Day / Agenda:
   - a live red **"now" line** on Week & Day
   - month cells show **event titles** (tap a day for times)
@@ -85,6 +93,11 @@ plan B when a workplace won't approve calendar OAuth access.
   across the Month/Week/Day views: **Solid colors** (the default — full
   person-color blocks with readable text, maximum at-a-glance color) or
   **Tinted** (the softer pale wash). Applies to the whole household, instantly.
+- **Settings → Family → Family color** (admins, web) — the color whole-family
+  events render in (an event whose participants cover every member). Eight preset
+  swatches plus a **custom color** picker; household-wide, instant. Individual
+  member colors are set per person in **Family & People** (or self-service in
+  **My Profile**) — those pickers also accept any custom color now.
 - **Settings → Family → Week calendar** (admins, web) — how the Today
   [dashboard](/features/today/)'s week card draws its days: **Separated days**
   (the default — distinct bordered day cells with today ringed, the family-board

@@ -12,7 +12,7 @@ Meals is your recipe library and your planner in one — pick what's for dinner 
 - 🗓️ **Weekly and Month planners** — a grid with a recipe picker; drag-to-swap meals on either grid.
 - 📖 **Full-screen recipe detail** — hero image, metadata chips, a servings scaler, and total time (prep + cook) computed for you.
 - 🔎 **Recipes library** — search across everything, multi-select filters, and sort; a **🆕 New** tag + filter surfaces recipes you've never cooked (cooked count is zero).
-- ✏️ **In-app recipe editor** — metadata, ingredients, and steps, with per-step ingredient amounts and ingredient **sections** you can drag items between (delete is web-only).
+- ✏️ **In-app recipe editor** — metadata, ingredients, and steps, with per-step ingredient amounts and ingredient **sections** you can drag items between (delete is web-only). Start one from the **＋ New recipe** button right on the planner header (web). The editor runs title → ingredients → method first with the optional Details fields below, has a **Planner slot** field (Breakfast / Lunch / Dinner / Snack) so the recipe files under the right meal in the picker, and quantities accept fractions the way you type them ("1/2", "1 1/2", "½").
 - 📋 **Paste-markdown import** — drop in a markdown recipe, and Waffled parses it to fill the editor before you save.
 - 🔀 **Per-recipe overrides** — ingredient substitutions that feed the grocery build, plus per-step and whole-recipe notes.
 - 👨‍🍳 **Cook mode** — step-by-step with the screen kept awake, a recipe overview to jump between steps and ingredients, and **finish → mark cooked**.
@@ -65,4 +65,4 @@ Meals is an **optional module** (`meals`, default **on**), toggled in **Settings
 - 🌉 **Meals ↔ calendar bridge** — a planned entry can get a companion calendar event (`origin='meal_plan'`) so meals show up on the [Calendar](/features/calendar/) and can optionally push to Google.
 - 🧺 **Groceries flow through [Lists & groceries](/features/lists/)** — the auto-build reads the week's dinners and applies your recipe substitutions.
 - ✏️ **Some edits are web-forward** — recipe delete and paste-import parsing live on the web; mobile still edits most fields.
-- 🚧 **Conversational recipe AI is planned** — "make it gluten-free" tweaks and photo → recipe capture aren't shipped yet.
+- 🚧 **Conversational recipe AI is planned** — "make it gluten-free" tweaks aren't shipped yet. (Photo → recipe and describe-it import **are** shipped — see the [AI recipe import guide](/guides/ai-recipe-import/).)

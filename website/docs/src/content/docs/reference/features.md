@@ -43,6 +43,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | Disable password login / force SSO (break-glass guard) | ✅ | ✅ | ✅ | ✅ Done — config is web/server-only admin by design; every client's login screen honors it (an SSO-only server hides the email/password form on web **and** iPhone/iPad) |
 | **Member management** — grant a person a login (email ± password) + kiosk PIN | ✅ | ✅ | ✅ | ✅ Done |
 | **Members CRUD** (profiles: name, avatar, color, role, admin, birthday) | ✅ | ✅ | ✅ | ✅ Done |
+| **Custom member colors** — the 8 preset swatches **plus any custom color** (full color wheel) in the member editor and My Profile; colors are validated server-side (`#RRGGBB`) | ✅ | ⬜ | ⬜ | ✅ Done (web/kiosk pickers; iOS displays the stored color) |
 | **Role-based permissions** — per-role capability grid (Settings → Family); [model](/concepts/permissions/) | ✅ | ✅ | ✅ | ✅ Done (editable matrix, admin-only) |
 | Sign out (revokes refresh) | ✅ | ✅ | ✅ | ✅ Done |
 
@@ -75,6 +76,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Customize** mode — drag to reorder + **× to hide** cards (hidden collect in a tray to add back) | ✅ | ✅ | 🟡 | ✅ Done (web + iPhone reorder + hide; a hidden card stays hidden even for module cards; iPad uses layout presets) |
 | **Live drag** — long-press a card on the board to lift and rearrange, saves your personal layout on drop (no Customize needed) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | **Week calendar card** — 7 day columns (household week start), today ringed, events as solid person-color blocks, tap to open | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **Rewards card** — every member's star balance at a glance, a pending-approvals note, and a jump to the Reward Shop; appears when rewards are enabled, moves/hides like any card | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | iPad Today **layout presets** (Balanced / Agenda / Meals / **Goal-focused**) | 🟡 | ❌ N/A | ✅ | ✅ Done (iPad-only; Goal-focused features a goal big + tonight's dinner) |
 | Save layout **for me** (per-user, incl. which cards are hidden) vs **for everyone** (family default) | ✅ | ✅ | 🟡 | ✅ Done (iPad layout is device-local) |
 | **Goals card** on Today — a chosen goal's progress with a **My spotlight / Family spotlight / specific goal** picker (grouped by list) | ✅ | ✅ | 🟡 | ✅ Done (web + iPhone; iPad Goal-focused preset shows a goal big) |
@@ -90,6 +92,8 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Multiple participants** per event (stacked avatars, per-person color) | ✅ | ✅ | ✅ | ✅ Done |
 | Views: **Month / Week / Day / Agenda** | ✅ | ✅ | ✅ | ✅ Done (iPad = `KioskCalendarView` grids) |
 | **Event style** household setting — **Solid** person-color chips (default) vs the softer **Tinted** wash, Settings → Family | ✅ | ❌ | ❌ | ✅ Done (web/kiosk; admin-only setting, applies household-wide) |
+| **Family color** for whole-family events — an event that includes *everyone* renders in a dedicated household color (Settings → Family → **Family color**, preset or custom) across Month/Week/Day/agenda + the Today week card; a **👨‍👩‍👧‍👦 Everyone** chip in the event form selects the whole family in one tap | ✅ | ❌ | ❌ | ✅ Done (web/kiosk; iOS shows the owner color for now) |
+| **Exact end time** on events — the form's length field toggles **Duration** (presets) ⇄ **End time** (any HH:MM; at/before the start rolls to the next day); editing an event whose length isn't a preset opens in End-time mode and keeps the exact end | ✅ | ⬜ | ⬜ | ✅ Done (web event form; API validates `endsAt > startsAt` for every client) |
 | **Current-time "now" line** on the time grid (Week/Day) | ✅ | ✅ | ✅ | ✅ Done (live red rule; iPhone Day + iPad Week/Day) |
 | Month cells show **event titles** (tap a day for times) | ✅ | ✅ | ✅ | ✅ Done |
 | Agenda **dims past events** | ✅ | ✅ | — | ✅ Done — the Calendar agenda **and** the Today dashboard's agenda card fade already-ended events (web + iPhone) |
@@ -209,6 +213,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Recipes library** (search-all, multi-select filters, sort) | ✅ | ✅ | ✅ | ✅ Done |
 | **Never-cooked "🆕 New" tag + filter** (recipes you haven't tried) | ✅ | ✅ | ✅ | ✅ Done — mobile: "New" library toggle (`cookedCount == 0`), 🆕 card badge, tappable 🆕 New chip on the detail → library filtered to New |
 | Create / **edit** recipes in-app (all metadata + ingredients + steps) | ✅ | ✅ | ✅ | ✅ Done (full editor — shared iPhone/iPad; **per-step ingredient amounts**; **ingredient sections** with dividers + cross-section drag-drop; delete is web-only) |
+| **Streamlined add-recipe flow** — a **＋ New recipe** button right on the Meals planner header; the editor runs title → ingredients → method first (optional Details below); a **Planner slot** field (Breakfast/Lunch/Dinner/Snack) files the recipe under the right meal in the picker; quantities accept fractions ("1/2", "1 1/2", "½"); a failed save shows an error | ✅ | ⬜ | ⬜ | ✅ Done (web/kiosk) |
 | **Paste-markdown** recipe import (template/example) | ✅ | ✅ | ✅ | ✅ Done (paste → parse → fills the editor for review, then save) |
 | **Share a recipe** as a Markdown file (the inverse of paste-markdown import) | ✅ | ✅ | ✅ | ✅ Done — a **Share** action on the recipe detail compiles the recipe into the blessed Markdown format (`GET /api/recipes/:id/markdown`) and hands it to the platform share options: iOS native share sheet with a `.md` file (Messages / Mail / Save to Files); web `navigator.share`, falling back to copy-to-clipboard + `.md` download. Round-trips back through paste-markdown import |
 | Per-recipe **overrides** (substitutions, notes) | ✅ | ✅ | ✅ | ✅ Done — mobile now edits **ingredient substitutions** (⇄ per row → `overrides.subs`, feeds the substitution-aware grocery build) alongside per-step + recipe notes |
