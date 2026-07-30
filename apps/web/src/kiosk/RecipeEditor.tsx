@@ -52,11 +52,25 @@ const META_FIELDS: { key: keyof RecipeWriteInput; label: string; placeholder: st
 const blankIng = (): EditIng => ({ uid: newUid(), name: '', amount: '', unit: '', prepNote: '', section: '' })
 const blankStep = (): EditStep => ({ uid: newUid(), instruction: '', picks: [], extra: [], timerSeconds: null })
 
+// Quantity parsing that accepts what people actually type: "3", "1.5", "1/2",
+// "1 1/2", and unicode fractions ("½", "1½") — not just decimals.
+const UNI_FRACTIONS: Record<string, number> = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 }
+export function parseQty(s: string): number | null {
+  const t = s.trim()
+  if (!t) return null
+  const um = t.match(/^(\d+)?\s*([¼½¾⅓⅔⅛⅜⅝⅞])$/)
+  if (um) return (um[1] ? Number(um[1]) : 0) + UNI_FRACTIONS[um[2]]
+  const fm = t.match(/^(?:(\d+)\s+)?(\d+)\s*\/\s*(\d+)$/)
+  if (fm && Number(fm[3]) !== 0) return (fm[1] ? Number(fm[1]) : 0) + Number(fm[2]) / Number(fm[3])
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
 function toIngInput(r: EditIng, i: number): IngredientInput {
-  const amount = r.amount.trim() ? Number(r.amount) : null
+  const amount = parseQty(r.amount)
   return {
     name: r.name.trim(),
-    amount: amount != null && Number.isFinite(amount) ? amount : null,
+    amount,
     unit: r.unit.trim() || null,
     prepNote: r.prepNote.trim() || null,
     section: r.section.trim() || null,
@@ -105,6 +119,10 @@ export function RecipeEditor() {
 
   const [title, setTitle] = useState('')
   const [emoji, setEmoji] = useState('')
+  // Planner slot (recipes.category) — which meal row the planner files this
+  // under. Distinct from the free-text "Meal type" metadata field; without it a
+  // hand-made recipe shows under every filter and never counts as on-type.
+  const [category, setCategory] = useState('')
   const [servings, setServings] = useState('4')
   const [prep, setPrep] = useState('')
   const [cook, setCook] = useState('')
@@ -140,6 +158,7 @@ export function RecipeEditor() {
   const [parsing, setParsing] = useState(false)
   const [parseErr, setParseErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveErr, setSaveErr] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [prefilled, setPrefilled] = useState(false)
 
@@ -182,6 +201,7 @@ export function RecipeEditor() {
     if (!isEdit || prefilled || !recipe) return
     setTitle(recipe.title)
     setEmoji(recipe.emoji ?? '')
+    setCategory(recipe.category ?? '')
     setServings(String(recipe.servings ?? 4))
     setPrep(recipe.prepTimeMinutes != null ? String(recipe.prepTimeMinutes) : '')
     setCook(recipe.cookTimeMinutes != null ? String(recipe.cookTimeMinutes) : '')
@@ -278,6 +298,7 @@ export function RecipeEditor() {
     return {
       title: title.trim(),
       emoji: emoji.trim() || null,
+      category: category || null,
       servings: num(servings) ?? 4,
       prepTimeMinutes: num(prep),
       cookTimeMinutes: num(cook),
@@ -303,6 +324,7 @@ export function RecipeEditor() {
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
+    setSaveErr(null)
     try {
       const payload = buildPayload()
       // replace: true so the editor page doesn't linger in history — otherwise
@@ -315,6 +337,7 @@ export function RecipeEditor() {
         navigate(`/meals/recipe/${created.id}`, { replace: true })
       }
     } catch {
+      setSaveErr('Could not save the recipe — check your connection and try again.')
       setSaving(false)
     }
   }
@@ -535,10 +558,104 @@ export function RecipeEditor() {
           </label>
         </div>
         <div className="re-row">
+          <label className="re-f">
+            <span>Planner slot</span>
+            {/* Which meal row the planner files this under (breakfast/lunch/…) —
+                without it the recipe shows under every filter in the picker. */}
+            <select aria-label="Planner slot" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">Any meal</option>
+              <option value="breakfast">Breakfast</option>
+              <option value="lunch">Lunch</option>
+              <option value="dinner">Dinner</option>
+              <option value="snack">Snack</option>
+            </select>
+          </label>
           <label className="re-f re-num"><span>Servings</span><input type="number" min={1} value={servings} onChange={(e) => setServings(e.target.value)} /></label>
           <label className="re-f re-num"><span>Prep (min)</span><input type="number" min={0} value={prep} onChange={(e) => setPrep(e.target.value)} /></label>
           <label className="re-f re-num"><span>Cook (min)</span><input type="number" min={0} value={cook} onChange={(e) => setCook(e.target.value)} /></label>
         </div>
+      </div>
+
+      {/* ingredients */}
+      <div className="card re-card">
+        <div className="card-h re-section-h" style={{ marginBottom: 14 }}>Ingredients</div>
+        <div className="re-ing-head">
+          <span /><span>Qty</span><span>Unit</span><span>Ingredient</span><span>Prep · optional</span><span />
+        </div>
+        <div className="re-ings" ref={ingListRef}>
+          {ingGroups.map((grp, gi) => (
+            <div className="re-ing-group" key={gi}>
+              {(grp.section !== '' || grp.items[0]?.row.uid === pendingSectionUid) && (
+                <SectionInput
+                  value={grp.section}
+                  onChange={(v) => renameGroup(grp.items.map((it) => it.i), v)}
+                  suggestions={sectionSuggestions}
+                  autoFocus={grp.items[0]?.row.uid === pendingSectionUid}
+                />
+              )}
+              {grp.items.map(({ row, i }) => (
+                <div
+                  key={row.uid}
+                  className={`re-ing-row${dragIdx === i ? ' re-ing-dragging' : ''}`}
+                  onDragOver={(e) => { if (dragIdx != null) e.preventDefault() }}
+                  onDrop={() => dropRow(i)}
+                >
+                  <button
+                    type="button"
+                    className="re-ing-drag"
+                    aria-label="Drag to reorder"
+                    tabIndex={-1}
+                    draggable
+                    onDragStart={() => setDragIdx(i)}
+                    onDragEnd={() => setDragIdx(null)}
+                  >⠿</button>
+                  <input className="re-ing-amt" value={row.amount} onChange={(e) => setIngs((rs) => patch(rs, i, { amount: e.target.value }))} placeholder="2" />
+                  <input className="re-ing-unit" value={row.unit} onChange={(e) => setIngs((rs) => patch(rs, i, { unit: e.target.value }))} placeholder="cups" />
+                  <input className="re-ing-name" value={row.name} onChange={(e) => setIngs((rs) => patch(rs, i, { name: e.target.value }))} placeholder="ingredient" />
+                  <input className="re-ing-prep" value={row.prepNote} onChange={(e) => setIngs((rs) => patch(rs, i, { prepNote: e.target.value }))} placeholder="diced" />
+                  <button type="button" tabIndex={-1} aria-label="Remove" className="re-ing-x" onClick={() => setIngs((rs) => rs.filter((_, j) => j !== i))}>×</button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="re-ing-actions">
+          <button type="button" className="btn re-add-ing" onClick={addIngredient}>+ Add ingredient</button>
+          <button type="button" className="re-add-section" onClick={addSection}>+ Add section</button>
+        </div>
+      </div>
+
+      {/* steps */}
+      <div className="card re-card">
+        <div className="card-h re-section-h" style={{ marginBottom: 14 }}>Method</div>
+        <div className="re-steps" ref={stepListRef}>
+          {stps.map((s, i) => (
+            <div key={s.uid} className="re-step-row">
+              <div className="re-step-n">{i + 1}</div>
+              <div className="re-step-body">
+                <textarea value={s.instruction} onChange={(e) => setStps((rs) => patch(rs, i, { instruction: e.target.value }))} placeholder="Describe this step…" rows={2} />
+                <div className="re-step-tags">
+                  <StepIngredients
+                    picks={s.picks}
+                    extra={s.extra}
+                    namedIngs={namedIngs}
+                    onAddPick={(ing) => addPick(i, ing)}
+                    onRemovePick={(uid) => removePick(i, uid)}
+                    onSetAmount={(uid, amt) => setPickAmount(i, uid, amt)}
+                    onRemoveExtra={(j) => removeExtra(i, j)}
+                  />
+                  <StepTimerControl seconds={s.timerSeconds} onChange={(secs) => setStepTimer(i, secs)} />
+                </div>
+              </div>
+              <div className="re-step-ctl">
+                <button type="button" tabIndex={-1} aria-label="Move up" disabled={i === 0} onClick={() => moveStep(i, -1)}>↑</button>
+                <button type="button" tabIndex={-1} aria-label="Move down" disabled={i === stps.length - 1} onClick={() => moveStep(i, 1)}>↓</button>
+                <button type="button" tabIndex={-1} aria-label="Remove" className="re-del" onClick={() => setStps((rs) => rs.filter((_, j) => j !== i))}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="pill re-add-row" onClick={addStep}>+ Add step</button>
       </div>
 
       {/* metadata */}
@@ -630,88 +747,6 @@ export function RecipeEditor() {
         </label>
       </div>
 
-      {/* ingredients */}
-      <div className="card re-card">
-        <div className="card-h re-section-h" style={{ marginBottom: 14 }}>Ingredients</div>
-        <div className="re-ing-head">
-          <span /><span>Qty</span><span>Unit</span><span>Ingredient</span><span>Prep · optional</span><span />
-        </div>
-        <div className="re-ings" ref={ingListRef}>
-          {ingGroups.map((grp, gi) => (
-            <div className="re-ing-group" key={gi}>
-              {(grp.section !== '' || grp.items[0]?.row.uid === pendingSectionUid) && (
-                <SectionInput
-                  value={grp.section}
-                  onChange={(v) => renameGroup(grp.items.map((it) => it.i), v)}
-                  suggestions={sectionSuggestions}
-                  autoFocus={grp.items[0]?.row.uid === pendingSectionUid}
-                />
-              )}
-              {grp.items.map(({ row, i }) => (
-                <div
-                  key={row.uid}
-                  className={`re-ing-row${dragIdx === i ? ' re-ing-dragging' : ''}`}
-                  onDragOver={(e) => { if (dragIdx != null) e.preventDefault() }}
-                  onDrop={() => dropRow(i)}
-                >
-                  <button
-                    type="button"
-                    className="re-ing-drag"
-                    aria-label="Drag to reorder"
-                    tabIndex={-1}
-                    draggable
-                    onDragStart={() => setDragIdx(i)}
-                    onDragEnd={() => setDragIdx(null)}
-                  >⠿</button>
-                  <input className="re-ing-amt" value={row.amount} onChange={(e) => setIngs((rs) => patch(rs, i, { amount: e.target.value }))} placeholder="2" />
-                  <input className="re-ing-unit" value={row.unit} onChange={(e) => setIngs((rs) => patch(rs, i, { unit: e.target.value }))} placeholder="cups" />
-                  <input className="re-ing-name" value={row.name} onChange={(e) => setIngs((rs) => patch(rs, i, { name: e.target.value }))} placeholder="ingredient" />
-                  <input className="re-ing-prep" value={row.prepNote} onChange={(e) => setIngs((rs) => patch(rs, i, { prepNote: e.target.value }))} placeholder="diced" />
-                  <button type="button" tabIndex={-1} aria-label="Remove" className="re-ing-x" onClick={() => setIngs((rs) => rs.filter((_, j) => j !== i))}>×</button>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-        <div className="re-ing-actions">
-          <button type="button" className="btn re-add-ing" onClick={addIngredient}>+ Add ingredient</button>
-          <button type="button" className="re-add-section" onClick={addSection}>+ Add section</button>
-        </div>
-      </div>
-
-      {/* steps */}
-      <div className="card re-card">
-        <div className="card-h re-section-h" style={{ marginBottom: 14 }}>Method</div>
-        <div className="re-steps" ref={stepListRef}>
-          {stps.map((s, i) => (
-            <div key={s.uid} className="re-step-row">
-              <div className="re-step-n">{i + 1}</div>
-              <div className="re-step-body">
-                <textarea value={s.instruction} onChange={(e) => setStps((rs) => patch(rs, i, { instruction: e.target.value }))} placeholder="Describe this step…" rows={2} />
-                <div className="re-step-tags">
-                  <StepIngredients
-                    picks={s.picks}
-                    extra={s.extra}
-                    namedIngs={namedIngs}
-                    onAddPick={(ing) => addPick(i, ing)}
-                    onRemovePick={(uid) => removePick(i, uid)}
-                    onSetAmount={(uid, amt) => setPickAmount(i, uid, amt)}
-                    onRemoveExtra={(j) => removeExtra(i, j)}
-                  />
-                  <StepTimerControl seconds={s.timerSeconds} onChange={(secs) => setStepTimer(i, secs)} />
-                </div>
-              </div>
-              <div className="re-step-ctl">
-                <button type="button" tabIndex={-1} aria-label="Move up" disabled={i === 0} onClick={() => moveStep(i, -1)}>↑</button>
-                <button type="button" tabIndex={-1} aria-label="Move down" disabled={i === stps.length - 1} onClick={() => moveStep(i, 1)}>↓</button>
-                <button type="button" tabIndex={-1} aria-label="Remove" className="re-del" onClick={() => setStps((rs) => rs.filter((_, j) => j !== i))}>×</button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <button type="button" className="pill re-add-row" onClick={addStep}>+ Add step</button>
-      </div>
-
       <div className="card re-card">
         <div className="card-h re-section-h">Notes</div>
         {isEdit ? (
@@ -730,6 +765,7 @@ export function RecipeEditor() {
         )}
       </div>
 
+      {saveErr && <div className="tiny" style={{ color: 'var(--danger)', fontWeight: 700 }}>{saveErr}</div>}
       <div className="re-actions">
         {isEdit && <button type="button" className="pill re-delete-btn" onClick={() => setConfirmDelete(true)}>🗑 Delete recipe</button>}
         <div className="re-actions-right">

@@ -111,16 +111,8 @@ function MealPicker({
         <div className="wf-serif" style={{ fontSize: 20, fontWeight: 600, marginLeft: 14 }}>
           {browse ? 'Explore recipes' : `Add a ${MEAL_LABEL[slot].toLowerCase()} · ${dayLabel}`}
         </div>
-        <div className="tb-right" style={{ marginLeft: 'auto' }}>
-          <div className="ai-bar" style={{ width: 280, padding: '8px 10px 8px 14px' }}>
-            <div className="ai-spark" style={{ width: 26, height: 26 }}>
-              <Icon name="spark" />
-            </div>
-            <div className="ph" style={{ fontSize: 14 }}>
-              Search or paste a recipe…
-            </div>
-          </div>
-        </div>
+        {/* (The old decorative "Search or paste a recipe…" bar was a dead div —
+            the real search lives in the browser grid below.) */}
       </>
     ),
     [slot, dayLabel]
@@ -420,6 +412,10 @@ export function Meals() {
         <button type="button" className="pill" style={{ cursor: 'pointer' }} onClick={() => navigate('/meals/recipes')}>
           <Icon name="recipes" />
           <span>Explore recipes</span>
+        </button>
+        {/* Direct add — creating a recipe used to be buried behind Explore recipes. */}
+        <button type="button" className="pill" style={{ cursor: 'pointer' }} onClick={() => navigate('/meals/recipe/new')}>
+          ＋ New recipe
         </button>
         <button type="button" className="btn btn-ai" style={{ fontSize: 14, padding: '10px 18px' }} onClick={() => (view === 'month' ? setPlanningMonth(true) : setPlanning(true))}>
           <Icon name="spark" />

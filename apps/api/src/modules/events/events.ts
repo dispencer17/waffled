@@ -695,6 +695,14 @@ export function registerEventRoutes(api: Api): void {
     if (!body.startsAt || Number.isNaN(Date.parse(body.startsAt))) {
       return res.status(400).json({ error: 'BadRequest', message: 'startsAt must be a valid timestamp' })
     }
+    if (body.endsAt != null) {
+      if (Number.isNaN(Date.parse(body.endsAt))) {
+        return res.status(400).json({ error: 'BadRequest', message: 'endsAt must be a valid timestamp' })
+      }
+      if (Date.parse(body.endsAt) <= Date.parse(body.startsAt)) {
+        return res.status(400).json({ error: 'BadRequest', message: 'endsAt must be after startsAt' })
+      }
+    }
     if (body.rrule && !isValidRrule(body.rrule)) {
       return res.status(400).json({ error: 'BadRequest', message: 'rrule is not a valid RFC5545 recurrence rule' })
     }
@@ -737,6 +745,14 @@ export function registerEventRoutes(api: Api): void {
     const patch = (req.body ?? {}) as Record<string, unknown>
     if (typeof patch.startsAt === 'string' && Number.isNaN(Date.parse(patch.startsAt))) {
       return res.status(400).json({ error: 'BadRequest', message: 'startsAt must be a valid timestamp' })
+    }
+    if (typeof patch.endsAt === 'string') {
+      if (Number.isNaN(Date.parse(patch.endsAt))) {
+        return res.status(400).json({ error: 'BadRequest', message: 'endsAt must be a valid timestamp' })
+      }
+      if (typeof patch.startsAt === 'string' && Date.parse(patch.endsAt) <= Date.parse(patch.startsAt)) {
+        return res.status(400).json({ error: 'BadRequest', message: 'endsAt must be after startsAt' })
+      }
     }
     if (typeof patch.rrule === 'string' && patch.rrule && !isValidRrule(patch.rrule)) {
       return res.status(400).json({ error: 'BadRequest', message: 'rrule is not a valid RFC5545 recurrence rule' })

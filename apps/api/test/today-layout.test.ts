@@ -54,16 +54,17 @@ describe('reconcileLayout', () => {
     const out = reconcileLayout([['agenda'], ['tonight'], ['week'], ['chores'], ['grocery']])
     // cols past the 3rd merge in; unplaced non-calendar cards (in TODAY_CARDS order)
     // append to the last column, and the unplaced calendar goes to the band.
-    expect(out.cols[2]).toEqual(['week', 'chores', 'grocery', 'countdowns', 'pantry', 'familyNight', 'goals', 'smartHome'])
+    expect(out.cols[2]).toEqual(['week', 'chores', 'grocery', 'countdowns', 'rewards', 'pantry', 'familyNight', 'goals', 'smartHome'])
     expect(out.full).toEqual(['weekCalendar'])
   })
 
-  it('accepts every card the kiosk registry can place (smartHome, weekCalendar)', () => {
+  it('accepts every card the kiosk registry can place (smartHome, weekCalendar, rewards)', () => {
     expect(TODAY_CARDS).toContain('smartHome')
     expect(TODAY_CARDS).toContain('weekCalendar')
-    const out = reconcileLayout({ full: ['weekCalendar'], cols: [['smartHome'], [], []], hidden: [] })
+    expect(TODAY_CARDS).toContain('rewards')
+    const out = reconcileLayout({ full: ['weekCalendar'], cols: [['smartHome', 'rewards'], [], []], hidden: [] })
     expect(out.full).toEqual(['weekCalendar'])
-    expect(out.cols[0]).toEqual(['smartHome'])
+    expect(out.cols[0]).toEqual(['smartHome', 'rewards'])
   })
 
   // --- Zone sizes ---------------------------------------------------------

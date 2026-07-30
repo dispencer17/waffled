@@ -14,6 +14,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **A family color for whole-family events.** When an event includes *everyone* in the
+  household it now renders in a dedicated **family color** across every calendar view
+  (Month, Week, Day, agenda, and the Today week card) — so a glance tells you whether
+  something is for the whole family, just some of you, or one person. Pick the color in
+  **Settings → Family → Family color** (eight presets or any custom color), and use the
+  new **👨‍👩‍👧‍👦 Everyone** chip in the event form's "Who" row to put the whole family on an
+  event in one tap.
+- **Pick any color for a family member — not just the eight presets.** The color picker
+  in the member editor (and in My Profile) now has a **custom color** button next to the
+  swatches that opens a full color wheel, so everyone can fine-tune their calendar color.
+  The server now also validates colors properly (a malformed color is rejected instead of
+  being stored silently).
+- **Set an exact end time on events — not just a duration.** The event form's length
+  field now has a **Duration / End time** toggle: keep the quick duration presets, or
+  switch to End time and type exactly when it ends ("ends at 8:45"). An end time at or
+  before the start rolls to the next day, so late-night events work. Editing an event
+  whose length isn't a tidy preset (say, a 20-minute synced appointment) now opens in
+  End-time mode and **keeps the exact end** instead of silently snapping it to the
+  nearest preset on save. The server now also rejects an event whose end is before its
+  start.
+- **Adding a recipe is no longer a scavenger hunt.** The Meals planner now has a
+  **＋ New recipe** button right in its header (it used to be buried two screens deep
+  behind "Explore recipes"), and the recipe editor was reshuffled so the natural path —
+  title → ingredients → method — comes first, with the optional Details fields
+  (cuisine, protein, tags, photo…) moved below. The editor also gains a **Planner
+  slot** field (Breakfast / Lunch / Dinner / Snack) so a hand-added recipe files under
+  the right meal in the picker instead of showing up everywhere; quantities accept
+  fractions the way you type them ("1/2", "1 1/2", "½") instead of silently dropping
+  them; a failed save now shows an error instead of doing nothing; and the meal
+  picker's decorative search bar that did nothing has been removed (the real search
+  is right below it).
+- **A Rewards card for the Today dashboard.** Every member's star balance at a glance,
+  a "waiting for approval" note when redemptions are pending, and a one-tap jump into
+  the Reward Shop. It appears automatically when rewards are enabled (rewards is part
+  of the chores loop) and can be moved or hidden like any other card in Customize.
 - **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
   Today card for half a second and it lifts; drag it where you want and let go — the new
   arrangement saves as your personal layout automatically. Scrolling still scrolls (a

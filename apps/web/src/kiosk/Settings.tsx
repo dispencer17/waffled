@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router'
 import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { eventStyle, weekCardStyle, type EventStyle, type WeekCardStyle } from '../lib/display'
+import { familyColorHex } from '../lib/event-color'
+import { ColorPicker, COLOR_SWATCHES } from './components/ColorPicker'
 import { testWakeWord, BUILTIN_KEYWORDS } from '../lib/voice/wakeword'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
@@ -656,7 +658,7 @@ function UpdateBanner({ upd, onToggle, toggling }: { upd: UpdateInfo; onToggle: 
 
 // Same swatch palette the Family & People person editor uses, so a member's
 // self-service color picker matches what an admin sees.
-const ACCOUNT_SWATCHES = ['#2F7FED', '#EC6049', '#25A368', '#8B5CF6', '#E0A500', '#EC4899', '#14B8A6', '#6B7280']
+const ACCOUNT_SWATCHES = COLOR_SWATCHES
 
 // Pull the server's `{ error, message }` message off a caught apiSend error
 // (ApiSendError carries `.body`), falling back to a friendly default.
@@ -747,17 +749,7 @@ function MyProfilePanel() {
 
         <div className="field">
           <span>Color</span>
-          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-            {ACCOUNT_SWATCHES.map((c) => (
-              <button
-                type="button"
-                key={c}
-                aria-label={`color ${c}`}
-                onClick={() => { setColorHex(c); setSaved(false) }}
-                style={{ width: 30, height: 30, borderRadius: 999, background: c, border: colorHex === c ? '3px solid var(--ink)' : '2px solid #fff', boxShadow: '0 0 0 1px var(--hair)', cursor: 'pointer' }}
-              />
-            ))}
-          </div>
+          <ColorPicker value={colorHex} onChange={(c) => { setColorHex(c); setSaved(false) }} />
         </div>
 
         <label className="field">
@@ -990,6 +982,13 @@ function FamilyPanel() {
     refetch()
   }
 
+  // fork: the whole-family event color (used when everyone is on an event).
+  async function saveFamilyColor(hex: string) {
+    await personsApi.setDisplay({ familyColorHex: hex })
+    emitHouseholdChanged() // calendar views re-read the household
+    refetch()
+  }
+
   return (
     <div className="set-panel">
       <div className="set-head">
@@ -1033,6 +1032,10 @@ function FamilyPanel() {
             <option value="solid">Solid colors</option>
             <option value="tinted">Tinted</option>
           </select>
+        </SettingRow>
+        {/* fork: whole-family event color — used when every member is on an event */}
+        <SettingRow icon="👨‍👩‍👧‍👦" title="Family color" sub="Events with the whole family use this color">
+          <ColorPicker value={familyColorHex(household)} onChange={saveFamilyColor} size={24} />
         </SettingRow>
         <SettingRow icon="🗂️" title="Week calendar" sub="How the Today week card shows days">
           <select className="sel" value={weekCardStyle(household)} onChange={(e) => saveWeekCard(e.target.value as WeekCardStyle)}>

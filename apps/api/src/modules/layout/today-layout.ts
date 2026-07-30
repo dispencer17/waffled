@@ -14,7 +14,7 @@ type Api = ReturnType<typeof createAPI>
 // Module cards (pantry, familyNight, goals, smartHome) are injected on the client when
 // their module is on; they must be accepted here too or saving a layout that includes
 // one 400s. Keep this in sync with the kiosk's CARDS map (apps/web Today.tsx).
-export const TODAY_CARDS = ['agenda', 'countdowns', 'tonight', 'week', 'chores', 'grocery', 'pantry', 'familyNight', 'goals', 'smartHome', 'weekCalendar'] as const
+export const TODAY_CARDS = ['agenda', 'countdowns', 'tonight', 'week', 'chores', 'rewards', 'grocery', 'pantry', 'familyNight', 'goals', 'smartHome', 'weekCalendar'] as const
 type CardKey = (typeof TODAY_CARDS)[number]
 const CARD_SET = new Set<string>(TODAY_CARDS)
 

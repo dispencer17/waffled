@@ -160,6 +160,42 @@ describe('RecipeEditor — new', () => {
     expect(b.steps[0].ingredients).toEqual(['3 cups carrots'])
   })
 
+  it('sends the planner slot (category) and parses fraction quantities', async () => {
+    const sent: Sent[] = []
+    mockApi(sent)
+    renderNew()
+
+    fireEvent.change(screen.getByPlaceholderText('Recipe title'), { target: { value: 'Pancakes' } })
+    fireEvent.change(screen.getByLabelText('Planner slot'), { target: { value: 'breakfast' } })
+    fireEvent.change(screen.getByPlaceholderText('ingredient'), { target: { value: 'flour' } })
+    fireEvent.change(screen.getByPlaceholderText('2'), { target: { value: '1 1/2' } })
+    fireEvent.change(screen.getByPlaceholderText('cups'), { target: { value: 'cups' } })
+
+    fireEvent.click(screen.getByText('Create recipe'))
+    await waitFor(() => expect(sent.some((s) => s.url.endsWith('/api/recipes') && s.method === 'POST')).toBe(true))
+    const b = sent.find((s) => s.url.endsWith('/api/recipes') && s.method === 'POST')!.body as {
+      category: string | null
+      ingredients: { name: string; amount: number | null }[]
+    }
+    expect(b.category).toBe('breakfast')
+    expect(b.ingredients[0]).toMatchObject({ name: 'flour', amount: 1.5 })
+  })
+
+  it('surfaces a save failure instead of silently doing nothing', async () => {
+    globalThis.fetch = vi.fn(async (url: string, init?: { method?: string }) => {
+      const u = String(url)
+      if (u.endsWith('/api/recipes') && init?.method === 'POST') return { ok: false, status: 500, json: async () => ({}) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    renderNew()
+
+    fireEvent.change(screen.getByPlaceholderText('Recipe title'), { target: { value: 'Doomed' } })
+    fireEvent.click(screen.getByText('Create recipe'))
+    expect(await screen.findByText(/Could not save/)).toBeInTheDocument()
+    // The button recovers so the user can retry.
+    expect((screen.getByText('Create recipe') as HTMLButtonElement).disabled).toBe(false)
+  })
+
   it('per-step amount can be split (override the chip amount)', async () => {
     const sent: Sent[] = []
     mockApi(sent)

@@ -230,6 +230,25 @@ describe('events api', () => {
     expect((await call('POST', '/api/events', kevin, { title: 'X', startsAt: 'not-a-date' })).statusCode).toBe(400)
   })
 
+  it('400 on a malformed endsAt or an end at/before the start', async () => {
+    const base = { title: 'Ends', startsAt: '2026-06-08T13:30:00Z' }
+    expect((await call('POST', '/api/events', kevin, { ...base, endsAt: 'not-a-date' })).statusCode).toBe(400)
+    expect((await call('POST', '/api/events', kevin, { ...base, endsAt: '2026-06-08T13:00:00Z' })).statusCode).toBe(400)
+    expect((await call('POST', '/api/events', kevin, { ...base, endsAt: '2026-06-08T13:30:00Z' })).statusCode).toBe(400)
+
+    // A valid exact end (not a preset duration) round-trips.
+    const ok = await call('POST', '/api/events', kevin, { ...base, endsAt: '2026-06-08T14:50:00Z' })
+    expect(ok.statusCode).toBe(201)
+    const ev = JSON.parse(ok.body).event
+    expect(new Date(ev.endsAt).toISOString()).toBe('2026-06-08T14:50:00.000Z')
+
+    // PATCH: malformed endsAt rejected; start+end swapped rejected.
+    expect((await call('PATCH', `/api/events/${ev.id}`, kevin, { endsAt: 'nope' })).statusCode).toBe(400)
+    expect(
+      (await call('PATCH', `/api/events/${ev.id}`, kevin, { startsAt: '2026-06-08T15:00:00Z', endsAt: '2026-06-08T14:00:00Z' })).statusCode
+    ).toBe(400)
+  })
+
   it('rejects foreign people, goals, steps, and calendars on create and update', async () => {
     const base = { title: 'Boundary event', startsAt: '2026-06-08T18:00:00Z' }
     for (const foreignRef of [

@@ -28,6 +28,10 @@ always there, whatever modules you've turned on.
   into a column. The week calendar lives in the band by default.
 - 🎯 **Goals card** — shows one goal's progress; pick **My spotlight**, **Family
   spotlight**, or a **specific goal** from a grouped picker. See [Goals](/features/goals/).
+- ⭐ **Rewards card** (web) — every member's star balance at a glance, a "waiting for
+  approval" note when redemptions are pending, and a **Shop ›** jump into the
+  [Reward Shop](/features/rewards/). Appears automatically when rewards are enabled;
+  move or hide it like any card.
 - ✋ **Drag cards right on the board** (web) — press and **hold a card ~half a second**
   and it lifts; drag between the band and columns and drop, and the layout saves as **your
   personal layout** automatically. **Resize zones the same way** — drag the faint dividers

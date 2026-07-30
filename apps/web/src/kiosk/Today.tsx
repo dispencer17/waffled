@@ -8,6 +8,7 @@ import { CountdownsCard } from './components/CountdownsCard'
 import { FamilyNightCard } from './components/FamilyNightCard'
 import { QuickControlsCard } from './components/QuickControls'
 import { GoalSpotlightCard } from './components/GoalSpotlightCard'
+import { RewardsCard } from './components/RewardsCard'
 import { GoalRecapBar } from './components/GoalRecap'
 import { ApprovalsBar } from './components/Approvals'
 import { CaptureBar } from './components/CaptureBar'
@@ -30,6 +31,7 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
   tonight: { label: "Tonight's dinner", node: <TonightCardSlot /> },
   week: { label: "This week's dinners", node: <WeekDinnersCard /> },
   chores: { label: 'Family Chores', node: <ChoresCard /> },
+  rewards: { label: 'Rewards', node: <RewardsCard /> },
   grocery: { label: 'Grocery', node: <GroceryCard />, fill: true },
   countdowns: { label: 'Countdowns', node: <CountdownsCard /> },
   familyNight: { label: 'Family Night', node: <FamilyNightCard /> },
@@ -74,6 +76,8 @@ export function Today() {
   const showFamilyNight = moduleEnabled(household, 'familyNight') && household?.settings?.familyNight?.showOnToday !== false
   const showGoals = moduleEnabled(household, 'goals')
   const showSmartHome = moduleEnabled(household, 'smartHome')
+  // Rewards is a sub-toggle of chores, not its own module — bespoke gate.
+  const showRewards = rewardsEnabled(household)
   // Whether each card is available to show at all (its module is on). Cards with
   // no module gate are always available. Drives which hidden cards can be brought
   // back from the tray — showing one whose module is off would just get stripped.
@@ -87,8 +91,9 @@ export function Today() {
       week: showMeals,
       grocery: showGrocery,
       smartHome: showSmartHome,
+      rewards: showRewards,
     }),
-    [showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome]
+    [showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome, showRewards]
   )
   const isAvailable = (card: string) => cardAvailable[card] ?? true
   const effectiveResolved = useMemo<StoredLayout>(() => {
@@ -101,11 +106,14 @@ export function Today() {
     cols = hideModuleCard(cols, 'tonight', showMeals)
     cols = hideModuleCard(cols, 'week', showMeals)
     cols = hideModuleCard(cols, 'grocery', showGrocery)
+    // Rewards arrives via the server's reconcile append (it's in TODAY_CARDS);
+    // here we only strip it when the rewards toggle is off.
+    cols = hideModuleCard(cols, 'rewards', showRewards)
     // The band passes through untouched, minus any module-off card that somehow
     // landed there (defensive — normally only the never-gated week calendar).
     const full = resolved.full.filter((c) => CARDS[c] && (cardAvailable[c] ?? true))
     return { full, cols, hidden, bandHeight: resolved.bandHeight, colWidths: resolved.colWidths }
-  }, [resolved, cardAvailable, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome])
+  }, [resolved, cardAvailable, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome, showRewards])
 
   const [editing, setEditing] = useState(false)
   const [full, setFull] = useState<string[]>(effectiveResolved.full)

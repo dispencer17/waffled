@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { api, usePersons, useGoals, goalsApi, goalCalendarApi, calendarsApi, mealsApi, localToday, invalidateGetCache, type AgendaEvent, type CalendarLink, type GoalStep } from '../../lib/api'
+import { api, usePersons, useHousehold, useGoals, goalsApi, goalCalendarApi, calendarsApi, mealsApi, localToday, invalidateGetCache, type AgendaEvent, type CalendarLink, type GoalStep } from '../../lib/api'
+import { familyColorHex } from '../../lib/event-color'
 import { suggestGoalForEvent } from '../../lib/goal-match'
 import { Icon } from '../icons'
 import { createEventLocal, updateEventLocal, deleteEventLocal, tombstoneEvent } from '../../lib/powersync/events-local'
@@ -89,6 +90,21 @@ function toIso(date: string, time: string): string {
   return new Date(`${date}T${time}`).toISOString()
 }
 
+// The end instant for "End time" mode. An end at/before the start means the
+// event crosses midnight, so it rolls to the next day.
+function endIsoFrom(day: string, startTime: string, endTime: string): string {
+  const start = new Date(`${day}T${startTime}`)
+  const end = new Date(`${day}T${endTime}`)
+  if (end.getTime() <= start.getTime()) end.setDate(end.getDate() + 1)
+  return end.toISOString()
+}
+
+// "HH:MM" an hour after the given local time — the End-time field's default.
+function plusHour(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  return `${pad((h + 1) % 24)}:${pad(m || 0)}`
+}
+
 const DURATIONS: Array<{ min: number; label: string }> = [
   { min: 15, label: '15 min' },
   { min: 30, label: '30 min' },
@@ -118,15 +134,18 @@ function initialForm(event?: AgendaEvent, date?: string, time?: string, prefill?
       : event.personId
         ? [event.personId]
         : []
-    const durationMin =
-      event.endsAt && !event.allDay
-        ? Math.max(15, Math.round((new Date(event.endsAt).getTime() - d.getTime()) / 60000))
-        : 60
+    const end = event.endsAt && !event.allDay ? new Date(event.endsAt) : null
+    const durationMin = end ? Math.max(15, Math.round((end.getTime() - d.getTime()) / 60000)) : 60
+    // A length that isn't one of the presets (a synced calendar can produce any
+    // length) opens in End-time mode so saving never snaps it to a preset.
+    const isPreset = DURATIONS.some((o) => o.min === durationMin)
     return {
       title: event.title,
       day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
       time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-      durationMin,
+      durationMin: isPreset ? durationMin : 60,
+      endMode: (end && !isPreset ? 'end' : 'duration') as 'duration' | 'end',
+      endTime: end ? `${pad(end.getHours())}:${pad(end.getMinutes())}` : plusHour(`${pad(d.getHours())}:${pad(d.getMinutes())}`),
       allDay: event.allDay,
       isCountdown: event.isCountdown ?? false,
       participantIds,
@@ -142,6 +161,8 @@ function initialForm(event?: AgendaEvent, date?: string, time?: string, prefill?
     day: date ?? localToday(),
     time: time ?? '17:00',
     durationMin: prefill?.durationMin ?? 60,
+    endMode: 'duration' as 'duration' | 'end',
+    endTime: plusHour(time ?? '17:00'),
     allDay: false,
     isCountdown: false,
     participantIds: prefill?.participantIds ?? ([] as string[]),
@@ -171,6 +192,7 @@ export function EventModal({
   const editing = !!event
   const navigate = useNavigate()
   const { persons } = usePersons()
+  const { household } = useHousehold()
   // Goals that opted into calendar auto-counting (the "Counts toward" picker).
   // total/count/habit add an amount; a checklist instead ticks a chosen step.
   const { goals } = useGoals()
@@ -499,8 +521,12 @@ export function EventModal({
   // (personIds), `restPayload` for REST (participantIds).
   function buildPayloads() {
     const startsAt = form.allDay ? toIso(form.day, '12:00') : toIso(form.day, form.time)
-    // Timed events get start + duration; all-day events have no end.
-    const endsAt = form.allDay ? null : new Date(new Date(startsAt).getTime() + form.durationMin * 60000).toISOString()
+    // Timed events get start + duration OR an exact end time; all-day events have no end.
+    const endsAt = form.allDay
+      ? null
+      : form.endMode === 'end'
+        ? endIsoFrom(form.day, form.time, form.endTime)
+        : new Date(new Date(startsAt).getTime() + form.durationMin * 60000).toISOString()
     // Calendar choice only when the picker was shown (owner has >1); else auto-route.
     const chosenCal = !editing && ownerCals.length > 1 ? calendarId || null : null
     const draft = {
@@ -698,16 +724,29 @@ export function EventModal({
                 <span>Time</span>
                 <input type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
               </label>
-              <label className="field">
-                <span>Duration</span>
-                <select value={form.durationMin} onChange={(e) => set('durationMin', Number(e.target.value))}>
-                  {DURATIONS.map((d) => (
-                    <option key={d.min} value={d.min}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="field">
+                {/* Duration is the quick default; End time is for events whose
+                    length isn't a tidy preset ("ends at 8:45"). */}
+                <div className="seg" style={{ width: 'fit-content', marginBottom: 6 }}>
+                  <button type="button" className={form.endMode === 'duration' ? 'on' : ''} style={{ cursor: 'pointer' }} onClick={() => set('endMode', 'duration')}>
+                    Duration
+                  </button>
+                  <button type="button" className={form.endMode === 'end' ? 'on' : ''} style={{ cursor: 'pointer' }} onClick={() => set('endMode', 'end')}>
+                    End time
+                  </button>
+                </div>
+                {form.endMode === 'duration' ? (
+                  <select aria-label="Duration" value={form.durationMin} onChange={(e) => set('durationMin', Number(e.target.value))}>
+                    {DURATIONS.map((d) => (
+                      <option key={d.min} value={d.min}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type="time" aria-label="End time" value={form.endTime} onChange={(e) => set('endTime', e.target.value)} />
+                )}
+              </div>
             </div>
           )}
 
@@ -843,6 +882,35 @@ export function EventModal({
           <div className="field">
             <span>Who</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {persons.length > 1 && (() => {
+                // One tap for a whole-family event — selects everyone (and renders
+                // in the household's family color on the calendar).
+                const allIds = persons.map((p) => p.id)
+                const allOn = allIds.every((id) => form.participantIds.includes(id))
+                const famColor = familyColorHex(household)
+                return (
+                  <button
+                    type="button"
+                    onClick={() => set('participantIds', allOn ? [] : allIds)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 12px',
+                      borderRadius: 999,
+                      border: `1.5px solid ${allOn ? famColor : 'transparent'}`,
+                      background: allOn ? `${famColor}22` : 'var(--card-2)',
+                      color: 'var(--ink)',
+                      font: 'inherit',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    👨‍👩‍👧‍👦 Everyone
+                  </button>
+                )
+              })()}
               {persons.map((p) => {
                 const on = form.participantIds.includes(p.id)
                 const color = p.colorHex ?? '#6B6B70'
