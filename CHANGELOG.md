@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Settings → Family → Family color** (eight presets or any custom color), and use the
   new **👨‍👩‍👧‍👦 Everyone** chip in the event form's "Who" row to put the whole family on an
   event in one tap.
+- **Pick any color for a family member — not just the eight presets.** The color picker
+  in the member editor (and in My Profile) now has a **custom color** button next to the
+  swatches that opens a full color wheel, so everyone can fine-tune their calendar color.
+  The server now also validates colors properly (a malformed color is rejected instead of
+  being stored silently).
 - **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
   Today card for half a second and it lifts; drag it where you want and let go — the new
   arrangement saves as your personal layout automatically. Scrolling still scrolls (a

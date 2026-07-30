@@ -162,6 +162,16 @@ describe('POST /api/persons', () => {
     ).toBe(400)
   })
 
+  it('accepts any custom #RRGGBB color and rejects malformed ones (400)', async () => {
+    const ok = await call('POST', '/api/persons', kevin, { name: 'Cus', memberType: 'kid', colorHex: '#A1B2C3' })
+    expect(ok.statusCode).toBe(201)
+    expect(JSON.parse(ok.body).person.colorHex).toBe('#A1B2C3')
+
+    for (const bad of ['blue', '#FFF', '#GGGGGG', '#12345', 'javascript:alert(1)']) {
+      expect((await call('POST', '/api/persons', kevin, { name: 'Bad', memberType: 'kid', colorHex: bad })).statusCode).toBe(400)
+    }
+  })
+
   it('forbids a non-admin member from adding people (403)', async () => {
     await seedNonAdmin('dev|teen', kevinHouseholdId)
     const res = await call('POST', '/api/persons', mint('dev|teen'), {
@@ -198,6 +208,13 @@ describe('GET / PATCH /api/persons/:id', () => {
     })
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(res.body).person).toMatchObject({ name: 'Bram Jr', colorHex: '#222222' })
+  })
+
+  it('rejects a malformed colorHex on patch (400)', async () => {
+    expect((await call('PATCH', `/api/persons/${targetId}`, kevin, { colorHex: 'gold' })).statusCode).toBe(400)
+    expect((await call('PATCH', `/api/persons/${targetId}`, kevin, { colorHex: '#12345G' })).statusCode).toBe(400)
+    // Still readable and unchanged after the rejected patches.
+    expect(JSON.parse((await call('GET', `/api/persons/${targetId}`, kevin)).body).person.colorHex).toBe('#222222')
   })
 
   it('rejects an invalid memberType (400) and an empty patch (400)', async () => {

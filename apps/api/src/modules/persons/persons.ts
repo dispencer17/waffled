@@ -280,9 +280,9 @@ const EVENT_STYLES = new Set(['solid', 'tinted'])
 // How the Today week-calendar card draws its days: 'separated' (distinct bordered
 // day cells, the FamilyBoard look — the default) or 'plain' (continuous columns).
 const WEEK_CARD_STYLES = new Set(['separated', 'plain'])
-// The whole-family event color must be a full #RRGGBB hex — it goes straight
-// into CSS custom properties on every calendar view.
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+// Person + family colors must be a full #RRGGBB hex — they go straight into
+// CSS custom properties on every calendar view. (Shared with account.ts.)
+export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 
 export function registerPersonRoutes(api: Api): void {
   // Household settings: the household + its members (with login/owner flags).
@@ -388,6 +388,9 @@ export function registerPersonRoutes(api: Api): void {
         message: 'name and memberType (adult|teen|kid) are required',
       })
     }
+    if (body.colorHex != null && !HEX_COLOR.test(String(body.colorHex))) {
+      return res.status(400).json({ error: 'BadRequest', message: 'colorHex must be a #RRGGBB hex color' })
+    }
     const person = await createPerson(tenant.householdId, body as CreatePersonInput)
     return res.status(201).json({ person: presentPerson(person) })
   }))
@@ -409,6 +412,9 @@ export function registerPersonRoutes(api: Api): void {
     const patch = (req.body ?? {}) as Record<string, unknown>
     if (patch.memberType !== undefined && !MEMBER_TYPES.has(String(patch.memberType))) {
       return res.status(400).json({ error: 'BadRequest', message: 'invalid memberType' })
+    }
+    if (patch.colorHex != null && !HEX_COLOR.test(String(patch.colorHex))) {
+      return res.status(400).json({ error: 'BadRequest', message: 'colorHex must be a #RRGGBB hex color' })
     }
     if ('allergens' in patch) patch.allergens = cleanAllergens(patch.allergens)
     if (!Object.keys(UPDATABLE).some((field) => field in patch)) {

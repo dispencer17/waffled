@@ -4,7 +4,7 @@ import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, ver
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { eventStyle, weekCardStyle, type EventStyle, type WeekCardStyle } from '../lib/display'
 import { familyColorHex } from '../lib/event-color'
-import { ColorPicker } from './components/ColorPicker'
+import { ColorPicker, COLOR_SWATCHES } from './components/ColorPicker'
 import { testWakeWord, BUILTIN_KEYWORDS } from '../lib/voice/wakeword'
 import { useThemePref, PALETTES, type PaletteDef } from '../lib/theme'
 import { useInstallPrompt } from '../lib/pwa'
@@ -658,7 +658,7 @@ function UpdateBanner({ upd, onToggle, toggling }: { upd: UpdateInfo; onToggle: 
 
 // Same swatch palette the Family & People person editor uses, so a member's
 // self-service color picker matches what an admin sees.
-const ACCOUNT_SWATCHES = ['#2F7FED', '#EC6049', '#25A368', '#8B5CF6', '#E0A500', '#EC4899', '#14B8A6', '#6B7280']
+const ACCOUNT_SWATCHES = COLOR_SWATCHES
 
 // Pull the server's `{ error, message }` message off a caught apiSend error
 // (ApiSendError carries `.body`), falling back to a friendly default.
@@ -749,17 +749,7 @@ function MyProfilePanel() {
 
         <div className="field">
           <span>Color</span>
-          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-            {ACCOUNT_SWATCHES.map((c) => (
-              <button
-                type="button"
-                key={c}
-                aria-label={`color ${c}`}
-                onClick={() => { setColorHex(c); setSaved(false) }}
-                style={{ width: 30, height: 30, borderRadius: 999, background: c, border: colorHex === c ? '3px solid var(--ink)' : '2px solid #fff', boxShadow: '0 0 0 1px var(--hair)', cursor: 'pointer' }}
-              />
-            ))}
-          </div>
+          <ColorPicker value={colorHex} onChange={(c) => { setColorHex(c); setSaved(false) }} />
         </div>
 
         <label className="field">
