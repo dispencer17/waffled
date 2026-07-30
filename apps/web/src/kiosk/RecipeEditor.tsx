@@ -120,6 +120,9 @@ export function RecipeEditor() {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
+  // Personal notes (user_notes) are a separate column from the recipe's own `notes`:
+  // they survive re-imports and must never be written into the shared notes field.
+  const [userNotes, setUserNotes] = useState('')
   const [ings, setIngs] = useState<EditIng[]>([blankIng()])
   const [stps, setStps] = useState<EditStep[]>([blankStep()])
   const [dragIdx, setDragIdx] = useState<number | null>(null)
@@ -200,7 +203,8 @@ export function RecipeEditor() {
       setImageUrl(recipe.imageUrl ?? '')
     }
     setImagePreview(recipe.imageUrl ?? null)
-    setNotes(recipe.userNotes ?? recipe.notes ?? '')
+    setNotes(recipe.notes ?? '')
+    setUserNotes(recipe.userNotes ?? '')
     const ingRows: EditIng[] = ingredients.length
       ? ingredients.map((i) => ({
           uid: newUid(), name: i.name, amount: i.amount != null ? String(i.amount) : '', unit: i.unit ?? '',
@@ -304,7 +308,7 @@ export function RecipeEditor() {
       // replace: true so the editor page doesn't linger in history — otherwise
       // "‹ Recipes" from the saved recipe would walk back INTO the editor.
       if (isEdit) {
-        await mealsApi.updateRecipe(id!, payload)
+        await mealsApi.updateRecipe(id!, { ...payload, userNotes })
         navigate(`/meals/recipe/${id}`, { replace: true })
       } else {
         const created = await mealsApi.createRecipe(payload)
@@ -710,7 +714,20 @@ export function RecipeEditor() {
 
       <div className="card re-card">
         <div className="card-h re-section-h">Notes</div>
-        <textarea className="re-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering…" rows={3} />
+        {isEdit ? (
+          <>
+            <label className="re-f" style={{ marginTop: 10 }}>
+              <span>Recipe notes</span>
+              <textarea className="re-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering…" rows={3} />
+            </label>
+            <label className="re-f" style={{ marginTop: 10 }}>
+              <span>Your notes</span>
+              <textarea className="re-notes" value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="e.g. doubles well · use less salt. (Kept across re-imports.)" rows={3} />
+            </label>
+          </>
+        ) : (
+          <textarea className="re-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything worth remembering…" rows={3} />
+        )}
       </div>
 
       <div className="re-actions">

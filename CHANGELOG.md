@@ -242,6 +242,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Editing a recipe no longer copies your personal notes into the recipe's own notes.**
+  The recipe editor used to prefill its single Notes box with your personal notes and
+  then save them into the recipe's shared notes field — so after an edit the same text
+  showed up twice on the recipe page ("Your notes" *and* "Recipe notes (from the
+  source)"). The editor now shows the two as separate fields — **Recipe notes** and
+  **Your notes** — and each saves back to its own place, so personal notes stay personal
+  (and still survive re-imports).
 - **Voice commands actually run now.** A recorder bug made every spoken clip come back
   empty — the kiosk would hear the wake word (or the mic button), listen, and then
   silently do nothing. The recording is captured correctly now, and if the mic truly

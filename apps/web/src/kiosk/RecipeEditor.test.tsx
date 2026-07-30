@@ -38,6 +38,99 @@ function renderNew() {
   )
 }
 
+// A minimal recipe detail for edit-mode tests; override fields per test.
+function makeDetail(recipe: Record<string, unknown> = {}) {
+  return {
+    recipe: {
+      id: 'r1', title: 'Lentil Soup', emoji: '🍲', servings: 4,
+      prepTimeMinutes: 10, cookTimeMinutes: 30,
+      cuisine: null, protein: null, mealType: null, base: null, effort: null,
+      cookMethod: null, flavorProfile: null, collection: null,
+      dietary: [], vegetables: [], tags: [],
+      imageUrl: null, storageKey: null,
+      notes: null, userNotes: null,
+      ...recipe,
+    },
+    ingredients: [{ id: 'i1', name: 'lentils', amount: 1, unit: 'cup', prepNote: null, section: null }],
+    steps: [{ stepNumber: 1, instruction: 'Simmer until tender.', ingredients: [], timerSeconds: null }],
+  }
+}
+
+function mockEditApi(sent: Sent[], detail: ReturnType<typeof makeDetail>) {
+  globalThis.fetch = vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    const u = String(url)
+    const method = init?.method ?? 'GET'
+    const body = init?.body ? JSON.parse(init.body) : undefined
+    sent.push({ method, url: u, body })
+    if (u.endsWith('/api/recipes/r1') && method === 'GET') {
+      return { ok: true, json: async () => detail }
+    }
+    if (u.endsWith('/api/recipes/r1') && method === 'PATCH') {
+      return { ok: true, json: async () => ({ recipe: detail.recipe }) }
+    }
+    if (u.endsWith('/api/recipes/sections')) {
+      return { ok: true, json: async () => ({ sections: [] }) }
+    }
+    return { ok: false, status: 404, json: async () => ({}) }
+  }) as unknown as typeof fetch
+}
+
+function renderEdit() {
+  return render(
+    <MemoryRouter initialEntries={['/edit/r1']}>
+      <TopbarSlotProvider>
+        <Routes>
+          <Route path="/edit/:id" element={<RecipeEditor />} />
+          <Route path="/meals/recipe/:id" element={<div>recipe page</div>} />
+        </Routes>
+      </TopbarSlotProvider>
+    </MemoryRouter>,
+  )
+}
+
+describe('RecipeEditor — edit: recipe notes vs your notes', () => {
+  it('prefills recipe notes and your notes into separate fields', async () => {
+    const sent: Sent[] = []
+    mockEditApi(sent, makeDetail({ notes: 'Soak the lentils overnight.', userNotes: 'Kids love it — double the batch.' }))
+    renderEdit()
+
+    await waitFor(() => expect((screen.getByPlaceholderText('Recipe title') as HTMLInputElement).value).toBe('Lentil Soup'))
+    expect((screen.getByLabelText('Recipe notes') as HTMLTextAreaElement).value).toBe('Soak the lentils overnight.')
+    expect((screen.getByLabelText('Your notes') as HTMLTextAreaElement).value).toBe('Kids love it — double the batch.')
+  })
+
+  it('does NOT copy personal notes into the shared notes column on save', async () => {
+    // The reported bug: a recipe with ONLY userNotes got them saved into `notes`.
+    const sent: Sent[] = []
+    mockEditApi(sent, makeDetail({ notes: null, userNotes: 'Use less salt.' }))
+    renderEdit()
+
+    await waitFor(() => expect((screen.getByPlaceholderText('Recipe title') as HTMLInputElement).value).toBe('Lentil Soup'))
+    fireEvent.click(screen.getByText('Save changes'))
+
+    await waitFor(() => expect(sent.some((s) => s.method === 'PATCH')).toBe(true))
+    const b = sent.find((s) => s.method === 'PATCH')!.body as { notes: string | null; userNotes?: string }
+    expect(b.notes).toBeNull() // source notes stay untouched
+    expect(b.userNotes).toBe('Use less salt.') // personal notes stay personal
+  })
+
+  it('saves edits to each notes field into its own column', async () => {
+    const sent: Sent[] = []
+    mockEditApi(sent, makeDetail({ notes: 'Soak overnight.', userNotes: 'Double the batch.' }))
+    renderEdit()
+
+    await waitFor(() => expect((screen.getByPlaceholderText('Recipe title') as HTMLInputElement).value).toBe('Lentil Soup'))
+    fireEvent.change(screen.getByLabelText('Recipe notes'), { target: { value: 'Soak overnight, then rinse.' } })
+    fireEvent.change(screen.getByLabelText('Your notes'), { target: { value: 'Triple the batch.' } })
+    fireEvent.click(screen.getByText('Save changes'))
+
+    await waitFor(() => expect(sent.some((s) => s.method === 'PATCH')).toBe(true))
+    const b = sent.find((s) => s.method === 'PATCH')!.body as { notes: string | null; userNotes?: string }
+    expect(b.notes).toBe('Soak overnight, then rinse.')
+    expect(b.userNotes).toBe('Triple the batch.')
+  })
+})
+
 describe('RecipeEditor — new', () => {
   it('builds the create payload from the form (title, ingredient, step)', async () => {
     const sent: Sent[] = []
