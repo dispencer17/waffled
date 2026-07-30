@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   End-time mode and **keeps the exact end** instead of silently snapping it to the
   nearest preset on save. The server now also rejects an event whose end is before its
   start.
+- **A Rewards card for the Today dashboard.** Every member's star balance at a glance,
+  a "waiting for approval" note when redemptions are pending, and a one-tap jump into
+  the Reward Shop. It appears automatically when rewards are enabled (rewards is part
+  of the chores loop) and can be moved or hidden like any other card in Customize.
 - **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
   Today card for half a second and it lifts; drag it where you want and let go — the new
   arrangement saves as your personal layout automatically. Scrolling still scrolls (a
