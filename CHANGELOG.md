@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   End-time mode and **keeps the exact end** instead of silently snapping it to the
   nearest preset on save. The server now also rejects an event whose end is before its
   start.
+- **Adding a recipe is no longer a scavenger hunt.** The Meals planner now has a
+  **＋ New recipe** button right in its header (it used to be buried two screens deep
+  behind "Explore recipes"), and the recipe editor was reshuffled so the natural path —
+  title → ingredients → method — comes first, with the optional Details fields
+  (cuisine, protein, tags, photo…) moved below. The editor also gains a **Planner
+  slot** field (Breakfast / Lunch / Dinner / Snack) so a hand-added recipe files under
+  the right meal in the picker instead of showing up everywhere; quantities accept
+  fractions the way you type them ("1/2", "1 1/2", "½") instead of silently dropping
+  them; a failed save now shows an error instead of doing nothing; and the meal
+  picker's decorative search bar that did nothing has been removed (the real search
+  is right below it).
 - **A Rewards card for the Today dashboard.** Every member's star balance at a glance,
   a "waiting for approval" note when redemptions are pending, and a one-tap jump into
   the Reward Shop. It appears automatically when rewards are enabled (rewards is part

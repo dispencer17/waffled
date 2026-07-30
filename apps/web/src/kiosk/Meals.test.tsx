@@ -91,6 +91,34 @@ function renderMeals() {
   )
 }
 
+describe('Meals — recipe entry points', () => {
+  it('has a New recipe button right on the planner that opens the editor', async () => {
+    mockApi({ recipes: [] })
+    render(
+      <MemoryRouter initialEntries={['/meals']}>
+        <TopbarSlotProvider>
+          <Routes>
+            <Route path="/meals" element={<Meals />} />
+            <Route path="/meals/recipe/new" element={<div>EDITOR</div>} />
+          </Routes>
+        </TopbarSlotProvider>
+      </MemoryRouter>
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /New recipe/ }))
+    expect(await screen.findByText('EDITOR')).toBeInTheDocument()
+  })
+
+  it('the meal picker keeps its real search and has no fake AI search bar', async () => {
+    mockApi({ recipes: [ravioli] })
+    renderMeals()
+    fireEvent.click((await screen.findAllByRole('button', { name: /^Add /i }))[0])
+    // The real, working search field (RecipeBrowser)…
+    expect(await screen.findByPlaceholderText(/Search recipes/)).toBeInTheDocument()
+    // …and no decorative "Search or paste a recipe…" div that does nothing.
+    expect(screen.queryByText('Search or paste a recipe…')).not.toBeInTheDocument()
+  })
+})
+
 describe('Meals weekly planner', () => {
   it('renders the day header, meal rows, planned cells and empty +', async () => {
     mockApi({
