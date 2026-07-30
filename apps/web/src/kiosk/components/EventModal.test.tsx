@@ -34,6 +34,74 @@ describe('EventModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('creates an event with an exact end time (End time mode)', async () => {
+    const calls: Array<{ body: Record<string, unknown> }> = []
+    globalThis.fetch = vi.fn(async (url: string, opts?: { method?: string; body?: string }) => {
+      if (String(url).includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      if (String(url).includes('/api/events') && opts?.method === 'POST') {
+        calls.push({ body: JSON.parse(opts.body!) })
+        return { ok: true, json: async () => ({ event: { id: 'e1' } }) }
+      }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderModal(<EventModal date="2026-06-09" time="17:00" onClose={vi.fn()} onSaved={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('Soccer practice'), { target: { value: 'Recital' } })
+    fireEvent.click(screen.getByRole('button', { name: 'End time' }))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '18:20' } })
+    fireEvent.click(screen.getByRole('button', { name: /Add event/ }))
+
+    await waitFor(() => expect(calls).toHaveLength(1))
+    const { startsAt, endsAt } = calls[0].body as { startsAt: string; endsAt: string }
+    expect((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000).toBe(80)
+  })
+
+  it('rolls an end time at/before the start over to the next day', async () => {
+    const calls: Array<{ body: Record<string, unknown> }> = []
+    globalThis.fetch = vi.fn(async (url: string, opts?: { method?: string; body?: string }) => {
+      if (String(url).includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      if (String(url).includes('/api/events') && opts?.method === 'POST') {
+        calls.push({ body: JSON.parse(opts.body!) })
+        return { ok: true, json: async () => ({ event: { id: 'e1' } }) }
+      }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderModal(<EventModal date="2026-06-09" time="23:00" onClose={vi.fn()} onSaved={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('Soccer practice'), { target: { value: 'NYE-ish' } })
+    fireEvent.click(screen.getByRole('button', { name: 'End time' }))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '00:30' } })
+    fireEvent.click(screen.getByRole('button', { name: /Add event/ }))
+
+    await waitFor(() => expect(calls).toHaveLength(1))
+    const { startsAt, endsAt } = calls[0].body as { startsAt: string; endsAt: string }
+    expect((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000).toBe(90)
+  })
+
+  it('opens a non-preset-length event in End time mode and preserves the exact end', async () => {
+    const patched: Array<Record<string, unknown>> = []
+    globalThis.fetch = vi.fn(async (url: string, opts?: { method?: string; body?: string }) => {
+      const u = String(url)
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      if (/\/api\/events\/[^/]+$/.test(u) && opts?.method === 'PATCH') {
+        patched.push(JSON.parse(opts.body!))
+        return { ok: true, json: async () => ({ event: { id: 'e1' } }) }
+      }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    // 20 minutes — not one of the duration presets (a synced calendar can produce this).
+    const ev = { ...sampleEvent, startsAt: '2026-06-09T22:00:00Z', endsAt: '2026-06-09T22:20:00Z' }
+    renderModal(<EventModal event={ev} onClose={vi.fn()} onSaved={vi.fn()} />)
+    // The form opens in End-time mode (no snapping to a preset)…
+    expect((screen.getByLabelText('End time') as HTMLInputElement).value).not.toBe('')
+    // …and saving untouched keeps the exact 20-minute end.
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(patched).toHaveLength(1))
+    const { startsAt, endsAt } = patched[0] as { startsAt: string; endsAt: string }
+    expect((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000).toBe(20)
+  })
+
   it('selects the whole family with the Everyone chip', async () => {
     const calls: Array<{ body: Record<string, unknown> }> = []
     globalThis.fetch = vi.fn(async (url: string, opts?: { method?: string; body?: string }) => {

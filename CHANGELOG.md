@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   swatches that opens a full color wheel, so everyone can fine-tune their calendar color.
   The server now also validates colors properly (a malformed color is rejected instead of
   being stored silently).
+- **Set an exact end time on events — not just a duration.** The event form's length
+  field now has a **Duration / End time** toggle: keep the quick duration presets, or
+  switch to End time and type exactly when it ends ("ends at 8:45"). An end time at or
+  before the start rolls to the next day, so late-night events work. Editing an event
+  whose length isn't a tidy preset (say, a 20-minute synced appointment) now opens in
+  End-time mode and **keeps the exact end** instead of silently snapping it to the
+  nearest preset on save. The server now also rejects an event whose end is before its
+  start.
 - **Rearrange the dashboard by touch — no Customize mode needed.** Press and hold any
   Today card for half a second and it lifts; drag it where you want and let go — the new
   arrangement saves as your personal layout automatically. Scrolling still scrolls (a
