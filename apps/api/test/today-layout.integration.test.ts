@@ -99,4 +99,56 @@ describe('today-layout routes', () => {
     const r = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout: { cols: [['agenda', 'bogus'], [], []], hidden: [] } })
     expect(r.statusCode).toBe(400)
   })
+
+  // --- v2 zone trees ------------------------------------------------------
+
+  it('round-trips a v2 zones layout with board options, storing zones-native', async () => {
+    const layout = {
+      zones: {
+        dir: 'row',
+        children: [
+          { cards: ['agenda', 'grocery'], size: 2 },
+          { dir: 'col', children: [{ cards: ['weekCalendar'] }, { cards: ['chores', 'tonight', 'week', 'countdowns', 'rewards', 'pantry', 'familyNight', 'goals', 'smartHome'] }] },
+        ],
+      },
+      hidden: [],
+      options: { hideEmpty: true, density: 'compact' },
+    }
+    const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout })
+    expect(put.statusCode).toBe(200)
+    const saved = JSON.parse(put.body).layout
+    expect(saved.zones.children[0].cards).toEqual(['agenda', 'grocery'])
+    expect(saved.zones.children[0].size).toBe(2)
+    expect(saved.options).toEqual({ hideEmpty: true, density: 'compact' })
+
+    const get = await call('GET', '/api/today-layout', kevin)
+    const resolved = JSON.parse(get.body).resolved
+    expect(resolved.zones.children[0].cards).toEqual(['agenda', 'grocery'])
+    expect(resolved.options).toEqual({ hideEmpty: true, density: 'compact' })
+    // The raw stored user tier is zones-native (no legacy full/cols keys).
+    const user = JSON.parse(get.body).user
+    expect(user.zones).toBeTruthy()
+    expect(user.full).toBeUndefined()
+  })
+
+  it('rewrites a legacy PUT as zones and still serves the legacy projection', async () => {
+    const put = await call('PUT', '/api/today-layout', kevin, {
+      scope: 'user',
+      layout: { full: ['weekCalendar'], cols: [['agenda', 'countdowns'], ['tonight', 'week'], ['chores', 'grocery', 'rewards', 'pantry', 'familyNight', 'goals', 'smartHome']], hidden: [] },
+    })
+    expect(put.statusCode).toBe(200)
+    const get = await call('GET', '/api/today-layout', kevin)
+    const body = JSON.parse(get.body)
+    expect(body.user.zones).toBeTruthy() // stored zones-native after the save
+    expect(body.resolved.full).toEqual(['weekCalendar']) // projection for old clients
+    expect(body.resolved.cols[0]).toEqual(['agenda', 'countdowns'])
+  })
+
+  it('400s a v2 tree containing an unknown card key', async () => {
+    const r = await call('PUT', '/api/today-layout', kevin, {
+      scope: 'user',
+      layout: { zones: { dir: 'row', children: [{ cards: ['agenda', 'bogus'] }] }, hidden: [] },
+    })
+    expect(r.statusCode).toBe(400)
+  })
 })
