@@ -51,52 +51,110 @@ afterAll(async () => {
   await pg?.stop()
 })
 
+// All leaves of a zone tree, pre-order — the assertion workhorse.
+function leaves(root: { cards?: string[]; children?: unknown[] }): { cards: string[]; size?: number }[] {
+  if (root.cards) return [root as { cards: string[]; size?: number }]
+  return ((root.children ?? []) as { cards?: string[]; children?: unknown[] }[]).flatMap(leaves)
+}
+
 describe('today-layout routes', () => {
-  it('accepts and round-trips a layout placing weekCalendar and smartHome', async () => {
+  it('accepts and round-trips a legacy columns layout placing weekCalendar and smartHome', async () => {
     const cols = [['weekCalendar', 'agenda', 'countdowns'], ['tonight', 'week', 'smartHome'], ['chores', 'grocery']]
     const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout: { cols, hidden: [] } })
     expect(put.statusCode).toBe(200)
     const saved = JSON.parse(put.body).layout
-    expect(saved.cols[0]).toEqual(['weekCalendar', 'agenda', 'countdowns'])
-    expect(saved.cols[1]).toContain('smartHome')
+    expect(leaves(saved.zones)[0].cards).toEqual(['weekCalendar', 'agenda', 'countdowns'])
+    expect(leaves(saved.zones)[1].cards).toContain('smartHome')
 
     const get = await call('GET', '/api/today-layout', kevin)
     expect(get.statusCode).toBe(200)
     const resolved = JSON.parse(get.body).resolved
-    expect(resolved.cols[0]).toEqual(['weekCalendar', 'agenda', 'countdowns'])
-    expect(resolved.cols.flat()).toContain('smartHome')
+    expect(leaves(resolved.zones)[0].cards).toEqual(['weekCalendar', 'agenda', 'countdowns'])
+    expect(leaves(resolved.zones).flatMap((l) => l.cards)).toContain('smartHome')
   })
 
-  it('surfaces weekCalendar in the full-width band for layouts saved before it existed', async () => {
+  it('gives an unplaced weekCalendar its own top band zone for layouts saved before it existed', async () => {
     const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout: { cols: [['agenda'], ['tonight'], ['chores']], hidden: [] } })
     expect(put.statusCode).toBe(200)
-    // The unplaced calendar defaults to the band; other unplaced cards to the last column.
-    expect(JSON.parse(put.body).layout.full).toContain('weekCalendar')
+    expect(leaves(JSON.parse(put.body).layout.zones)[0].cards).toEqual(['weekCalendar'])
   })
 
-  it('round-trips a {full, cols, bandHeight, colWidths} layout with the sizes clamped', async () => {
+  it('converts a legacy {full, cols, bandHeight, colWidths} layout into sized zones', async () => {
     const layout = {
       full: ['weekCalendar'],
       cols: [['agenda', 'countdowns'], ['tonight', 'week'], ['chores', 'grocery']],
       hidden: [],
-      bandHeight: 5000, // clamped to 900
+      bandHeight: 5000, // px → ratio, clamped to 4
       colWidths: [2, 1, 1],
     }
     const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout })
     expect(put.statusCode).toBe(200)
     const saved = JSON.parse(put.body).layout
-    expect(saved.full).toEqual(['weekCalendar'])
-    expect(saved.bandHeight).toBe(900)
-    expect(saved.colWidths).toEqual([2, 1, 1])
+    const ls = leaves(saved.zones)
+    expect(ls[0].cards).toEqual(['weekCalendar'])
+    expect(ls[0].size).toBe(4)
+    expect(ls[1].size).toBe(2)
 
     const resolved = JSON.parse((await call('GET', '/api/today-layout', kevin)).body).resolved
-    expect(resolved.full).toEqual(['weekCalendar'])
-    expect(resolved.bandHeight).toBe(900)
-    expect(resolved.colWidths).toEqual([2, 1, 1])
+    expect(leaves(resolved.zones)[0].cards).toEqual(['weekCalendar'])
+    expect(leaves(resolved.zones)[1].size).toBe(2)
   })
 
   it('still 400s a layout with an unknown card key', async () => {
     const r = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout: { cols: [['agenda', 'bogus'], [], []], hidden: [] } })
+    expect(r.statusCode).toBe(400)
+  })
+
+  // --- v2 zone trees ------------------------------------------------------
+
+  it('round-trips a v2 zones layout with board options, storing zones-native', async () => {
+    const layout = {
+      zones: {
+        dir: 'row',
+        children: [
+          { cards: ['agenda', 'grocery'], size: 2 },
+          { dir: 'col', children: [{ cards: ['weekCalendar'] }, { cards: ['chores', 'tonight', 'week', 'countdowns', 'rewards', 'pantry', 'familyNight', 'goals', 'smartHome'] }] },
+        ],
+      },
+      hidden: [],
+      options: { hideEmpty: true, density: 'compact' },
+    }
+    const put = await call('PUT', '/api/today-layout', kevin, { scope: 'user', layout })
+    expect(put.statusCode).toBe(200)
+    const saved = JSON.parse(put.body).layout
+    expect(saved.zones.children[0].cards).toEqual(['agenda', 'grocery'])
+    expect(saved.zones.children[0].size).toBe(2)
+    expect(saved.options).toEqual({ hideEmpty: true, density: 'compact' })
+
+    const get = await call('GET', '/api/today-layout', kevin)
+    const resolved = JSON.parse(get.body).resolved
+    expect(resolved.zones.children[0].cards).toEqual(['agenda', 'grocery'])
+    expect(resolved.options).toEqual({ hideEmpty: true, density: 'compact' })
+    // The raw stored user tier is zones-native (no legacy full/cols keys).
+    const user = JSON.parse(get.body).user
+    expect(user.zones).toBeTruthy()
+    expect(user.full).toBeUndefined()
+  })
+
+  it('rewrites a legacy PUT as zones on save', async () => {
+    const put = await call('PUT', '/api/today-layout', kevin, {
+      scope: 'user',
+      layout: { full: ['weekCalendar'], cols: [['agenda', 'countdowns'], ['tonight', 'week'], ['chores', 'grocery', 'rewards', 'pantry', 'familyNight', 'goals', 'smartHome']], hidden: [] },
+    })
+    expect(put.statusCode).toBe(200)
+    const get = await call('GET', '/api/today-layout', kevin)
+    const body = JSON.parse(get.body)
+    expect(body.user.zones).toBeTruthy() // stored zones-native after the save
+    expect(body.user.full).toBeUndefined()
+    expect(leaves(body.resolved.zones)[0].cards).toEqual(['weekCalendar'])
+    expect(leaves(body.resolved.zones)[1].cards).toEqual(['agenda', 'countdowns'])
+  })
+
+  it('400s a v2 tree containing an unknown card key', async () => {
+    const r = await call('PUT', '/api/today-layout', kevin, {
+      scope: 'user',
+      layout: { zones: { dir: 'row', children: [{ cards: ['agenda', 'bogus'] }] }, hidden: [] },
+    })
     expect(r.statusCode).toBe(400)
   })
 })

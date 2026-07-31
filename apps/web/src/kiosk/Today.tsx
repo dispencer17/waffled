@@ -15,15 +15,34 @@ import { CaptureBar } from './components/CaptureBar'
 import { GettingStartedBar } from './onboarding/GettingStarted'
 import { PantryCard } from './Pantry'
 import { useTopbarRight } from './topbar-slot'
-import { useTodayLayout, useHousehold, type LayoutScope, type StoredLayout } from '../lib/api'
+import { useTodayLayout, useHousehold, type LayoutScope, type StoredLayout, type BoardOptions } from '../lib/api'
 import { moduleEnabled, rewardsEnabled } from '../lib/modules'
-import { appendToColumn, applyModuleCard, hideModuleCard, removeCardEverywhere, insertAtRegion, dropTargetAt, type Region, type RegionLayout } from './today-layout-utils'
+import {
+  isLeaf,
+  getNode,
+  splitZone,
+  deleteZone,
+  listLeaves,
+  resizeSiblings,
+  setZoneSize,
+  removeCardEverywhere,
+  insertAtZone,
+  appendCard,
+  applyModuleCard,
+  hideModuleCard,
+  dropTargetAt,
+  SIZE_MIN,
+  SIZE_MAX,
+  type ZoneNode,
+  type ZonePath,
+} from './zone-layout'
 import { TODAY_PRESETS, applyPreset, type TodayPreset } from './today-presets'
+import { CardSlotCtx, type CardSlotApi } from './today-card-slot'
 
 // The cards that can live on Today, keyed the same as the stored layout. `fill`
 // cards are long, scrollable lists (agenda, grocery) — they take the spare room in
-// their column and scroll INSIDE the card, so a 30-item grocery list never stretches
-// the column. Everything else sizes to its content (never shrinks/clips). The label
+// their zone and scroll INSIDE the card, so a 30-item grocery list never stretches
+// the zone. Everything else sizes to its content (never shrinks/clips). The label
 // shows in the Customize drag bar (and covers cards that render nothing, like
 // Tonight with no dinner planned).
 const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> = {
@@ -41,28 +60,31 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
   weekCalendar: { label: 'Week calendar', node: <WeekCalendarCard />, fill: true },
 }
 
-// Pure layout helpers + drop-target math live in today-layout-utils.ts (tested).
+// Pure zone-tree helpers + drop-target math live in zone-layout.ts (tested).
+
+// Cards with per-card quiet settings (the ⚙ on their edit-mode chip).
+const QUIET_CARDS = new Set(['agenda', 'grocery', 'chores'])
 
 // Live drag: how long a press must hold still to lift a card, and how far the
 // pointer may wander during the hold before we treat the gesture as a scroll.
 const HOLD_MS = 450
 const HOLD_SLOP = 8
 
-// Zone-size bounds (mirror the server clamps in modules/layout/today-layout.ts).
-const BAND_MIN = 160
-const BAND_MAX = 900
-const BAND_DEFAULT = 320 // starting band height when none is saved yet
-const COLW_MIN = 0.4
-const COLW_MAX = 3
-// Pixels of horizontal drag ≈ one column-width ratio unit (≈ a column's width).
+// Zone sizing: sizes are flex ratios. In a row split they divide the width; in
+// a col split an explicit size pins the zone's height at size × VZONE_PX
+// (ratio-less zones take their content height). Pixel↔ratio conversions mirror
+// the server (modules/layout/today-layout.ts).
+const VZONE_PX = 320
+// Pixels of horizontal drag ≈ one width-ratio unit (≈ a zone's width).
 const COL_RESIZE_REF = 220
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
 // The kiosk "Today" dashboard. Cards are arranged from a saved layout (family
-// default + optional per-person override): a full-width band on top (the week
-// calendar by default) plus 3 columns below. Cards can be dragged directly on
-// the board (long-press to lift) or rearranged in a Customize mode — where zone
-// dividers also resize the band + columns — then saved for you or the family.
+// default + optional per-person override): a FancyZones-style zone tree —
+// recursive row/col splits whose leaves stack cards. Cards can be dragged
+// directly on the board (long-press to lift, target zone highlights) or
+// rearranged in a Customize mode — where zones can also be split, deleted, and
+// resized via their dividers — then saved for you or the family.  // fork
 export function Today() {
   const { resolved, source, loading, save, reset } = useTodayLayout()
   const { household } = useHousehold()
@@ -98,30 +120,43 @@ export function Today() {
   const isAvailable = (card: string) => cardAvailable[card] ?? true
   const effectiveResolved = useMemo<StoredLayout>(() => {
     const hidden = resolved.hidden
-    let cols = applyModuleCard(resolved.cols, 'pantry', showPantry, hidden, 1) // pantry → middle column by default
-    cols = applyModuleCard(cols, 'familyNight', showFamilyNight, hidden)
-    cols = applyModuleCard(cols, 'goals', showGoals, hidden, 0) // goals → left column by default
-    cols = applyModuleCard(cols, 'smartHome', showSmartHome, hidden)
-    cols = hideModuleCard(cols, 'chores', showChores)
-    cols = hideModuleCard(cols, 'tonight', showMeals)
-    cols = hideModuleCard(cols, 'week', showMeals)
-    cols = hideModuleCard(cols, 'grocery', showGrocery)
+    // Default-tree leaf paths: '0' band, '1.0'..'1.2' columns — the prefer
+    // paths keep module cards landing where the old board put them.
+    let z = applyModuleCard(resolved.zones, 'pantry', showPantry, hidden, '1.1')
+    z = applyModuleCard(z, 'familyNight', showFamilyNight, hidden)
+    z = applyModuleCard(z, 'goals', showGoals, hidden, '1.0')
+    z = applyModuleCard(z, 'smartHome', showSmartHome, hidden)
+    z = hideModuleCard(z, 'chores', showChores)
+    z = hideModuleCard(z, 'tonight', showMeals)
+    z = hideModuleCard(z, 'week', showMeals)
+    z = hideModuleCard(z, 'grocery', showGrocery)
     // Rewards arrives via the server's reconcile append (it's in TODAY_CARDS);
     // here we only strip it when the rewards toggle is off.
-    cols = hideModuleCard(cols, 'rewards', showRewards)
-    // The band passes through untouched, minus any module-off card that somehow
-    // landed there (defensive — normally only the never-gated week calendar).
-    const full = resolved.full.filter((c) => CARDS[c] && (cardAvailable[c] ?? true))
-    return { full, cols, hidden, bandHeight: resolved.bandHeight, colWidths: resolved.colWidths }
-  }, [resolved, cardAvailable, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome, showRewards])
+    z = hideModuleCard(z, 'rewards', showRewards)
+    return { zones: z, hidden, ...(resolved.options ? { options: resolved.options } : {}) }
+  }, [resolved, showPantry, showFamilyNight, showGoals, showChores, showMeals, showGrocery, showSmartHome, showRewards])
 
   const [editing, setEditing] = useState(false)
-  const [full, setFull] = useState<string[]>(effectiveResolved.full)
-  const [layout, setLayout] = useState<string[][]>(effectiveResolved.cols)
+  const [zones, setZones] = useState<ZoneNode>(effectiveResolved.zones)
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)
-  const [bandHeight, setBandHeight] = useState<number | undefined>(effectiveResolved.bandHeight)
-  const [colWidths, setColWidths] = useState<number[] | undefined>(effectiveResolved.colWidths)
+  const [options, setOptions] = useState<BoardOptions>(effectiveResolved.options ?? {})
   const [saving, setSaving] = useState(false)
+  // Which card's quiet-settings modal is open (Customize ⚙).
+  const [quietCard, setQuietCard] = useState<string | null>(null)
+  // Which cards reported "nothing to show" (via useCardEmpty) — drives the
+  // hide-empty board option. Default (unreported) is visible.
+  const [emptyByCard, setEmptyByCard] = useState<Record<string, boolean>>({})
+  const slotApis = useMemo(() => {
+    const m: Record<string, CardSlotApi> = {}
+    for (const key of Object.keys(CARDS)) {
+      m[key] = {
+        reportEmpty: (empty: boolean) =>
+          setEmptyByCard((prev) => (prev[key] === empty ? prev : { ...prev, [key]: empty })),
+        cardOptions: (options.cards as Record<string, CardSlotApi['cardOptions']> | undefined)?.[key],
+      }
+    }
+    return m
+  }, [options.cards])
 
   // Pointer drag state (Customize chips AND live long-press drags). `drag` is set
   // once per drag so the listener effect subscribes once; `pos` drives the ghost,
@@ -129,13 +164,13 @@ export function Today() {
   // (`live: true`) starts from a long-press on the board and auto-saves on drop.
   const [drag, setDrag] = useState<{ card: string; live?: boolean } | null>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
-  const [target, setTarget] = useState<{ region: Region; index: number } | null>(null)
-  const targetRef = useRef<{ region: Region; index: number } | null>(null)
+  const [target, setTarget] = useState<{ path: ZonePath; index: number } | null>(null)
+  const targetRef = useRef<{ path: ZonePath; index: number } | null>(null)
   targetRef.current = target
-  // While a live drop's PUT is in flight, render its layout (covers the gap until
+  // While a live drop's PUT is in flight, render its tree (covers the gap until
   // the hook's optimistic update lands); reverts on failure. Refs keep the drag
   // effect subscribed once per drag without stale closures.
-  const [liveOverride, setLiveOverride] = useState<RegionLayout | null>(null)
+  const [liveOverride, setLiveOverride] = useState<ZoneNode | null>(null)
   const resolvedRef = useRef(effectiveResolved)
   resolvedRef.current = effectiveResolved
   const saveRef = useRef(save)
@@ -143,21 +178,29 @@ export function Today() {
   // True while a zone divider is being dragged, so the resolved→working sync below
   // doesn't clobber the in-progress size (and, in view mode, the just-saved one).
   const resizingRef = useRef(false)
-  // The current working region layout (edit mode) — read on drop without a stale closure.
-  const workingRef = useRef<RegionLayout>({ full, cols: layout })
-  workingRef.current = { full, cols: layout }
+  // The current working tree + hidden set — read on drop without a stale closure.
+  const zonesRef = useRef<ZoneNode>(zones)
+  zonesRef.current = zones
+  const hiddenRef = useRef(hidden)
+  hiddenRef.current = hidden
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   // Keep the working copy in sync with the server layout (+ module cards) when not
   // editing — but never mid-resize, so a live divider drag isn't reverted.
   useEffect(() => {
     if (!editing && !resizingRef.current) {
-      setFull(effectiveResolved.full)
-      setLayout(effectiveResolved.cols)
+      setZones(effectiveResolved.zones)
       setHidden(effectiveResolved.hidden)
-      setBandHeight(effectiveResolved.bandHeight)
-      setColWidths(effectiveResolved.colWidths)
+      setOptions(effectiveResolved.options ?? {})
     }
   }, [effectiveResolved, editing])
+
+  // What the working state saves as (working options ride along on every save).
+  function toStored(z: ZoneNode, h: string[]): StoredLayout {
+    const o = optionsRef.current
+    return { zones: z, hidden: h, ...(Object.keys(o).length ? { options: o } : {}) }
+  }
 
   useEffect(() => {
     if (!drag) return
@@ -171,23 +214,14 @@ export function Today() {
         if (drag.live) {
           // Live drag: apply and persist as the personal layout in one go.
           const base = resolvedRef.current
-          const next = insertAtRegion({ full: base.full, cols: base.cols }, drag.card, t.region, t.index)
+          const next = insertAtZone(base.zones, drag.card, t.path, t.index)
           setLiveOverride(next)
-          const toSave: StoredLayout = {
-            full: next.full,
-            cols: next.cols,
-            hidden: base.hidden,
-            ...(base.bandHeight != null ? { bandHeight: base.bandHeight } : {}),
-            ...(base.colWidths ? { colWidths: base.colWidths } : {}),
-          }
           saveRef
-            .current('user', toSave)
+            .current('user', toStored(next, base.hidden))
             .catch(() => {}) // clearing liveOverride below reverts to the server layout
             .finally(() => setLiveOverride(null))
         } else {
-          const next = insertAtRegion(workingRef.current, drag.card, t.region, t.index)
-          setFull(next.full)
-          setLayout(next.cols)
+          setZones(insertAtZone(zonesRef.current, drag.card, t.path, t.index))
         }
       }
       setDrag(null)
@@ -278,116 +312,96 @@ export function Today() {
   }
 
   // Zone dividers live on the normal dashboard AND in Customize. Dragging updates
-  // the working size live; on the normal board it auto-saves to the personal layout
-  // on release (like live card drag), while in Customize it persists with Save.
-  function persistSizes(patch: { bandHeight?: number; colWidths?: number[] }) {
-    const base = resolvedRef.current
-    const nextBand = patch.bandHeight ?? base.bandHeight
-    const nextCols = patch.colWidths ?? base.colWidths
-    saveRef
-      .current('user', {
-        full: base.full,
-        cols: base.cols,
-        hidden: base.hidden,
-        ...(nextBand != null ? { bandHeight: nextBand } : {}),
-        ...(nextCols ? { colWidths: nextCols } : {}),
-      })
-      .catch(() => {})
-  }
-  function startBandResize(e: ReactPointerEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    const startY = e.clientY
-    const startH = bandHeight ?? BAND_DEFAULT
-    let latest = startH
-    resizingRef.current = true
-    const move = (ev: PointerEvent) => {
-      latest = clamp(startH + (ev.clientY - startY), BAND_MIN, BAND_MAX)
-      setBandHeight(latest)
-    }
-    const up = () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      document.body.style.userSelect = ''
-      resizingRef.current = false
-      if (!editing) persistSizes({ bandHeight: latest })
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-    document.body.style.userSelect = 'none'
-  }
-  // Resize the boundary between column `i` and `i+1`: shift ratio between the two.
-  function startColResize(e: ReactPointerEvent, i: number) {
+  // the working tree live; on the normal board it auto-saves to the personal
+  // layout on release (like live card drag), while in Customize it persists with
+  // Save. A divider between siblings of a row split rebalances their width
+  // ratios; in a col split it drags the upper sibling's pinned height.
+  function startZoneResize(e: ReactPointerEvent, parentPath: ZonePath, i: number, dir: 'row' | 'col') {
+    if (drag) return
     e.preventDefault()
     e.stopPropagation()
     const startX = e.clientX
-    const base = colWidths ?? layout.map(() => 1)
-    const wi = base[i] ?? 1
-    const wj = base[i + 1] ?? 1
+    const startY = e.clientY
+    const base = zonesRef.current
     let latest = base
     resizingRef.current = true
+    const childPath = parentPath ? `${parentPath}.${i}` : String(i)
+    const startSize = (getNode(base, childPath) as { size?: number } | null)?.size ?? 1
     const move = (ev: PointerEvent) => {
-      const d = (ev.clientX - startX) / COL_RESIZE_REF
-      latest = base.slice()
-      latest[i] = clamp(wi + d, COLW_MIN, COLW_MAX)
-      latest[i + 1] = clamp(wj - d, COLW_MIN, COLW_MAX)
-      setColWidths(latest)
+      if (dir === 'row') {
+        const d = (ev.clientX - startX) / COL_RESIZE_REF
+        latest = resizeSiblings(base, parentPath, i, d)
+      } else {
+        const ratio = clamp(startSize + (ev.clientY - startY) / VZONE_PX, SIZE_MIN, SIZE_MAX)
+        latest = setZoneSize(base, childPath, ratio)
+      }
+      setZones(latest)
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       document.body.style.userSelect = ''
       resizingRef.current = false
-      if (!editing) persistSizes({ colWidths: latest })
+      if (!editing && latest !== base) saveRef.current('user', toStored(latest, hiddenRef.current)).catch(() => {})
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     document.body.style.userSelect = 'none'
   }
 
+  // Merge a patch into one card's quiet settings; undefined values clear keys,
+  // and empty objects fall away entirely so the stored options stay minimal.
+  function setCardOpt(card: 'agenda' | 'grocery' | 'chores', patch: Record<string, unknown>) {
+    setOptions((o) => {
+      const cur: Record<string, unknown> = { ...(o.cards?.[card] as object | undefined), ...patch }
+      for (const k of Object.keys(cur)) if (cur[k] === undefined) delete cur[k]
+      const cards = { ...o.cards, [card]: cur } as Record<string, unknown>
+      if (Object.keys(cur).length === 0) delete cards[card]
+      const next = { ...o, cards: cards as BoardOptions['cards'] }
+      if (!Object.keys(cards).length) delete next.cards
+      return next
+    })
+  }
+
+  // Zone tools (Customize): split a leaf into side-by-side / stacked zones, or
+  // delete it (its cards merge into the neighbor).
+  function doSplit(path: ZonePath, dir: 'row' | 'col') {
+    setZones((z) => splitZone(z, path, dir))
+  }
+  function doDelete(path: ZonePath) {
+    setZones((z) => deleteZone(z, path))
+  }
+
   // Apply a Customize preset to the working layout (filtered to available cards);
-  // the user then tweaks and saves. Replaces the whole arrangement + zone sizes.
+  // the user then tweaks and saves. Replaces the whole arrangement.
   function applyWorkingPreset(p: TodayPreset) {
     const next = applyPreset(p, isAvailable)
-    setFull(next.full)
-    setLayout(next.cols)
+    setZones(next.zones)
     setHidden(next.hidden)
-    setBandHeight(next.bandHeight)
-    setColWidths(next.colWidths)
   }
 
   function cancel() {
     setEditing(false)
     setDrag(null)
-    setFull(effectiveResolved.full)
-    setLayout(effectiveResolved.cols)
+    setZones(effectiveResolved.zones)
     setHidden(effectiveResolved.hidden)
-    setBandHeight(effectiveResolved.bandHeight)
-    setColWidths(effectiveResolved.colWidths)
+    setOptions(effectiveResolved.options ?? {})
   }
-  // Hide a card from Today: pull it out of the band + columns and remember it as
-  // hidden, so it stays gone (and, for module cards, doesn't auto-reappear) until shown.
+  // Hide a card from Today: pull it out of the tree and remember it as hidden,
+  // so it stays gone (and, for module cards, doesn't auto-reappear) until shown.
   function hideCard(card: string) {
-    const next = removeCardEverywhere(workingRef.current, card)
-    setFull(next.full)
-    setLayout(next.cols)
+    setZones((z) => removeCardEverywhere(z, card))
     setHidden((prev) => (prev.includes(card) ? prev : [...prev, card]))
   }
-  // Bring a hidden card back — drop it from `hidden` and append it to a column.
+  // Bring a hidden card back — drop it from `hidden` and append it to a zone.
   function showCard(card: string) {
     setHidden((prev) => prev.filter((c) => c !== card))
-    setLayout((prev) => appendToColumn(prev, card))
+    setZones((z) => appendCard(z, card))
   }
   async function persist(scope: LayoutScope) {
     setSaving(true)
     try {
-      await save(scope, {
-        full,
-        cols: layout,
-        hidden,
-        ...(bandHeight != null ? { bandHeight } : {}),
-        ...(colWidths ? { colWidths } : {}),
-      })
+      await save(scope, toStored(zones, hidden))
       setEditing(false)
       setDrag(null)
     } finally {
@@ -405,39 +419,44 @@ export function Today() {
     }
   }
 
-  // What to render: the working layout (editing) or the resolved layout (view),
-  // or a just-dropped live layout while its PUT is in flight. The dragged card is
-  // NOT removed — it renders in place as a dimmed source (see renderCard), which
-  // keeps its DOM node mounted so a touch pointer's implicit capture isn't lost
-  // (removing it fires pointercancel → the drag snaps back).
-  const displayLayout: RegionLayout = editing
-    ? { full, cols: layout }
-    : liveOverride ?? { full: effectiveResolved.full, cols: effectiveResolved.cols }
-  // Render zone sizes from the working state in both modes (it mirrors the resolved
-  // layout while not editing, and reflects an in-progress live resize immediately).
-  const curBandHeight = bandHeight
-  const curColWidths = colWidths
-  // Show the band whenever it holds a card, or while dragging/editing so it's a drop zone.
-  const showBand = displayLayout.full.length > 0 || !!drag || editing
+  // What to render: the working tree (kept in sync with the resolved layout
+  // while not editing), or a just-dropped live tree while its PUT is in flight.
+  // The dragged card is NOT removed — it renders in place as a dimmed source
+  // (see renderCard), which keeps its DOM node mounted so a touch pointer's
+  // implicit capture isn't lost (removing it fires pointercancel → snap-back).
+  const displayZones: ZoneNode = editing ? zones : liveOverride ?? zones
   // Hidden cards the user could bring back — only those whose module is on.
   const hiddenShowable = hidden.filter((c) => CARDS[c] && isAvailable(c))
+  const lastLeaf = listLeaves(displayZones).length <= 1
 
   // One card in a zone: the drop-line before it (when it's the target slot), then
   // the card. The dragged card keeps rendering (DOM stays mounted) but drops its
   // `data-card` so dropTargetAt skips it, and dims via `dragging-source`.
-  function renderCard(card: string, region: Region, idx: number) {
+  function renderCard(card: string, path: ZonePath, idx: number) {
     const def = CARDS[card]
     if (!def) return null
     const dragged = drag?.card === card
     return (
       <Fragment key={card}>
-        {drag && target?.region === region && target?.index === idx && <div className="today-drop-line" />}
+        {drag && target?.path === path && target?.index === idx && <div className="today-drop-line" />}
         {editing ? (
           <div className={`today-card-wrap compact ${dragged ? 'dragging-source' : ''}`} data-card={dragged ? undefined : card}>
             <div className="today-card-bar" onPointerDown={(e) => startDrag(e, card)}>
               <span className="today-card-grip">⠿</span>
               <span className="today-card-name">{def.label}</span>
               {def.fill && <span className="today-card-fillhint">list</span>}
+              {QUIET_CARDS.has(card) && (
+                <button
+                  type="button"
+                  className="today-card-hide"
+                  title="Card options"
+                  aria-label={`${def.label} options`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setQuietCard(card)}
+                >
+                  ⚙
+                </button>
+              )}
               <button
                 type="button"
                 className="today-card-hide"
@@ -452,35 +471,95 @@ export function Today() {
           </div>
         ) : (
           <div
-            className={`today-slot ${def.fill ? 'fill' : ''} ${dragged ? 'dragging-source' : ''}`}
+            className={`today-slot ${def.fill ? 'fill' : ''} ${dragged ? 'dragging-source' : ''} ${
+              options.hideEmpty && emptyByCard[card] === true && !drag ? 'today-slot--collapsed' : ''
+            }`}
             data-card={dragged ? undefined : card}
             onPointerDown={(e) => beginHold(e, card)}
           >
-            {def.node}
+            <CardSlotCtx.Provider value={slotApis[card]}>{def.node}</CardSlotCtx.Provider>
           </div>
         )}
       </Fragment>
     )
   }
   // The trailing drop-line (dropping at the end of a zone) + the empty-zone hint.
-  function renderZoneTail(cards: string[], region: Region) {
+  function renderZoneTail(cards: string[], path: ZonePath) {
     return (
       <>
-        {drag && target?.region === region && target?.index === cards.length && <div className="today-drop-line" />}
+        {drag && target?.path === path && target?.index === cards.length && <div className="today-drop-line" />}
         {(editing || !!drag) && cards.length === 0 && <div className="today-col-empty">Drop a card here</div>}
       </>
     )
   }
 
+  // Recursive zone render. A leaf is a drop region (data-region=path) stacking
+  // its cards; a split lays its children out with draggable dividers between
+  // them. Sizing: row-split children flex by --z-size; col-split children with
+  // an explicit size pin their height via --z-h.
+  function renderZone(node: ZoneNode, path: ZonePath, parentDir: 'row' | 'col' | null): ReactNode {
+    const sized = node.size != null
+    const style: CSSProperties =
+      parentDir === 'col'
+        ? sized
+          ? ({ '--z-h': `${Math.round((node.size ?? 1) * VZONE_PX)}px` } as CSSProperties)
+          : {}
+        : ({ '--z-size': node.size ?? 1 } as CSSProperties)
+    if (isLeaf(node)) {
+      return (
+        <div
+          key={path || 'root'}
+          className={`today-zone ${parentDir === 'col' && sized ? 'today-zone--pinned' : ''} ${drag && target?.path === path ? 'zone-drop-active' : ''}`}
+          data-region={path}
+          style={style}
+        >
+          {editing && (
+            <div className="today-zone-tools">
+              <button type="button" className="today-zone-tool" title="Split into side-by-side zones" aria-label="Split zone horizontally" onClick={() => doSplit(path, 'row')}>
+                ◫
+              </button>
+              <button type="button" className="today-zone-tool" title="Split into stacked zones" aria-label="Split zone vertically" onClick={() => doSplit(path, 'col')}>
+                ⬓
+              </button>
+              <button type="button" className="today-zone-tool danger" title={lastLeaf ? 'The last zone cannot be deleted' : 'Delete this zone (cards move to its neighbor)'} aria-label="Delete zone" disabled={lastLeaf} onClick={() => doDelete(path)}>
+                ×
+              </button>
+            </div>
+          )}
+          {node.cards.map((card, idx) => renderCard(card, path, idx))}
+          {renderZoneTail(node.cards, path)}
+        </div>
+      )
+    }
+    return (
+      <div key={path || 'root'} className={`today-zone-split ${parentDir === 'col' && sized ? 'today-zone--pinned' : ''}`} data-dir={node.dir} style={style}>
+        {node.children.map((child, i) => (
+          <Fragment key={i}>
+            {i > 0 && (
+              <div
+                className={node.dir === 'col' ? 'today-divider-h' : 'today-divider-v'}
+                onPointerDown={(e) => startZoneResize(e, path, i - 1, node.dir)}
+                title="Drag to resize"
+              >
+                <span className="today-divider-grip" />
+              </div>
+            )}
+            {renderZone(child, path ? `${path}.${i}` : String(i), node.dir)}
+          </Fragment>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className={`today-wrap ${editing ? 'today-editing' : ''} ${drag ? 'today-dragging' : ''}`}>
+    <div className={`today-wrap ${editing ? 'today-editing' : ''} ${drag ? 'today-dragging' : ''} ${options.density === 'compact' ? 'density-compact' : ''}`}>
       <GettingStartedBar />
       {(showChores || rewardsEnabled(household)) && <ApprovalsBar />}
       {moduleEnabled(household, 'goals') && <GoalRecapBar />}
 
       {editing && (
         <div className="today-toolbar">
-          <span className="tiny muted today-toolbar-hint">Drag cards to rearrange; drag the dividers to resize</span>
+          <span className="tiny muted today-toolbar-hint">Drag cards to rearrange; split, delete, and resize zones</span>
           <button type="button" className="pill" style={{ cursor: 'pointer' }} disabled={saving} onClick={cancel}>Cancel</button>
           <button type="button" className="pill" style={{ cursor: 'pointer' }} disabled={saving} onClick={resetDefault}>Reset to defaults</button>
           <button type="button" className="pill btn-primary" style={{ color: 'var(--on-accent)', border: 0, cursor: 'pointer' }} disabled={saving} onClick={() => persist('user')}>Save for me</button>
@@ -496,35 +575,38 @@ export function Today() {
           ))}
         </div>
       )}
-
-      {showBand && (
-        <div className={`today-full ${curBandHeight ? 'today-full--fixed' : ''}`} data-region="full" style={{ '--band-h': curBandHeight ? `${curBandHeight}px` : 'auto' } as CSSProperties}>
-          {displayLayout.full.map((card, idx) => renderCard(card, 'full', idx))}
-          {renderZoneTail(displayLayout.full, 'full')}
+      {/* Board options — the signal-to-noise dials, saved with the layout. */}
+      {editing && (
+        <div className="today-options">
+          <span className="tiny muted today-options-h">Board options:</span>
+          <label className="today-option">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!options.hideEmpty}
+              aria-label="Hide empty cards"
+              className={`toggle ${options.hideEmpty ? 'on' : ''}`}
+              onClick={() => setOptions((o) => ({ ...o, hideEmpty: !o.hideEmpty }))}
+            />
+            <span>Hide empty cards</span>
+          </label>
+          <label className="today-option">
+            <span>Density</span>
+            <select
+              className="sel"
+              aria-label="Density"
+              value={options.density ?? 'cozy'}
+              onChange={(e) => setOptions((o) => ({ ...o, density: e.target.value === 'compact' ? 'compact' : 'cozy' }))}
+            >
+              <option value="cozy">Cozy</option>
+              <option value="compact">Compact</option>
+            </select>
+          </label>
         </div>
       )}
-      {/* Horizontal divider — drag to resize the band vs the columns (view + Customize). */}
-      {showBand && (
-        <div className="today-divider-h" onPointerDown={startBandResize} title="Drag to resize the calendar band">
-          <span className="today-divider-grip" />
-        </div>
-      )}
 
-      <div className={`today-board ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}>
-        {displayLayout.cols.map((col, ci) => (
-          <Fragment key={ci}>
-            {/* Vertical dividers — drag to rebalance column widths (view + Customize). */}
-            {ci > 0 && (
-              <div className="today-divider-v" onPointerDown={(e) => startColResize(e, ci - 1)} title="Drag to resize columns">
-                <span className="today-divider-grip" />
-              </div>
-            )}
-            <div className="today-col" data-region={ci} style={{ '--col-w': curColWidths?.[ci] ?? 1 } as CSSProperties}>
-              {col.map((card, idx) => renderCard(card, ci, idx))}
-              {renderZoneTail(col, ci)}
-            </div>
-          </Fragment>
-        ))}
+      <div className={`today-board today-zones ${editing ? 'editing' : ''} ${drag ? 'dragging' : ''}`}>
+        {renderZone(displayZones, '', null)}
       </div>
 
       {editing && (
@@ -542,6 +624,72 @@ export function Today() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Per-card quiet settings (Customize ⚙). Saved with the layout. */}
+      {editing && quietCard && (
+        <div className="modal-overlay" onClick={() => setQuietCard(null)}>
+          <div className="modal-card" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="modal-close" aria-label="Close" onClick={() => setQuietCard(null)}>
+              ×
+            </button>
+            <div className="wf-serif" style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
+              {CARDS[quietCard]?.label} options
+            </div>
+            <div className="tiny muted" style={{ fontWeight: 600, marginBottom: 14 }}>
+              Quiet-down settings for this card — saved with your layout.
+            </div>
+            {quietCard === 'agenda' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!options.cards?.agenda?.hideEnded}
+                  aria-label="Hide ended events"
+                  className={`toggle ${options.cards?.agenda?.hideEnded ? 'on' : ''}`}
+                  onClick={() => setCardOpt('agenda', { hideEnded: !options.cards?.agenda?.hideEnded })}
+                />
+                <span>Hide events that already ended</span>
+              </label>
+            )}
+            {quietCard === 'chores' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!options.cards?.chores?.hideOpen}
+                  aria-label="Hide up-for-grabs chores"
+                  className={`toggle ${options.cards?.chores?.hideOpen ? 'on' : ''}`}
+                  onClick={() => setCardOpt('chores', { hideOpen: !options.cards?.chores?.hideOpen })}
+                />
+                <span>Hide “up for grabs” chores</span>
+              </label>
+            )}
+            {quietCard === 'grocery' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <span>Show at most</span>
+                <select
+                  className="sel"
+                  aria-label="Max grocery items"
+                  value={options.cards?.grocery?.maxItems ?? 0}
+                  onChange={(e) => setCardOpt('grocery', { maxItems: Number(e.target.value) || undefined })}
+                >
+                  <option value={0}>All items</option>
+                  {[5, 10, 15, 25, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n} items
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <button type="button" className="btn btn-primary" onClick={() => setQuietCard(null)}>
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

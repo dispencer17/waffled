@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { ChoresCard } from './ChoresCard'
+import { CardSlotCtx } from '../today-card-slot'
 
 const CURRENCIES = [
   { id: 'c1', key: 'stars', label: 'Stars', symbol: '⭐', color: '#f2b01e', isDefault: true, spendable: true, sortOrder: 0 },
@@ -62,6 +63,19 @@ describe('ChoresCard', () => {
     expect(screen.getByText('2 chores available')).toBeInTheDocument()
     expect(screen.queryByText(/No chores yet/)).not.toBeInTheDocument()
     expect(screen.queryByText('Kevin')).not.toBeInTheDocument()
+  })
+
+  it('hides the up-for-grabs row via the hideOpen quiet setting', async () => {
+    mockAll(PEOPLE, [], 2)
+    render(
+      <MemoryRouter>
+        <CardSlotCtx.Provider value={{ reportEmpty: () => {}, cardOptions: { hideOpen: true } }}>
+          <ChoresCard />
+        </CardSlotCtx.Provider>
+      </MemoryRouter>
+    )
+    expect(await screen.findByText('Wally')).toBeInTheDocument()
+    expect(screen.queryByText('Up for grabs')).not.toBeInTheDocument()
   })
 
   it('shows the Spot award quick-tap for a reward.grant holder and opens the modal', async () => {

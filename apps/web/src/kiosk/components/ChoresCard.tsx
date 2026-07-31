@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useChoresToday, useCurrencies, useHousehold, can, type PersonChores } from '../../lib/api'
 import { SpotAwardModal } from './SpotAwardModal'
+import { useCardEmpty, useCardOptions } from '../today-card-slot' // fork
 
 // Per-person progress ring, colored by the member's own color. `sym` is the
 // household default currency symbol (renders ⭐ / 💵 / etc. from the catalog).
@@ -86,6 +87,11 @@ export function ChoresCard() {
   const { person: me } = useHousehold()
   const sym = defaultCurrency?.symbol ?? '⭐'
   const withChores = people.filter((p) => p.total > 0)
+  // fork — the hideOpen quiet setting drops the "up for grabs" row (and the
+  // emptiness math follows what's actually visible).
+  const cardOpts = useCardOptions<{ hideOpen?: boolean }>()
+  const showOpen = upForGrabs > 0 && !cardOpts?.hideOpen
+  useCardEmpty(loading ? undefined : error ? false : withChores.length === 0 && !showOpen) // fork — hide-empty board option
   // A parent who can hand out ad-hoc stars gets a quick-tap entry point right on
   // the card — no picker preset, so they choose who in the modal.
   const canAward = can(me, 'reward.grant')
@@ -104,10 +110,10 @@ export function ChoresCard() {
       {error && (
         <div className="tiny muted" style={{ padding: '8px 0' }}>Couldn't load chores — reload or sign in.</div>
       )}
-      {!loading && !error && withChores.length === 0 && upForGrabs === 0 && (
+      {!loading && !error && withChores.length === 0 && !showOpen && (
         <div className="tiny muted" style={{ padding: '8px 0' }}>No chores yet.</div>
       )}
-      {upForGrabs > 0 && <UpForGrabsRow count={upForGrabs} />}
+      {showOpen && <UpForGrabsRow count={upForGrabs} />}
       {withChores.map((p) => (
         <Ring key={p.id} person={p} sym={sym} />
       ))}

@@ -5,6 +5,7 @@ import { eventPeople } from './cal-utils'
 import { isPastEvent } from './AgendaView'
 import { useEventsToday, usePersons, type AgendaEvent } from '../../lib/api'
 import { useEventColor } from '../../lib/event-color'
+import { useCardEmpty, useCardOptions } from '../today-card-slot' // fork
 
 function formatTime(e: AgendaEvent): string {
   if (e.allDay) return 'all day'
@@ -84,17 +85,21 @@ export function AgendaCard() {
   const { events, loading, error, refetch } = useEventsToday()
   const { persons = [] } = usePersons()
   const colorOf = useEventColor('#A6A29B')
+  useCardEmpty(loading ? undefined : error ? false : events.length === 0) // fork — hide-empty board option
   const [selected, setSelected] = useState<AgendaEvent | null>(null)
   // Today's events can be filtered to one person (owner or participant). null = all.
   const [filterId, setFilterId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const shown = filterId
-    ? events.filter((e) => e.personId === filterId || eventPeople(e).some((p) => p.id === filterId))
-    : events
-  const activePerson = persons.find((p) => p.id === filterId)
   // Fade events that have already ended — mirrors the calendar's agenda list.
   const now = new Date()
+  // fork — the hideEnded quiet setting drops ended events entirely.
+  const cardOpts = useCardOptions<{ hideEnded?: boolean }>()
+  const base = filterId
+    ? events.filter((e) => e.personId === filterId || eventPeople(e).some((p) => p.id === filterId))
+    : events
+  const shown = cardOpts?.hideEnded ? base.filter((e) => !isPastEvent(e, now)) : base
+  const activePerson = persons.find((p) => p.id === filterId)
 
   return (
     <div className="card" style={{ padding: '22px 22px 8px', display: 'flex', flexDirection: 'column' }}>

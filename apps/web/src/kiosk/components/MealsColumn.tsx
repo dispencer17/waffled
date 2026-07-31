@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router'
 import { useMealsWeek, localToday, type WeekEntry } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 function dayAbbrev(dateStr: string): string {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' })
@@ -79,8 +80,9 @@ function TonightCard({ entry }: { entry: WeekEntry }) {
 // Tonight's dinner as a standalone Today card (self-fetching). Renders nothing
 // when nothing is planned for today, so it can sit in the draggable board.
 export function TonightCardSlot() {
-  const { entries } = useMealsWeek()
+  const { entries, loading } = useMealsWeek()
   const tonight = entries.find((e) => e.mealType === 'dinner' && e.date === localToday()) ?? null
+  useCardEmpty(loading ? undefined : !tonight) // fork — hide-empty board option
   if (!tonight) return null
   return <TonightCard entry={tonight} />
 }
@@ -90,6 +92,7 @@ export function WeekDinnersCard() {
   const navigate = useNavigate()
   const { entries, loading, error } = useMealsWeek()
   const dinners = entries.filter((e) => e.mealType === 'dinner')
+  useCardEmpty(loading ? undefined : error ? false : dinners.length === 0) // fork — hide-empty board option
   return (
     <div className="card" style={{ padding: '15px 18px 8px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>

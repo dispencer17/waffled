@@ -19,13 +19,20 @@ always there, whatever modules you've turned on.
   on the household's week-start day, today's date ringed, every event a **solid block in
   its person's color** with a compact time ("1p"), all-day events pinned on top. Tap an
   event to open it, tap a day header for the full [calendar](/features/calendar/). By
-  default it spans the **full-width band across the top** of the board — drag it into a
-  column, or hide it, in Customize. Days show as **distinct bordered cells** (today's
+  default it spans a **full-width zone across the top** of the board — drag it anywhere,
+  or hide it, in Customize. Days show as **distinct bordered cells** (today's
   ringed) by default; **Settings → Family → Week calendar → Continuous** switches to a
-  plainer, borderless look.
-- 🧱 **Full-width band + columns** (web) — the board is a full-width **band** on top over
-  three **columns**. Drag any card up into the band to span the whole width, or back down
-  into a column. The week calendar lives in the band by default.
+  plainer, borderless look. **Person chips** above the strip filter the week to the
+  people you pick (same chips as the calendar's Week view) — the selection is
+  **remembered on that device**, so the wall kiosk keeps its filter. Events happening
+  **right now** breathe with a gentle pulse and a live dot (a static ring under
+  reduced-motion settings).
+- 🧱 **Zones** (web) — the board is a grid of **zones**, PowerToys-FancyZones style:
+  any zone can be **split** into side-by-side or stacked zones, **deleted** (its cards
+  slide into the neighbor), and **resized** by dragging the dividers between zones.
+  Cards stack inside their zone; the week calendar gets a full-width top zone by
+  default. While you drag a card, the zone under your finger **lights up** so you can
+  see exactly where it will land.
 - 🎯 **Goals card** — shows one goal's progress; pick **My spotlight**, **Family
   spotlight**, or a **specific goal** from a grouped picker. See [Goals](/features/goals/).
 - ⭐ **Rewards card** (web) — every member's star balance at a glance, a "waiting for
@@ -33,24 +40,37 @@ always there, whatever modules you've turned on.
   [Reward Shop](/features/rewards/). Appears automatically when rewards are enabled;
   move or hide it like any card.
 - ✋ **Drag cards right on the board** (web) — press and **hold a card ~half a second**
-  and it lifts; drag between the band and columns and drop, and the layout saves as **your
-  personal layout** automatically. **Resize zones the same way** — drag the faint dividers
-  between the band and the columns (and between columns) right on the dashboard; that saves
-  automatically too. A finger that moves early scrolls instead of lifting, and buttons
-  inside cards are never drag handles — so the board can't be rearranged by accident. For
-  hiding cards, presets, resetting, or saving for everyone, use Customize mode.
+  and it lifts; drag it to any zone (the target highlights) and drop, and the layout
+  saves as **your personal layout** automatically. **Resize zones the same way** — drag
+  the faint dividers between zones right on the dashboard; that saves automatically too.
+  A finger that moves early scrolls instead of lifting, and buttons inside cards are
+  never drag handles — so the board can't be rearranged by accident. For editing zones,
+  hiding cards, presets, or resetting, use Customize mode.
+- 🔇 **Signal-to-noise controls** (web, in Customize → *Board options*):
+  - **Hide empty cards** — a card with nothing to show (no events today, empty grocery
+    list, no chores…) collapses away entirely and reappears the moment it has content.
+    Customize always shows everything so nothing gets lost.
+  - **Density** — **Cozy** (default) or **Compact**, which tightens padding, headers,
+    and gaps so more fits with less visual weight.
+  - **Per-card quiet settings** — the ⚙ on a card's Customize chip: the Agenda can
+    **hide already-ended events**, the Grocery card can **cap its list at N items**
+    (with a "+N more" tail), and Chores can **hide "up for grabs"** chores.
 - 🎛️ **Customize mode** (web / iPhone):
   - **drag** a card by its bar to reorder; each card also has an **× to hide it** —
     hidden cards drop into a tray below the board where a tap adds them back
-  - **layout presets** (web) — one tap on **Calendar on top**, **Classic columns**,
-    **Agenda focus**, or **Meals focus** fills the board with that arrangement to tweak
-    and save
-  - **resize zones** (web) — draggable dividers between the band and the columns (band
-    height) and between columns (widths); the sizes save with your layout. The handles
-    also live **right on the normal dashboard** (faint until you hover/grab them) — a
-    drag there saves to your personal layout automatically, like moving a card
+  - **edit zones** (web) — every zone shows a small toolbar: **split ↔** (side-by-side),
+    **split ↕** (stacked), and **×** to delete the zone (its cards merge into the
+    neighbor; the last zone can't be deleted)
+  - **layout templates** (web) — one tap on **Calendar on top**, **Classic columns**,
+    **Agenda focus**, **Meals focus**, **Quadrants** (a 2×2 grid), or **Sidebar** (one
+    big zone + a stacked rail) fills the board with that arrangement to tweak and save
+  - **resize zones** (web) — draggable dividers between zones (widths as ratios,
+    heights for pinned zones like the calendar strip); the sizes save with your layout.
+    The handles also live **right on the normal dashboard** (faint until you hover/grab
+    them) — a drag there saves to your personal layout automatically, like moving a card
   - save the layout **"for me"** (per-user) or **"for everyone"** (family default);
-    your arrangement, zone sizes, **and** which cards you've hidden all save per person
+    your arrangement, zones, board options, **and** which cards you've hidden all save
+    per person — an old saved layout converts to zones automatically
   - a hidden card **stays hidden** — including module cards (Chores, Meals, Grocery,
     Pantry, Goals, Family Night) that would otherwise reappear when their module is on
   - iPhone keeps a separate mobile `{order, hidden}` config

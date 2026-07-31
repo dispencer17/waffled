@@ -74,8 +74,10 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | --- | :---: | :---: | :---: | --- |
 | Today cards: agenda · tonight's meal · this week · chores · grocery · **week calendar** | ✅ | ✅ | ✅ | ✅ Done (iPad = distinct 3-column `KioskDashboard`; week-calendar card is web-only for now) |
 | **Customize** mode — drag to reorder + **× to hide** cards (hidden collect in a tray to add back) | ✅ | ✅ | 🟡 | ✅ Done (web + iPhone reorder + hide; a hidden card stays hidden even for module cards; iPad uses layout presets) |
-| **Live drag** — long-press a card on the board to lift and rearrange, saves your personal layout on drop (no Customize needed) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
-| **Week calendar card** — 7 day columns (household week start), today ringed, events as solid person-color blocks, tap to open | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **Live drag** — long-press a card on the board to lift and rearrange (the target zone highlights), saves your personal layout on drop (no Customize needed) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **FancyZones-style zones** — split any zone ↔/↕, delete (cards merge into the neighbor), resize via dividers; Quadrants + Sidebar templates; old layouts convert automatically | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **Board options** — hide empty cards, Cozy/Compact density, per-card quiet settings (agenda hide-ended, grocery item cap, chores hide up-for-grabs) | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
+| **Week calendar card** — 7 day columns (household week start), today ringed, events as solid person-color blocks, tap to open; person filter chips (remembered per device) + a live pulse on in-progress events | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | **Rewards card** — every member's star balance at a glance, a pending-approvals note, and a jump to the Reward Shop; appears when rewards are enabled, moves/hides like any card | ✅ | ❌ | ❌ | ✅ Done (web/kiosk) |
 | iPad Today **layout presets** (Balanced / Agenda / Meals / **Goal-focused**) | 🟡 | ❌ N/A | ✅ | ✅ Done (iPad-only; Goal-focused features a goal big + tonight's dinner) |
 | Save layout **for me** (per-user, incl. which cards are hidden) vs **for everyone** (family default) | ✅ | ✅ | 🟡 | ✅ Done (iPad layout is device-local) |

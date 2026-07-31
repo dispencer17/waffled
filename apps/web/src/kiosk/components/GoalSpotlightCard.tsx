@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useGoals, useGoalLists, useHousehold, usePersons, goalDisplayProgress, goalDisplayTarget, goalFraction, fmtGoalNum, type Goal, type GoalList, type GoalListMember } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Today card: a chosen goal's progress — the web counterpart of the iOS Today goal card.
 // A modal picker (grouped by goal list, like iOS) chooses My spotlight, Family spotlight,
@@ -85,6 +86,7 @@ export function GoalSpotlightCard() {
 
   const grouped = groupGoals(goals, lists, me)
   const g = resolveGoal(goals, pick, me, everyone)
+  useCardEmpty(loading ? undefined : !g) // fork — hide-empty board option
   const tag = g?.isSpotlight ? '🌟 Spotlight' : g?.isFeatured ? '📌 Pinned' : 'Goal'
   const pickLabel = pick === 'mine' ? 'My spotlight' : pick === 'family' ? 'Family spotlight' : goals.find((x) => x.id === pick)?.title ?? 'My spotlight'
 

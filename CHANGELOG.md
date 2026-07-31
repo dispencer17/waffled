@@ -14,6 +14,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **FancyZones-style dashboard zones.** The Today board is now a real zone grid, in the
+  spirit of PowerToys FancyZones: split any zone into side-by-side or stacked zones,
+  delete one (its cards slide into the neighbor), and drag the dividers to resize —
+  right on the dashboard or in Customize. While dragging a card, the zone under your
+  finger lights up so you can see exactly where it'll land. Two new layout templates
+  (**Quadrants** and **Sidebar**) join the existing presets, and any previously saved
+  layout converts to zones automatically.
+- **Turn down the dashboard noise.** New *Board options* in Customize: **Hide empty
+  cards** collapses any card with nothing to show (it reappears the moment it has
+  content), and a **Compact** density mode tightens padding and headers so more fits.
+  Cards also gain **quiet settings** (the ⚙ on their Customize chip): the Agenda can
+  hide already-ended events, the Grocery card can cap its list at N items with a
+  "+N more" tail, and Chores can hide "up for grabs" chores.
+- **Filter the Today week strip by person.** The week-calendar card now has the same
+  person chips as the calendar's Week view — tap to narrow the strip to just the people
+  you care about. The choice is remembered on that device, so the wall kiosk keeps its
+  filter across reloads.
+- **See what's happening *right now*.** Week-strip events that are currently in
+  progress breathe with a gentle pulse and a live dot; with reduced-motion enabled they
+  keep a static ring instead.
 - **A family color for whole-family events.** When an event includes *everyone* in the
   household it now renders in a dedicated **family color** across every calendar view
   (Month, Week, Day, agenda, and the Today week card) — so a glance tells you whether

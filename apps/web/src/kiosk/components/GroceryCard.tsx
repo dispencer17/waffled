@@ -1,12 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { Icon } from '../icons'
 import { useGrocery } from '../../lib/api'
+import { useCardEmpty, useCardOptions } from '../today-card-slot' // fork
 
 // Real, interactive grocery list: tap to check off, type to add. Backed by
 // /api/lists/grocery.
 export function GroceryCard() {
   const { items, loading, error, add, toggle, remove } = useGrocery()
   const [draft, setDraft] = useState('')
+  useCardEmpty(loading ? undefined : error ? false : items.length === 0) // fork — hide-empty board option
+  // fork — the maxItems quiet setting caps the visible list with a +N more tail.
+  const cardOpts = useCardOptions<{ maxItems?: number }>()
+  const shownItems = cardOpts?.maxItems ? items.slice(0, cardOpts.maxItems) : items
+  const moreCount = items.length - shownItems.length
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -35,7 +41,7 @@ export function GroceryCard() {
       )}
 
       <div className="gc-scroll">
-        {items.map((item) => (
+        {shownItems.map((item) => (
           <div key={item.id} className="gitem" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
             <button
               type="button"
@@ -77,6 +83,11 @@ export function GroceryCard() {
             </button>
           </div>
         ))}
+        {moreCount > 0 && (
+          <div className="tiny muted" style={{ paddingTop: 2, fontWeight: 700 }}>
+            +{moreCount} more
+          </div>
+        )}
       </div>
 
       {!error && (
