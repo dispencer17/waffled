@@ -90,7 +90,7 @@
    person-color blocks. Always solid (independent of the household event-style
    setting) — a tint wash is illegible at this block size. */
 .wkc-card { padding: 20px 20px 16px; display: flex; flex-direction: column; min-height: 0; }
-.wkc-head-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.wkc-head-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .wkc-head-row .card-h { font-size: 20px; }
 .wkc-head-row .pill { margin-left: auto; cursor: pointer; }
 .wkc-note { padding: 6px 0 10px; }
@@ -112,8 +112,10 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .wkc-ev.allday .wkc-ev-t { text-transform: uppercase; letter-spacing: .03em; font-size: 9.5px; }
 
-/* fork — person filter chips on the card (reuses the Week view's .wk-chip). */
-.wkc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; }
+/* fork — person filter chips on the card (reuses the Week view's .wk-chip).
+   They sit inline in the header row, between the title and the Calendar
+   button, wrapping under it only when the card is too narrow. */
+.wkc-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 
 /* fork — in-progress pulse: a gentle breathing ring around events happening
    right now, plus a live dot in the time label. Reduced motion keeps a static

@@ -149,6 +149,9 @@ describe('WeekCalendarCard people filter (per-device)', () => {
     await screen.findByText('Dentist')
     const riley = await screen.findByRole('button', { name: /Riley/ })
     expect(screen.getByRole('button', { name: /Addison/ })).toBeTruthy()
+    // The chips share the header row with the title and the Calendar button —
+    // no separate row eating vertical space.
+    expect(document.querySelector('.wkc-head-row .wkc-chips')).toBeTruthy()
 
     fireEvent.click(riley)
     await waitFor(() => expect(screen.queryByText('Dentist')).not.toBeInTheDocument()) // Addison's event filtered out
