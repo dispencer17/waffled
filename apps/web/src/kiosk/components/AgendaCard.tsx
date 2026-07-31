@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Icon } from '../icons'
+import { useEffect, useState } from 'react'
 import { EventModal } from './EventModal'
 import { eventPeople } from './cal-utils'
 import { isPastEvent } from './AgendaView'
@@ -81,66 +80,100 @@ function Avatars({ event }: { event: AgendaEvent }) {
   )
 }
 
+// fork — Per-device people filter, matching the calendar views' chips and the
+// week-strip card's persistence (see goalViews/persist.ts for the convention).
+const PEOPLE_KEY = 'waffled.agendaPeople'
+function loadPeople(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(PEOPLE_KEY) ?? '[]')
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+function savePeople(ids: string[]): void {
+  try {
+    localStorage.setItem(PEOPLE_KEY, JSON.stringify(ids))
+  } catch {
+    /* private mode */
+  }
+}
+
 export function AgendaCard() {
   const { events, loading, error, refetch } = useEventsToday()
   const { persons = [] } = usePersons()
   const colorOf = useEventColor('#A6A29B')
   useCardEmpty(loading ? undefined : error ? false : events.length === 0) // fork — hide-empty board option
   const [selected, setSelected] = useState<AgendaEvent | null>(null)
-  // Today's events can be filtered to one person (owner or participant). null = all.
-  const [filterId, setFilterId] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // fork — same person chips as the calendar Week view: empty selection =
+  // everyone; toggling chips narrows to those people. Remembered per device.
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(loadPeople()))
+  useEffect(() => {
+    if (persons.length === 0) return
+    setPicked((s) => {
+      const known = new Set(persons.map((p) => p.id))
+      const pruned = [...s].filter((id) => known.has(id))
+      if (pruned.length === s.size) return s
+      savePeople(pruned)
+      return new Set(pruned)
+    })
+  }, [persons])
+  function togglePerson(id: string) {
+    setPicked((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      savePeople([...n])
+      return n
+    })
+  }
 
   // Fade events that have already ended — mirrors the calendar's agenda list.
   const now = new Date()
   // fork — the hideEnded quiet setting drops ended events entirely.
   const cardOpts = useCardOptions<{ hideEnded?: boolean }>()
-  const base = filterId
-    ? events.filter((e) => e.personId === filterId || eventPeople(e).some((p) => p.id === filterId))
-    : events
+  const base =
+    picked.size === 0
+      ? events
+      : events.filter((e) => eventPeople(e).some((p) => picked.has(p.id)) || (e.personId && picked.has(e.personId)))
   const shown = cardOpts?.hideEnded ? base.filter((e) => !isPastEvent(e, now)) : base
-  const activePerson = persons.find((p) => p.id === filterId)
 
   return (
     <div className="card" style={{ padding: '22px 22px 8px', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
         <div className="card-h" style={{ fontSize: 23 }}>
           Today
         </div>
         <div className="muted" style={{ fontWeight: 600 }}>
           {shown.length} {shown.length === 1 ? 'event' : 'events'}
         </div>
-        <div style={{ marginLeft: 'auto', position: 'relative' }}>
-          <button type="button" className="pill" onClick={() => setMenuOpen((o) => !o)} style={{ cursor: 'pointer' }}>
-            <Icon name="filter" />
-            <span>{activePerson ? activePerson.name : 'All'}</span>
-          </button>
-          {menuOpen && (
-            <>
-              <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-              <div className="agenda-filter-menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 41, background: 'var(--card)', border: '1px solid var(--hair)', borderRadius: 'var(--r-md)', boxShadow: 'var(--sh-2)', padding: 6, minWidth: 160 }}>
-                <FilterOption label="Everyone" on={!filterId} onClick={() => { setFilterId(null); setMenuOpen(false) }} />
-                {persons.map((p) => (
-                  <FilterOption
-                    key={p.id}
-                    label={p.name}
-                    emoji={p.avatarEmoji ?? '🙂'}
-                    color={p.colorHex ?? '#A6A29B'}
-                    on={filterId === p.id}
-                    onClick={() => { setFilterId(p.id); setMenuOpen(false) }}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {persons.length > 1 && (
+          <div className="wkc-chips" style={{ marginLeft: 'auto' }}>
+            {persons.map((p) => {
+              const on = picked.has(p.id)
+              const color = p.colorHex ?? '#6B6B70'
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`wk-chip ${on ? 'on' : ''}`}
+                  style={on ? { background: `${color}22`, borderColor: color, color } : undefined}
+                  onClick={() => togglePerson(p.id)}
+                >
+                  <span className="av sm" style={{ background: `${color}22` }}>{p.avatarEmoji ?? '🙂'}</span>
+                  {p.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {loading && <div className="muted" style={{ padding: '14px 4px' }}>Loading…</div>}
       {error && <div className="muted" style={{ padding: '14px 4px' }}>Couldn't load the calendar — try reloading or signing in again.</div>}
       {!loading && !error && shown.length === 0 && (
         <div className="muted" style={{ padding: '14px 4px' }}>
-          {filterId ? `Nothing on ${activePerson?.name ?? 'their'} calendar today.` : 'Nothing on the calendar today.'}
+          {picked.size > 0 ? 'Nothing on their calendars today.' : 'Nothing on the calendar today.'}
         </div>
       )}
       {!loading && !error && shown.length > 0 && shown.length <= 3 ? (
@@ -157,25 +190,3 @@ export function AgendaCard() {
   )
 }
 
-// One row in the Today filter dropdown.
-function FilterOption({ label, emoji, color, on, onClick }: { label: string; emoji?: string; color?: string; on: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-        padding: '8px 10px', borderRadius: 8, border: 0, cursor: 'pointer', font: 'inherit', fontSize: 14, fontWeight: 600,
-        background: on ? 'var(--panel)' : 'transparent', color: 'var(--ink)',
-      }}
-    >
-      {emoji ? (
-        <span className="av sm" style={{ background: `${color ?? '#A6A29B'}22` }}>{emoji}</span>
-      ) : (
-        <span style={{ width: 26, textAlign: 'center' }}>👥</span>
-      )}
-      <span style={{ flex: 1 }}>{label}</span>
-      {on && <span style={{ color: 'var(--primary)', fontWeight: 800 }}>✓</span>}
-    </button>
-  )
-}

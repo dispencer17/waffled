@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AgendaCard } from './AgendaCard'
 import { CardSlotCtx } from '../today-card-slot'
 
@@ -48,6 +48,34 @@ describe('AgendaCard', () => {
     mockEvents([])
     render(<AgendaCard />)
     expect(await screen.findByText(/Nothing on the calendar today/)).toBeInTheDocument()
+  })
+
+  it('filters with person chips (multi-select, remembered per device) like the calendar views', async () => {
+    localStorage.clear()
+    const persons = [
+      { id: 'p1', name: 'Addison', colorHex: '#E0548B', avatarEmoji: '🦷' },
+      { id: 'p2', name: 'Riley', colorHex: '#25A368', avatarEmoji: '🐢' },
+    ]
+    const events = [
+      { id: '1', title: 'Dentist', startsAt: '2026-06-08T13:30:00Z', endsAt: null, allDay: false, location: null, personId: 'p1', personName: 'Addison', personColor: '#E0548B', personEmoji: null, participants: [] },
+      { id: '2', title: 'Swim', startsAt: '2026-06-08T15:00:00Z', endsAt: null, allDay: false, location: null, personId: null, personName: null, personColor: null, personEmoji: null, participants: [{ id: 'p2', name: 'Riley', colorHex: '#25A368', avatarEmoji: '🐢' }] },
+    ]
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons }) }
+      return { ok: true, json: async () => ({ date: '2026-06-08', events }) }
+    }) as unknown as typeof fetch
+
+    render(<AgendaCard />)
+    await screen.findByText('Dentist')
+    fireEvent.click(await screen.findByRole('button', { name: /Riley/ }))
+    await waitFor(() => expect(screen.queryByText('Dentist')).not.toBeInTheDocument())
+    expect(screen.getByText('Swim')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('waffled.agendaPeople') ?? '[]')).toEqual(['p2'])
+    // Toggling off restores everyone.
+    fireEvent.click(screen.getByRole('button', { name: /Riley/ }))
+    await waitFor(() => expect(screen.getByText('Dentist')).toBeInTheDocument())
+    localStorage.clear()
   })
 
   it('hides already-ended events via the hideEnded quiet setting', async () => {

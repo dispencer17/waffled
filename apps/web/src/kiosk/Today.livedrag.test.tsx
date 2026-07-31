@@ -184,7 +184,7 @@ describe('Today live drag', () => {
 
   it('pressing an interactive element inside a card never lifts', async () => {
     await renderToday(COLS_ONLY)
-    const btn = await screen.findByRole('button', { name: /All/i }) // AgendaCard's filter pill
+    const btn = await screen.findByRole('button', { name: /Add/i }) // CountdownsCard's + Add pill
     vi.useFakeTimers()
     fireEvent(btn, pointer('pointerdown', 10, 10))
     act(() => {

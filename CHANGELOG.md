@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The Today agenda filter now works like the calendar filters.** The agenda card's
+  single-person dropdown is gone; in its place are the same tappable person chips the
+  calendar Week view uses — pick one or several people, tap again to clear, and an
+  empty selection shows everyone. The choice is remembered on that device, like the
+  week strip's filter.
+
 ### Fixed
 - **Week-strip filter chips no longer waste a row.** On the Today board's week
   calendar card, the person filter chips now sit in line with the "This week" title
