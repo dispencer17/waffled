@@ -86,6 +86,16 @@ describe('Today board options', () => {
     expect(lastPutBody().layout.options).toMatchObject({ density: 'compact' })
   })
 
+  it('sets per-card quiet settings via the chip ⚙ modal and persists them', async () => {
+    await renderAndCustomize(LAYOUT)
+    fireEvent.click(screen.getByRole('button', { name: /Agenda options/i }))
+    fireEvent.click(await screen.findByRole('switch', { name: /Hide ended events/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Done/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
+    await waitFor(() => expect(puts().length).toBe(1))
+    expect(lastPutBody().layout.options).toMatchObject({ cards: { agenda: { hideEnded: true } } })
+  })
+
   it('applies the saved density class in normal view', async () => {
     await renderAndCustomize({ ...LAYOUT, options: { density: 'compact', hideEmpty: true } })
     fireEvent.click(screen.getByRole('button', { name: /Cancel/i }))

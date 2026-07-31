@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { GroceryCard } from './GroceryCard'
+import { CardSlotCtx } from '../today-card-slot'
 
 interface Item {
   id: string
@@ -63,6 +64,19 @@ describe('GroceryCard', () => {
     fireEvent.change(input, { target: { value: 'Bread' } })
     fireEvent.submit(input.closest('form')!)
     expect(await screen.findByText('Bread')).toBeInTheDocument()
+  })
+
+  it('caps the visible list via the maxItems quiet setting, with a +N more tail', async () => {
+    mockGrocery([{ name: 'Apples' }, { name: 'Bread' }, { name: 'Cheese' }, { name: 'Dates' }, { name: 'Eggs' }])
+    render(
+      <CardSlotCtx.Provider value={{ reportEmpty: () => {}, cardOptions: { maxItems: 3 } }}>
+        <GroceryCard />
+      </CardSlotCtx.Provider>
+    )
+    expect(await screen.findByText('Apples')).toBeInTheDocument()
+    expect(screen.getByText('Cheese')).toBeInTheDocument()
+    expect(screen.queryByText('Dates')).not.toBeInTheDocument()
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 
   it('removes an item via the delete button', async () => {

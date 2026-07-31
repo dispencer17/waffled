@@ -62,6 +62,9 @@ const CARDS: Record<string, { label: string; node: ReactNode; fill?: boolean }> 
 
 // Pure zone-tree helpers + drop-target math live in zone-layout.ts (tested).
 
+// Cards with per-card quiet settings (the ⚙ on their edit-mode chip).
+const QUIET_CARDS = new Set(['agenda', 'grocery', 'chores'])
+
 // Live drag: how long a press must hold still to lift a card, and how far the
 // pointer may wander during the hold before we treat the gesture as a scroll.
 const HOLD_MS = 450
@@ -138,6 +141,8 @@ export function Today() {
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)
   const [options, setOptions] = useState<BoardOptions>(effectiveResolved.options ?? {})
   const [saving, setSaving] = useState(false)
+  // Which card's quiet-settings modal is open (Customize ⚙).
+  const [quietCard, setQuietCard] = useState<string | null>(null)
   // Which cards reported "nothing to show" (via useCardEmpty) — drives the
   // hide-empty board option. Default (unreported) is visible.
   const [emptyByCard, setEmptyByCard] = useState<Record<string, boolean>>({})
@@ -344,6 +349,20 @@ export function Today() {
     document.body.style.userSelect = 'none'
   }
 
+  // Merge a patch into one card's quiet settings; undefined values clear keys,
+  // and empty objects fall away entirely so the stored options stay minimal.
+  function setCardOpt(card: 'agenda' | 'grocery' | 'chores', patch: Record<string, unknown>) {
+    setOptions((o) => {
+      const cur: Record<string, unknown> = { ...(o.cards?.[card] as object | undefined), ...patch }
+      for (const k of Object.keys(cur)) if (cur[k] === undefined) delete cur[k]
+      const cards = { ...o.cards, [card]: cur } as Record<string, unknown>
+      if (Object.keys(cur).length === 0) delete cards[card]
+      const next = { ...o, cards: cards as BoardOptions['cards'] }
+      if (!Object.keys(cards).length) delete next.cards
+      return next
+    })
+  }
+
   // Zone tools (Customize): split a leaf into side-by-side / stacked zones, or
   // delete it (its cards merge into the neighbor).
   function doSplit(path: ZonePath, dir: 'row' | 'col') {
@@ -426,6 +445,18 @@ export function Today() {
               <span className="today-card-grip">⠿</span>
               <span className="today-card-name">{def.label}</span>
               {def.fill && <span className="today-card-fillhint">list</span>}
+              {QUIET_CARDS.has(card) && (
+                <button
+                  type="button"
+                  className="today-card-hide"
+                  title="Card options"
+                  aria-label={`${def.label} options`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setQuietCard(card)}
+                >
+                  ⚙
+                </button>
+              )}
               <button
                 type="button"
                 className="today-card-hide"
@@ -593,6 +624,72 @@ export function Today() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Per-card quiet settings (Customize ⚙). Saved with the layout. */}
+      {editing && quietCard && (
+        <div className="modal-overlay" onClick={() => setQuietCard(null)}>
+          <div className="modal-card" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="modal-close" aria-label="Close" onClick={() => setQuietCard(null)}>
+              ×
+            </button>
+            <div className="wf-serif" style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
+              {CARDS[quietCard]?.label} options
+            </div>
+            <div className="tiny muted" style={{ fontWeight: 600, marginBottom: 14 }}>
+              Quiet-down settings for this card — saved with your layout.
+            </div>
+            {quietCard === 'agenda' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!options.cards?.agenda?.hideEnded}
+                  aria-label="Hide ended events"
+                  className={`toggle ${options.cards?.agenda?.hideEnded ? 'on' : ''}`}
+                  onClick={() => setCardOpt('agenda', { hideEnded: !options.cards?.agenda?.hideEnded })}
+                />
+                <span>Hide events that already ended</span>
+              </label>
+            )}
+            {quietCard === 'chores' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={!!options.cards?.chores?.hideOpen}
+                  aria-label="Hide up-for-grabs chores"
+                  className={`toggle ${options.cards?.chores?.hideOpen ? 'on' : ''}`}
+                  onClick={() => setCardOpt('chores', { hideOpen: !options.cards?.chores?.hideOpen })}
+                />
+                <span>Hide “up for grabs” chores</span>
+              </label>
+            )}
+            {quietCard === 'grocery' && (
+              <label className="today-option" style={{ padding: '6px 0' }}>
+                <span>Show at most</span>
+                <select
+                  className="sel"
+                  aria-label="Max grocery items"
+                  value={options.cards?.grocery?.maxItems ?? 0}
+                  onChange={(e) => setCardOpt('grocery', { maxItems: Number(e.target.value) || undefined })}
+                >
+                  <option value={0}>All items</option>
+                  {[5, 10, 15, 25, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n} items
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <button type="button" className="btn btn-primary" onClick={() => setQuietCard(null)}>
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
