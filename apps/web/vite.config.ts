@@ -37,7 +37,9 @@ function ortWasmAssets(): Plugin {
 // callbacks point at the wrong place.
 const apiProxy: Record<string, ProxyOptions> = {
   '/api': {
-    target: 'http://localhost:3000',
+    // Overridable so a dev server can point at a non-default api (e.g. a
+    // throwaway stack on another port) without editing this file.
+    target: process.env.VITE_API_TARGET ?? 'http://localhost:3000',
     changeOrigin: false,
     configure: (proxy) => {
       proxy.on('proxyReq', (proxyReq, req) => {
