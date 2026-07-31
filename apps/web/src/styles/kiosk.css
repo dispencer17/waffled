@@ -381,6 +381,35 @@ body {
 @media (max-width: 720px) {
   .today-presets { padding: 8px 16px 0; }
 }
+/* Board options row (Customize): the signal-to-noise dials. */
+.today-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 30px 0;
+}
+.today-options-h { margin-right: 2px; }
+.today-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+@media (max-width: 720px) {
+  .today-options { padding: 8px 16px 0; }
+}
+
+/* Compact density — tighter gaps, padding, and headers so more fits with less
+   visual weight. Card internals opt in via the shared .card / .card-h hooks. */
+.today-wrap.density-compact .today-zone,
+.today-wrap.density-compact .today-zone-split { gap: 10px; }
+.today-wrap.density-compact .today-slot > .card { padding: 14px 16px 8px; }
+.today-wrap.density-compact .card-h { font-size: 15px; }
+.today-wrap.density-compact .today-board { font-size: 13.5px; }
 /* Customize button + the Add-anything bar share the topbar's right slot. */
 .tb-today-actions { display: flex; align-items: center; gap: 12px; }
 .today-customize { font-weight: 700; cursor: pointer; }

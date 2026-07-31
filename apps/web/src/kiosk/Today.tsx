@@ -15,7 +15,7 @@ import { CaptureBar } from './components/CaptureBar'
 import { GettingStartedBar } from './onboarding/GettingStarted'
 import { PantryCard } from './Pantry'
 import { useTopbarRight } from './topbar-slot'
-import { useTodayLayout, useHousehold, type LayoutScope, type StoredLayout } from '../lib/api'
+import { useTodayLayout, useHousehold, type LayoutScope, type StoredLayout, type BoardOptions } from '../lib/api'
 import { moduleEnabled, rewardsEnabled } from '../lib/modules'
 import {
   isLeaf,
@@ -135,6 +135,7 @@ export function Today() {
   const [editing, setEditing] = useState(false)
   const [zones, setZones] = useState<ZoneNode>(effectiveResolved.zones)
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)
+  const [options, setOptions] = useState<BoardOptions>(effectiveResolved.options ?? {})
   const [saving, setSaving] = useState(false)
 
   // Pointer drag state (Customize chips AND live long-press drags). `drag` is set
@@ -162,6 +163,8 @@ export function Today() {
   zonesRef.current = zones
   const hiddenRef = useRef(hidden)
   hiddenRef.current = hidden
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   // Keep the working copy in sync with the server layout (+ module cards) when not
   // editing — but never mid-resize, so a live divider drag isn't reverted.
@@ -169,13 +172,14 @@ export function Today() {
     if (!editing && !resizingRef.current) {
       setZones(effectiveResolved.zones)
       setHidden(effectiveResolved.hidden)
+      setOptions(effectiveResolved.options ?? {})
     }
   }, [effectiveResolved, editing])
 
-  // What the working state saves as (options always pass through unchanged here).
+  // What the working state saves as (working options ride along on every save).
   function toStored(z: ZoneNode, h: string[]): StoredLayout {
-    const options = resolvedRef.current.options
-    return { zones: z, hidden: h, ...(options ? { options } : {}) }
+    const o = optionsRef.current
+    return { zones: z, hidden: h, ...(Object.keys(o).length ? { options: o } : {}) }
   }
 
   useEffect(() => {
@@ -347,6 +351,7 @@ export function Today() {
     setDrag(null)
     setZones(effectiveResolved.zones)
     setHidden(effectiveResolved.hidden)
+    setOptions(effectiveResolved.options ?? {})
   }
   // Hide a card from Today: pull it out of the tree and remember it as hidden,
   // so it stays gone (and, for module cards, doesn't auto-reappear) until shown.
@@ -499,7 +504,7 @@ export function Today() {
   }
 
   return (
-    <div className={`today-wrap ${editing ? 'today-editing' : ''} ${drag ? 'today-dragging' : ''}`}>
+    <div className={`today-wrap ${editing ? 'today-editing' : ''} ${drag ? 'today-dragging' : ''} ${options.density === 'compact' ? 'density-compact' : ''}`}>
       <GettingStartedBar />
       {(showChores || rewardsEnabled(household)) && <ApprovalsBar />}
       {moduleEnabled(household, 'goals') && <GoalRecapBar />}
@@ -520,6 +525,35 @@ export function Today() {
               {p.label}
             </button>
           ))}
+        </div>
+      )}
+      {/* Board options — the signal-to-noise dials, saved with the layout. */}
+      {editing && (
+        <div className="today-options">
+          <span className="tiny muted today-options-h">Board options:</span>
+          <label className="today-option">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!options.hideEmpty}
+              aria-label="Hide empty cards"
+              className={`toggle ${options.hideEmpty ? 'on' : ''}`}
+              onClick={() => setOptions((o) => ({ ...o, hideEmpty: !o.hideEmpty }))}
+            />
+            <span>Hide empty cards</span>
+          </label>
+          <label className="today-option">
+            <span>Density</span>
+            <select
+              className="sel"
+              aria-label="Density"
+              value={options.density ?? 'cozy'}
+              onChange={(e) => setOptions((o) => ({ ...o, density: e.target.value === 'compact' ? 'compact' : 'cozy' }))}
+            >
+              <option value="cozy">Cozy</option>
+              <option value="compact">Compact</option>
+            </select>
+          </label>
         </div>
       )}
 
