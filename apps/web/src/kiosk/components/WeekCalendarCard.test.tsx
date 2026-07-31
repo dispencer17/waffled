@@ -1,8 +1,9 @@
 // FamilyBoard-style Week calendar card: 7 day columns honoring the household
-// week start, today ringed, events stacked as solid person-color blocks.
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+// week start, today ringed, events stacked as solid person-color blocks, a
+// per-device people filter, and a live pulse on in-progress events.
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { WeekCalendarCard } from './WeekCalendarCard'
 import { startOfWeekFor, addDays, ymd } from './cal-utils'
 
@@ -19,10 +20,16 @@ const EVENTS = [
   { id: 'e3', title: 'Breakfast', startsAt: `${ymd(ws)}T09:00:00`, endsAt: null, allDay: false, personId: 'p2', personName: 'Riley', personColor: '#25A368', personEmoji: '🐢', participants: [] },
 ]
 
-function mockAll(weekStart = 'monday', settings: Record<string, unknown> = {}) {
+const PERSONS = [
+  { id: 'p1', name: 'Addison', colorHex: '#E0548B', avatarEmoji: '🦷' },
+  { id: 'p2', name: 'Riley', colorHex: '#25A368', avatarEmoji: '🐢' },
+]
+
+function mockAll(weekStart = 'monday', settings: Record<string, unknown> = {}, opts: { events?: unknown[]; persons?: unknown[] } = {}) {
   globalThis.fetch = vi.fn(async (url: string) => {
     const u = String(url)
-    if (u.includes('/api/events?from=')) return { ok: true, json: async () => ({ events: EVENTS }) }
+    if (u.includes('/api/events?from=')) return { ok: true, json: async () => ({ events: opts.events ?? EVENTS }) }
+    if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: opts.persons ?? [] }) }
     if (u.includes('/api/household')) {
       return {
         ok: true,
@@ -127,5 +134,68 @@ describe('WeekCalendarCard', () => {
     await screen.findByText('Dentist')
     await waitFor(() => expect(document.querySelector('.wkc-grid')).toBeTruthy())
     expect(document.querySelector('.wkc-grid.wkc-separated')).toBeNull()
+  })
+})
+
+describe('WeekCalendarCard people filter (per-device)', () => {
+  afterEach(() => {
+    localStorage.clear()
+    vi.useRealTimers()
+  })
+
+  it('renders a chip per member and filters the week when one is toggled, persisting the choice', async () => {
+    mockAll('monday', {}, { persons: PERSONS })
+    renderCard()
+    await screen.findByText('Dentist')
+    const riley = await screen.findByRole('button', { name: /Riley/ })
+    expect(screen.getByRole('button', { name: /Addison/ })).toBeTruthy()
+
+    fireEvent.click(riley)
+    await waitFor(() => expect(screen.queryByText('Dentist')).not.toBeInTheDocument()) // Addison's event filtered out
+    expect(screen.getByText('Breakfast')).toBeInTheDocument() // Riley's stays
+    expect(JSON.parse(localStorage.getItem('waffled.wkcPeople') ?? '[]')).toEqual(['p2'])
+  })
+
+  it('hydrates the stored selection on mount and prunes ids of removed members', async () => {
+    localStorage.setItem('waffled.wkcPeople', JSON.stringify(['p2', 'ghost']))
+    mockAll('monday', {}, { persons: PERSONS })
+    renderCard()
+    await screen.findByText('Breakfast')
+    expect(screen.queryByText('Dentist')).not.toBeInTheDocument() // filter applied from storage
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('waffled.wkcPeople') ?? '[]')).toEqual(['p2']))
+  })
+})
+
+describe('WeekCalendarCard in-progress pulse', () => {
+  afterEach(() => {
+    localStorage.clear()
+    vi.useRealTimers()
+  })
+
+  it('marks events happening right now and follows transitions on the minute tick', async () => {
+    const base = new Date()
+    base.setHours(12, 0, 0, 0)
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(base)
+    const day = ymd(base)
+    mockAll('monday', {}, {
+      events: [
+        { id: 'n1', title: 'Standup', startsAt: `${day}T11:30:00`, endsAt: `${day}T12:30:00`, allDay: false, personId: 'p1', personName: 'Addison', personColor: '#E0548B', personEmoji: null, participants: [] },
+        { id: 'n2', title: 'Review', startsAt: `${day}T12:45:00`, endsAt: `${day}T13:45:00`, allDay: false, personId: 'p1', personName: 'Addison', personColor: '#E0548B', personEmoji: null, participants: [] },
+        { id: 'n3', title: 'Camp', startsAt: `${day}T00:00:00`, endsAt: null, allDay: true, personId: null, personName: null, personColor: null, personEmoji: null, participants: [] },
+      ],
+    })
+    renderCard()
+    const standup = (await screen.findByText('Standup')).closest('.wkc-ev') as HTMLElement
+    expect(standup.className).toContain('wkc-ev--now')
+    expect((screen.getByText('Review').closest('.wkc-ev') as HTMLElement).className).not.toContain('wkc-ev--now')
+    expect((screen.getByText('Camp').closest('.wkc-ev') as HTMLElement).className).not.toContain('wkc-ev--now') // all-day never pulses
+
+    // An hour later: Standup ended, Review is live — the minute tick picks it up.
+    act(() => {
+      vi.advanceTimersByTime(60 * 60000)
+    })
+    expect((screen.getByText('Review').closest('.wkc-ev') as HTMLElement).className).toContain('wkc-ev--now')
+    expect((screen.getByText('Standup').closest('.wkc-ev') as HTMLElement).className).not.toContain('wkc-ev--now')
   })
 })

@@ -112,6 +112,27 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .wkc-ev.allday .wkc-ev-t { text-transform: uppercase; letter-spacing: .03em; font-size: 9.5px; }
 
+/* fork — person filter chips on the card (reuses the Week view's .wk-chip). */
+.wkc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; }
+
+/* fork — in-progress pulse: a gentle breathing ring around events happening
+   right now, plus a live dot in the time label. Reduced motion keeps a static
+   ring so the cue survives without the animation. */
+.wkc-ev--now {
+  animation: wkc-now-pulse 2.4s ease-in-out infinite;
+}
+.wkc-ev-live { font-size: 9px; vertical-align: 1px; }
+@keyframes wkc-now-pulse {
+  0%, 100% { box-shadow: var(--sh-1), 0 0 0 0 color-mix(in srgb, var(--ev, var(--primary)) 55%, transparent); }
+  50% { box-shadow: var(--sh-1), 0 0 0 5px color-mix(in srgb, var(--ev, var(--primary)) 18%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wkc-ev--now {
+    animation: none;
+    box-shadow: var(--sh-1), 0 0 0 3px color-mix(in srgb, var(--ev, var(--primary)) 35%, transparent);
+  }
+}
+
 /* Separated days (household display setting `weekCard: separated`, the default) —
    each day is a distinct bordered cell with a soft fill, and today's whole cell is
    ringed in the accent color, matching the FamilyBoard look. `plain` drops these. */
