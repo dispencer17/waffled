@@ -5,6 +5,7 @@ import { eventPeople } from './cal-utils'
 import { isPastEvent } from './AgendaView'
 import { useEventsToday, usePersons, type AgendaEvent } from '../../lib/api'
 import { useEventColor } from '../../lib/event-color'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 function formatTime(e: AgendaEvent): string {
   if (e.allDay) return 'all day'
@@ -84,6 +85,7 @@ export function AgendaCard() {
   const { events, loading, error, refetch } = useEventsToday()
   const { persons = [] } = usePersons()
   const colorOf = useEventColor('#A6A29B')
+  useCardEmpty(loading ? undefined : error ? false : events.length === 0) // fork — hide-empty board option
   const [selected, setSelected] = useState<AgendaEvent | null>(null)
   // Today's events can be filtered to one person (owner or participant). null = all.
   const [filterId, setFilterId] = useState<string | null>(null)

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useRewardsHub } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Today-board card for the rewards loop: every member's star balance at a
 // glance, a pending-approvals note, and a jump into the Reward Shop
@@ -7,6 +8,7 @@ import { useRewardsHub } from '../../lib/api'
 export function RewardsCard() {
   const navigate = useNavigate()
   const { balances, pending, loading, error } = useRewardsHub()
+  useCardEmpty(loading ? undefined : error ? false : balances.length === 0 && pending.length === 0) // fork — hide-empty board option
 
   return (
     <div className="card">

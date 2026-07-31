@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { homeAssistantApi, actionFor, isOn, type HaEntity } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Today card: the admin-pinned Home Assistant entities as one-tap controls.
 // Lights/switches toggle, scenes/scripts fire, locks and sensors are read-only.
@@ -68,6 +69,7 @@ export function QuickControlsCard() {
       })
   }
 
+  useCardEmpty(entities === null ? undefined : entities.length === 0) // fork — hide-empty board option
   return (
     <div className="card" style={{ padding: '22px 22px 16px', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>

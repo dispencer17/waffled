@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useEventsRange, useHousehold, type AgendaEvent } from '../../lib/api'
 import { useEventColor } from '../../lib/event-color'
+import { useCardEmpty } from '../today-card-slot' // fork
 import { weekCardStyle } from '../../lib/display'
 import { DOW, ymd, addDays, localDate, startOfWeekFor, fmtTimeShort, eventDetailPath } from './cal-utils'
 
@@ -22,6 +23,7 @@ export function WeekCalendarCard() {
   const { events, loading, error } = useEventsRange(ymd(ws), ymd(addDays(ws, 6)))
   const tz = household?.timezone ?? 'UTC'
   const today = ymd(new Date())
+  useCardEmpty(loading && events.length === 0 ? undefined : error ? false : events.length === 0) // fork — hide-empty board option
 
   // Bucket by household-tz day; all-day events pin to the top, the rest sort by time.
   const byDay = useMemo(() => {

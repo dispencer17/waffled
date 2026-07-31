@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCountdowns, countdownsApi, countdownLabel, type Countdown } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Today card: everything the family is counting down to, soonest first. Standalone
 // items are addable/removable here; event-flagged and birthday countdowns are derived
@@ -44,6 +45,7 @@ export function CountdownsCard() {
   const { countdowns, sleeps, loading } = useCountdowns()
   const [adding, setAdding] = useState(false)
   const navigate = useNavigate()
+  useCardEmpty(loading ? undefined : countdowns.length === 0) // fork — hide-empty board option
 
   // Tapping a countdown takes you to what it's counting down to: an event-based
   // countdown opens that event; standalone/birthday ones jump to the calendar day

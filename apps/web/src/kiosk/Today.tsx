@@ -37,6 +37,7 @@ import {
   type ZonePath,
 } from './zone-layout'
 import { TODAY_PRESETS, applyPreset, type TodayPreset } from './today-presets'
+import { CardSlotCtx, type CardSlotApi } from './today-card-slot'
 
 // The cards that can live on Today, keyed the same as the stored layout. `fill`
 // cards are long, scrollable lists (agenda, grocery) — they take the spare room in
@@ -137,6 +138,20 @@ export function Today() {
   const [hidden, setHidden] = useState<string[]>(effectiveResolved.hidden)
   const [options, setOptions] = useState<BoardOptions>(effectiveResolved.options ?? {})
   const [saving, setSaving] = useState(false)
+  // Which cards reported "nothing to show" (via useCardEmpty) — drives the
+  // hide-empty board option. Default (unreported) is visible.
+  const [emptyByCard, setEmptyByCard] = useState<Record<string, boolean>>({})
+  const slotApis = useMemo(() => {
+    const m: Record<string, CardSlotApi> = {}
+    for (const key of Object.keys(CARDS)) {
+      m[key] = {
+        reportEmpty: (empty: boolean) =>
+          setEmptyByCard((prev) => (prev[key] === empty ? prev : { ...prev, [key]: empty })),
+        cardOptions: (options.cards as Record<string, CardSlotApi['cardOptions']> | undefined)?.[key],
+      }
+    }
+    return m
+  }, [options.cards])
 
   // Pointer drag state (Customize chips AND live long-press drags). `drag` is set
   // once per drag so the listener effect subscribes once; `pos` drives the ghost,
@@ -425,11 +440,13 @@ export function Today() {
           </div>
         ) : (
           <div
-            className={`today-slot ${def.fill ? 'fill' : ''} ${dragged ? 'dragging-source' : ''}`}
+            className={`today-slot ${def.fill ? 'fill' : ''} ${dragged ? 'dragging-source' : ''} ${
+              options.hideEmpty && emptyByCard[card] === true && !drag ? 'today-slot--collapsed' : ''
+            }`}
             data-card={dragged ? undefined : card}
             onPointerDown={(e) => beginHold(e, card)}
           >
-            {def.node}
+            <CardSlotCtx.Provider value={slotApis[card]}>{def.node}</CardSlotCtx.Provider>
           </div>
         )}
       </Fragment>

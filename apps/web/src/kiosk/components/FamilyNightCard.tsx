@@ -1,4 +1,5 @@
 import { useFamilyNight, familyNightApi, type FamilyNightAssignment } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Today card: the upcoming Family Night — its date, agenda parts, and who's on each.
 // Parts default to a rotation suggestion; picking a person pins it for this week.
@@ -43,6 +44,7 @@ function PartRow({
 
 export function FamilyNightCard() {
   const { view, loading } = useFamilyNight()
+  useCardEmpty(loading ? undefined : !view || view.members.length === 0) // fork — hide-empty board option
 
   return (
     <div className="card fn-card" style={{ padding: '22px 22px 16px', display: 'flex', flexDirection: 'column' }}>

@@ -6,6 +6,7 @@ import {
 } from '../lib/api'
 import { ScanModal } from './components/ScanModal'
 import { CookFromPantry } from './components/CookFromPantry'
+import { useCardEmpty } from './today-card-slot' // fork
 import { AllergenBadges, AllergenBadge, AllergenKey } from './components/Allergens'
 import '../styles/pantry.css'
 
@@ -593,6 +594,7 @@ export function PantryCard() {
     pantryApi.list().then((d) => alive && setItems(d.items.filter((i) => !i.usedUp))).catch(() => {})
     return () => { alive = false }
   }, [])
+  useCardEmpty(items === null ? undefined : items.length === 0) // fork — hide-empty board option
 
   if (!items) return null
   const sorted = [...items].sort((a, b) => {

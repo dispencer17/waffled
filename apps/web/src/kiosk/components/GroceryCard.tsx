@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { Icon } from '../icons'
 import { useGrocery } from '../../lib/api'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Real, interactive grocery list: tap to check off, type to add. Backed by
 // /api/lists/grocery.
 export function GroceryCard() {
   const { items, loading, error, add, toggle, remove } = useGrocery()
   const [draft, setDraft] = useState('')
+  useCardEmpty(loading ? undefined : error ? false : items.length === 0) // fork — hide-empty board option
 
   async function submit(e: FormEvent) {
     e.preventDefault()

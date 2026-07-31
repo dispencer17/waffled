@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { useChoresToday, useCurrencies, useHousehold, can, type PersonChores } from '../../lib/api'
 import { SpotAwardModal } from './SpotAwardModal'
+import { useCardEmpty } from '../today-card-slot' // fork
 
 // Per-person progress ring, colored by the member's own color. `sym` is the
 // household default currency symbol (renders ⭐ / 💵 / etc. from the catalog).
@@ -86,6 +87,7 @@ export function ChoresCard() {
   const { person: me } = useHousehold()
   const sym = defaultCurrency?.symbol ?? '⭐'
   const withChores = people.filter((p) => p.total > 0)
+  useCardEmpty(loading ? undefined : error ? false : withChores.length === 0 && upForGrabs === 0) // fork — hide-empty board option
   // A parent who can hand out ad-hoc stars gets a quick-tap entry point right on
   // the card — no picker preset, so they choose who in the modal.
   const canAward = can(me, 'reward.grant')

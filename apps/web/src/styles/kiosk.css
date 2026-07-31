@@ -605,6 +605,10 @@ body {
   opacity: 0.4;
   pointer-events: none;
 }
+/* Hide-empty board option: a card that reported "nothing to show" collapses
+   away (display, not unmount — its fetch state survives and it reappears
+   instantly). Everything shows again while editing or dragging. */
+.today-slot.today-slot--collapsed { display: none; }
 
 /* Zone dividers — drag to resize: between row-split siblings they rebalance
    widths (vertical grip); between col-split siblings they drag the upper
