@@ -104,7 +104,9 @@ export function useTodayLayout(): TodayLayoutState {
   }
 
   return {
-    resolved: data?.resolved ?? FALLBACK,
+    // Guard the deploy window: an API that predates zones serves the legacy
+    // {full, cols} shape — fall back to the default board rather than crash.
+    resolved: data?.resolved?.zones ? data.resolved : FALLBACK,
     source: data?.source ?? 'default',
     canEditFamily: data?.canEditFamily ?? false,
     loading,

@@ -154,6 +154,30 @@ describe('Today customize dividers', () => {
   })
 })
 
+describe('Today legacy-response guard', () => {
+  it('renders the default board when the API serves a pre-zones layout shape', async () => {
+    // Simulate an old API mid-deploy: resolved has {full, cols} but no zones.
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/today-layout'))
+        return { ok: true, json: async () => ({ resolved: { full: ['weekCalendar'], cols: [['agenda'], [], []], hidden: [] }, family: null, user: null, source: 'family', cards: [], canEditFamily: false }) }
+      if (u.includes('/api/household'))
+        return { ok: true, json: async () => ({ provisioned: true, household: { id: 'h', name: 'Home', timezone: 'UTC', weekStart: 'sunday', settings: { modules: MODULES } }, person: { id: 'me', name: 'K', memberType: 'adult', isAdmin: false, capabilities: [] } }) }
+      return { ok: true, json: async () => EMPTY }
+    }) as unknown as typeof fetch
+    render(
+      <MemoryRouter>
+        <TopbarSlotProvider>
+          <Today />
+          <Slot />
+        </TopbarSlotProvider>
+      </MemoryRouter>
+    )
+    // No crash — the default (fallback) zone board renders with the agenda card.
+    await waitFor(() => expect(document.querySelector('.today-slot[data-card="agenda"]')).toBeTruthy())
+  })
+})
+
 describe('Today zone editor', () => {
   it('splits a zone into side-by-side zones and saves the tree', async () => {
     await renderToday(LAYOUT)
