@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Week-strip filter chips no longer waste a row.** On the Today board's week
+  calendar card, the person filter chips now sit in line with the "This week" title
+  and the Calendar button instead of on their own row of white space (they wrap
+  below only when the card is genuinely too narrow).
+
 ### Added
 - **FancyZones-style dashboard zones.** The Today board is now a real zone grid, in the
   spirit of PowerToys FancyZones: split any zone into side-by-side or stacked zones,

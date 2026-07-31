@@ -104,30 +104,31 @@ export function WeekCalendarCard() {
     <div className="card wkc-card">
       <div className="wkc-head-row">
         <div className="card-h">This week</div>
+        {/* Person filter chips ride the header row — no separate row of whitespace. */}
+        {persons.length > 1 && (
+          <div className="wkc-chips">
+            {persons.map((p) => {
+              const on = selected.has(p.id)
+              const color = p.colorHex ?? '#6B6B70'
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`wk-chip ${on ? 'on' : ''}`}
+                  style={on ? { background: `${color}22`, borderColor: color, color } : undefined}
+                  onClick={() => toggle(p.id)}
+                >
+                  <span className="av sm" style={{ background: `${color}22` }}>{p.avatarEmoji ?? '🙂'}</span>
+                  {p.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <button type="button" className="pill" onClick={() => navigate('/calendar')}>
           Calendar ›
         </button>
       </div>
-      {persons.length > 1 && (
-        <div className="wkc-chips">
-          {persons.map((p) => {
-            const on = selected.has(p.id)
-            const color = p.colorHex ?? '#6B6B70'
-            return (
-              <button
-                key={p.id}
-                type="button"
-                className={`wk-chip ${on ? 'on' : ''}`}
-                style={on ? { background: `${color}22`, borderColor: color, color } : undefined}
-                onClick={() => toggle(p.id)}
-              >
-                <span className="av sm" style={{ background: `${color}22` }}>{p.avatarEmoji ?? '🙂'}</span>
-                {p.name}
-              </button>
-            )
-          })}
-        </div>
-      )}
       {error && <div className="muted tiny wkc-note">Couldn't load the calendar — try reloading.</div>}
       {loading && events.length === 0 && !error && <div className="muted tiny wkc-note">Loading…</div>}
       <div className={`wkc-grid ${separated ? 'wkc-separated' : ''}`}>
