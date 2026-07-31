@@ -48,13 +48,14 @@ const cleanSize = (raw: unknown): number | undefined =>
 // The built-in default arrangement: the week calendar spans a full-width band
 // on top, the rest fill 3 columns below (mirrors the FamilyBoard layout).
 function defaultZones(): ZoneNode {
+  // In a col split, an explicit size means a pinned height (ratio × the legacy
+  // 320px band unit) — the content row below stays auto-sized, so it has none.
   return {
     dir: 'col',
     children: [
       { cards: [FULL_DEFAULT_CARD], size: 1 },
       {
         dir: 'row',
-        size: 1.6,
         children: [{ cards: ['agenda', 'countdowns'] }, { cards: ['tonight', 'week'] }, { cards: ['chores', 'grocery'] }],
       },
     ],
@@ -148,7 +149,7 @@ function legacyToZones(raw: unknown): ZoneNode {
     cards: Array.isArray(col) ? col.filter((c): c is string => typeof c === 'string') : [],
     ...(cleanSize(widths[i]) != null ? { size: cleanSize(widths[i]) } : {}),
   }))
-  const row: ZoneSplit = { dir: 'row', size: 1.6, children: colLeaves.length ? colLeaves : [{ cards: [] }] }
+  const row: ZoneSplit = { dir: 'row', children: colLeaves.length ? colLeaves : [{ cards: [] }] }
   if (rawFull.length === 0) return row
   const bandSize =
     typeof o.bandHeight === 'number' && Number.isFinite(o.bandHeight)
@@ -295,31 +296,6 @@ export function reconcileLayout(raw: unknown): StoredLayout {
   return { zones, hidden, ...(options ? { options } : {}) }
 }
 
-// Transitional projection for clients that still read {full, cols, sizes}:
-// exact for the canonical band-over-columns tree, else a lossless flatten into
-// 3 columns. Delete once the kiosk renders zones natively.
-export function zonesToLegacy(zones: ZoneNode): { full: string[]; cols: string[][]; bandHeight?: number; colWidths?: number[] } {
-  if (!isLeaf(zones) && zones.dir === 'col' && zones.children.length === 2 && isLeaf(zones.children[0]) && !isLeaf(zones.children[1]) && zones.children[1].dir === 'row' && zones.children[1].children.every(isLeaf)) {
-    const colLeaves = zones.children[1].children as ZoneLeaf[]
-    const cols = colLeaves.map((l) => [...l.cards])
-    while (cols.length < 3) cols.push([])
-    if (cols.length > 3) {
-      const extra = cols.splice(3)
-      cols[2].push(...extra.flat())
-    }
-    const bandHeight = clamp((zones.children[0].size ?? 1) * LEGACY_BAND_PX, 160, 900)
-    const colWidths = colLeaves.slice(0, 3).map((l) => l.size ?? 1)
-    while (colWidths.length < 3) colWidths.push(1)
-    return { full: [...zones.children[0].cards], cols, bandHeight, colWidths }
-  }
-  const leaves: ZoneLeaf[] = []
-  const collect = (n: ZoneNode) => (isLeaf(n) ? leaves.push(n) : n.children.forEach(collect))
-  collect(zones)
-  const cols: string[][] = [[], [], []]
-  leaves.forEach((l, i) => cols[Math.min(i, 2)].push(...l.cards))
-  return { full: [], cols }
-}
-
 const isKnownKey = (k: unknown): k is string => typeof k === 'string' && CARD_SET.has(k)
 const isKeyArray = (v: unknown) => v == null || (Array.isArray(v) && v.every(isKnownKey))
 
@@ -366,8 +342,7 @@ export function registerTodayLayoutRoutes(api: Api): void {
     const family = rows[0]?.family ?? null
     const user = rows[0]?.user ?? null
     const source = user != null ? 'user' : family != null ? 'family' : 'default'
-    const reconciled = reconcileLayout(user ?? family ?? null)
-    const resolved = { ...reconciled, ...zonesToLegacy(reconciled.zones) }
+    const resolved = reconcileLayout(user ?? family ?? null)
     // Only admins can change what the shared kiosk shows (the family tier).
     return { resolved, family: family ?? null, user: user ?? null, source, cards: TODAY_CARDS, canEditFamily: tenant.isAdmin }
   }))
@@ -388,7 +363,7 @@ export function registerTodayLayoutRoutes(api: Api): void {
     } else {
       await query(`update persons set today_layout = $1 where id = $2`, [JSON.stringify(layout), tenant.personId])
     }
-    return { ok: true, layout: { ...layout, ...zonesToLegacy(layout.zones) } }
+    return { ok: true, layout }
   }))
 
   // Reset a tier back to inheriting (user → family, family → built-in default).

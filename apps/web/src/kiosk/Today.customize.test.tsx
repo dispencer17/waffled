@@ -1,22 +1,23 @@
-// Customize mode: draggable zone dividers (band height + column widths) that are
-// visible only while customizing and persist with "Save for me".
+// Customize mode: draggable zone dividers (pinned heights + width ratios) that
+// are visible in both modes and persist with "Save for me"; zone editor tools.
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Today } from './Today'
 import { TopbarSlotProvider, useTopbarSlots } from './topbar-slot'
+import type { StoredLayout } from '../lib/api/today-layout'
+import { listLeaves, type ZoneNode, type ZoneSplit } from './zone-layout'
 
 const MODULES = { pantry: false, familyNight: false, goals: false, smartHome: false, chores: true, meals: false, lists: false, quotes: false }
 const EMPTY = { persons: [], items: [], lists: [], people: [], instances: [], entries: [], events: [], goals: [], photos: [], recipes: [], currencies: [] }
-type Layout = { full: string[]; cols: string[][]; hidden: string[]; bandHeight?: number; colWidths?: number[] }
 
-function mockAll(initial: Layout) {
+function mockAll(initial: StoredLayout) {
   const state = { layout: initial }
   globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
     const u = String(url)
     if (u.includes('/api/today-layout')) {
       if (init?.method === 'PUT') {
-        const body = JSON.parse(String(init.body)) as { scope: string; layout: Layout }
+        const body = JSON.parse(String(init.body)) as { scope: string; layout: StoredLayout }
         state.layout = body.layout
         return { ok: true, json: async () => ({ ok: true, layout: body.layout }) }
       }
@@ -45,7 +46,7 @@ function Slot() {
   return <>{useTopbarSlots().right}</>
 }
 
-async function renderToday(initial: Layout) {
+async function renderToday(initial: StoredLayout) {
   mockAll(initial)
   render(
     <MemoryRouter>
@@ -55,7 +56,9 @@ async function renderToday(initial: Layout) {
       </TopbarSlotProvider>
     </MemoryRouter>
   )
-  await waitFor(() => expect(document.querySelector('.today-slot[data-card="agenda"]')).toBeTruthy())
+  // Wait for the SERVED layout (countdowns is not in the client fallback) so
+  // interactions never hit the pre-fetch fallback tree, which remounts.
+  await waitFor(() => expect(document.querySelector('.today-slot[data-card="countdowns"]')).toBeTruthy())
 }
 
 async function enterCustomize() {
@@ -65,7 +68,17 @@ async function enterCustomize() {
   await screen.findByRole('button', { name: /Save for me/i })
 }
 
-const LAYOUT: Layout = { full: ['weekCalendar'], cols: [['agenda'], ['countdowns'], ['chores']], hidden: [] }
+// The default shape: a pinned week-calendar band over a row of three columns.
+const LAYOUT: StoredLayout = {
+  zones: {
+    dir: 'col',
+    children: [
+      { cards: ['weekCalendar'], size: 1 },
+      { dir: 'row', children: [{ cards: ['agenda'] }, { cards: ['countdowns'] }, { cards: ['chores'] }] },
+    ],
+  },
+  hidden: [],
+}
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -80,23 +93,23 @@ describe('Today customize dividers', () => {
     expect(document.querySelectorAll('.today-divider-v').length).toBe(2)
   })
 
-  it('resizes the band on the normal dashboard (no Customize) and auto-saves', async () => {
+  it('resizes the pinned band zone on the normal dashboard (no Customize) and auto-saves', async () => {
     await renderToday(LAYOUT)
     // enough time for the layout GET to resolve so the save carries the served layout
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/api/today-layout'))).toBe(true))
     const h = document.querySelector('.today-divider-h') as HTMLElement
     act(() => {
       fireEvent(h, pointer('pointerdown', 500, 400))
-      fireEvent(window, pointer('pointermove', 500, 520)) // +120 from a 320 default → 440
+      fireEvent(window, pointer('pointermove', 500, 520)) // +120px on a 320px unit → ratio 1.375
       fireEvent(window, pointer('pointerup', 500, 520))
     })
     await waitFor(() => expect(puts().length).toBe(1))
     const body = lastPutBody()
     expect(body.scope).toBe('user')
-    expect(body.layout.bandHeight).toBe(440)
+    expect((body.layout.zones as ZoneSplit).children[0].size).toBeCloseTo(1.375)
   })
 
-  it('resizes columns on the normal dashboard (no Customize) and auto-saves', async () => {
+  it('rebalances row-split widths on the normal dashboard (no Customize) and auto-saves', async () => {
     await renderToday(LAYOUT)
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some(([u]) => String(u).includes('/api/today-layout'))).toBe(true))
     const v = document.querySelectorAll('.today-divider-v')[0] as HTMLElement
@@ -108,36 +121,25 @@ describe('Today customize dividers', () => {
     await waitFor(() => expect(puts().length).toBe(1))
     const body = lastPutBody()
     expect(body.scope).toBe('user')
-    expect(body.layout.colWidths).toEqual([2, 0.4, 1])
+    const row = (body.layout.zones as ZoneSplit).children[1] as ZoneSplit
+    expect(row.children[0].size).toBe(2) // grew by one unit
+    expect(row.children[1].size).toBe(0.25) // shrunk to the floor
+    expect(row.children[2].size).toBeUndefined() // untouched
   })
 
-  it('dragging the horizontal divider then saving persists a clamped bandHeight', async () => {
+  it('dragging dividers in Customize persists only on "Save for me"', async () => {
     await renderToday(LAYOUT)
     await enterCustomize()
     const h = document.querySelector('.today-divider-h') as HTMLElement
     act(() => {
       fireEvent(h, pointer('pointerdown', 500, 400))
-      fireEvent(window, pointer('pointermove', 500, 520)) // +120 from a 320 default → 440
+      fireEvent(window, pointer('pointermove', 500, 520))
       fireEvent(window, pointer('pointerup', 500, 520))
     })
+    expect(puts().length).toBe(0) // nothing saved yet
     fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
     await waitFor(() => expect(puts().length).toBe(1))
-    expect(lastPutBody().layout.bandHeight).toBe(440)
-  })
-
-  it('dragging a vertical divider then saving persists clamped colWidths', async () => {
-    await renderToday(LAYOUT)
-    await enterCustomize()
-    const v = document.querySelectorAll('.today-divider-v')[0] as HTMLElement // between col 0 and 1
-    act(() => {
-      fireEvent(v, pointer('pointerdown', 400, 300))
-      fireEvent(window, pointer('pointermove', 620, 300)) // +220px ≈ +1 ratio unit
-      fireEvent(window, pointer('pointerup', 620, 300))
-    })
-    fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
-    await waitFor(() => expect(puts().length).toBe(1))
-    // col0 grows to 2, col1 shrinks to the 0.4 floor, col2 unchanged.
-    expect(lastPutBody().layout.colWidths).toEqual([2, 0.4, 1])
+    expect((lastPutBody().layout.zones as ZoneSplit).children[0].size).toBeCloseTo(1.375)
   })
 
   it('applying the Classic preset then saving persists that arrangement (no band)', async () => {
@@ -146,8 +148,51 @@ describe('Today customize dividers', () => {
     fireEvent.click(screen.getByRole('button', { name: /Classic columns/i }))
     fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
     await waitFor(() => expect(puts().length).toBe(1))
-    const body = lastPutBody()
-    expect(body.layout.full).toEqual([])
-    expect(body.layout.cols.flat()).toContain('weekCalendar')
+    const zones = lastPutBody().layout.zones as ZoneNode
+    expect((zones as ZoneSplit).dir).toBe('row') // flat columns, no pinned band
+    expect(listLeaves(zones).flatMap((l) => l.leaf.cards)).toContain('weekCalendar')
+  })
+})
+
+describe('Today zone editor', () => {
+  it('splits a zone into side-by-side zones and saves the tree', async () => {
+    await renderToday(LAYOUT)
+    await enterCustomize()
+    // Split the first column (path 1.0) horizontally → a new empty sibling.
+    const zone = document.querySelector('[data-region="1.0"]') as HTMLElement
+    fireEvent.click(zone.querySelector('[aria-label="Split zone horizontally"]') as HTMLElement)
+    await waitFor(() => expect(document.querySelectorAll('[data-region]').length).toBe(5)) // 4 leaves + 1 new
+    fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
+    await waitFor(() => expect(puts().length).toBe(1))
+    const row = (lastPutBody().layout.zones as ZoneSplit).children[1] as ZoneSplit
+    expect(row.children).toHaveLength(4)
+  })
+
+  it('deletes a zone, merging its cards into the neighbor', async () => {
+    await renderToday(LAYOUT)
+    await enterCustomize()
+    const zone = document.querySelector('[data-region="1.1"]') as HTMLElement
+    fireEvent.click(zone.querySelector('[aria-label="Delete zone"]') as HTMLElement)
+    fireEvent.click(screen.getByRole('button', { name: /Save for me/i }))
+    await waitFor(() => expect(puts().length).toBe(1))
+    const row = (lastPutBody().layout.zones as ZoneSplit).children[1] as ZoneSplit
+    expect(row.children).toHaveLength(2)
+    expect((row.children[0] as { cards: string[] }).cards).toEqual(['agenda', 'countdowns'])
+  })
+
+  it('disables deleting the last remaining zone', async () => {
+    mockAll({ zones: { dir: 'col', children: [{ cards: ['agenda'] }] }, hidden: [] })
+    render(
+      <MemoryRouter>
+        <TopbarSlotProvider>
+          <Today />
+          <Slot />
+        </TopbarSlotProvider>
+      </MemoryRouter>
+    )
+    await waitFor(() => expect(document.querySelector('.today-slot[data-card="agenda"]')).toBeTruthy())
+    await enterCustomize()
+    const del = document.querySelector('[aria-label="Delete zone"]') as HTMLButtonElement
+    expect(del.disabled).toBe(true)
   })
 })

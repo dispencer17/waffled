@@ -131,6 +131,15 @@ export function resizeSiblings(root: ZoneNode, parentPath: ZonePath, i: number, 
   return next
 }
 
+/** Set an explicit (clamped) size on the node at `path`. */
+export function setZoneSize(root: ZoneNode, path: ZonePath, size: number): ZoneNode {
+  const next = clone(root)
+  const node = getNode(next, path)
+  if (!node) return root
+  node.size = clampSize(size)
+  return next
+}
+
 export function removeCardEverywhere(root: ZoneNode, card: string): ZoneNode {
   const next = clone(root)
   for (const { leaf } of listLeaves(next)) leaf.cards = leaf.cards.filter((c) => c !== card)

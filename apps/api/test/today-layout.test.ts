@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest'
 import {
   reconcileLayout,
   cleanOptions,
-  zonesToLegacy,
   TODAY_CARDS,
   type ZoneNode,
   type ZoneLeaf,
@@ -189,21 +188,3 @@ describe('cleanOptions', () => {
   })
 })
 
-describe('zonesToLegacy (transitional projection)', () => {
-  it('projects the canonical band-over-columns tree back to {full, cols}', () => {
-    const { zones } = reconcileLayout({ full: ['weekCalendar'], cols: DEFAULT_COLS, hidden: ['rewards', 'pantry', 'familyNight', 'goals', 'smartHome'] })
-    const legacy = zonesToLegacy(zones)
-    expect(legacy.full).toEqual(['weekCalendar'])
-    expect(legacy.cols).toEqual(DEFAULT_COLS)
-  })
-
-  it('flattens an arbitrary tree into 3 columns without losing cards', () => {
-    const { zones } = reconcileLayout({
-      zones: { dir: 'row', children: [{ cards: ['agenda'] }, { cards: ['chores'] }, { cards: ['grocery'] }, { cards: ['tonight'] }] },
-      hidden: [],
-    })
-    const legacy = zonesToLegacy(zones)
-    expect(legacy.cols).toHaveLength(3)
-    expect([...legacy.full, ...legacy.cols.flat()].sort()).toEqual([...allCards(zones)].sort())
-  })
-})

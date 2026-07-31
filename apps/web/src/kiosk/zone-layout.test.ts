@@ -1,4 +1,4 @@
-// Tests for the zone-tree layout helpers — the FancyZones-style generalization
+﻿// Tests for the zone-tree layout helpers — the FancyZones-style generalization
 // of the old band+columns model. A layout is a recursive split-tree; leaves hold
 // ordered card stacks; zone identity is the pre-order child-index path ('1.0').
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,7 @@ import {
   splitZone,
   deleteZone,
   resizeSiblings,
+  setZoneSize,
   removeCardEverywhere,
   insertAtZone,
   appendCard,
@@ -58,7 +59,7 @@ describe('splitZone', () => {
     const out = splitZone(tree(), '1.1', 'row')
     const row = getNode(out, '1')
     expect(isLeaf(row!)).toBe(false)
-    if (!isLeaf(row!)) {
+    if (row && !isLeaf(row)) {
       expect(row.children).toHaveLength(4)
       expect(row.children[2]).toEqual({ cards: [], size: 0.5 }) // new empty leaf after the target
       expect(row.children[1]).toMatchObject({ cards: ['tonight'], size: 0.5 }) // target halved
@@ -82,7 +83,7 @@ describe('deleteZone', () => {
   it("merges the leaf's cards into its previous sibling's first leaf and removes it", () => {
     const out = deleteZone(tree(), '1.1')
     const row = getNode(out, '1')
-    if (!isLeaf(row!)) {
+    if (row && !isLeaf(row)) {
       expect(row.children).toHaveLength(2)
       expect(row.children[0]).toMatchObject({ cards: ['agenda', 'countdowns', 'tonight'] })
     }
@@ -91,7 +92,7 @@ describe('deleteZone', () => {
   it('merges into the next sibling when deleting the first child (deleted cards keep their board position, so they prepend)', () => {
     const out = deleteZone(tree(), '1.0')
     const row = getNode(out, '1')
-    if (!isLeaf(row!)) {
+    if (row && !isLeaf(row)) {
       expect(row.children[0]).toMatchObject({ cards: ['agenda', 'countdowns', 'tonight'] })
     }
   })
@@ -119,7 +120,7 @@ describe('resizeSiblings', () => {
   it('shifts the ratio between a sibling pair, clamped on both ends', () => {
     const out = resizeSiblings(tree(), '1', 0, 0.5)
     const row = getNode(out, '1')
-    if (!isLeaf(row!)) {
+    if (row && !isLeaf(row)) {
       expect(row.children[0].size).toBeCloseTo(1.5)
       expect(row.children[1].size).toBeCloseTo(0.5) // 1 - 0.5, still above SIZE_MIN
     }
@@ -128,7 +129,7 @@ describe('resizeSiblings', () => {
   it('clamps to SIZE_MIN / SIZE_MAX independently', () => {
     const out = resizeSiblings(tree(), '1', 0, 99)
     const row = getNode(out, '1')
-    if (!isLeaf(row!)) {
+    if (row && !isLeaf(row)) {
       expect(row.children[0].size).toBe(SIZE_MAX)
       expect(row.children[1].size).toBe(SIZE_MIN)
     }
@@ -137,6 +138,19 @@ describe('resizeSiblings', () => {
   it('is a no-op for a non-split path or out-of-range index', () => {
     expect(resizeSiblings(tree(), '0', 0, 1)).toEqual(tree())
     expect(resizeSiblings(tree(), '1', 2, 1)).toEqual(tree()) // no right-hand sibling
+  })
+})
+
+describe('setZoneSize', () => {
+  it('sets a clamped size on the node at the path without mutating', () => {
+    const input = tree()
+    const out = setZoneSize(input, '0', 2.5)
+    expect((getNode(out, '0') as { size?: number }).size).toBe(2.5)
+    expect(setZoneSize(tree(), '0', 99)).toEqual(setZoneSize(tree(), '0', SIZE_MAX))
+    expect(input).toEqual(tree())
+  })
+  it('is a no-op for an unknown path', () => {
+    expect(setZoneSize(tree(), '9.9', 2)).toEqual(tree())
   })
 })
 

@@ -1,22 +1,33 @@
-// Today dashboard card layout — client slice + hook. Two tiers: a family default
-// and a per-person override; the API returns the resolved 3-column layout plus
-// which tier it came from. See modules/layout/today-layout.ts on the server.
+// Today dashboard layout — client slice + hook. Two tiers: a family default
+// and a per-person override; the API returns the resolved zone tree plus which
+// tier it came from. See modules/layout/today-layout.ts on the server.
 import { useEffect, useState } from 'react'
 import { apiGet, apiSend, apiDelete } from './client'
+import type { ZoneNode } from '../../kiosk/zone-layout'
 
 export type LayoutScope = 'user' | 'family'
 
-// A normalized layout: a full-width band (`full`, spanning above the columns),
-// the 3-column grid, the cards the user explicitly hid from Today, and optional
-// zone sizes (band height + per-column width ratios, set via the Customize
-// dividers). `hidden` is what lets a removed card (esp. a module card that would
-// otherwise auto-reappear) stay gone until the user shows it again.
+// Board signal-to-noise options, stored alongside the layout (same user-over-
+// family tiering). `cards` holds per-card quiet settings.
+export interface BoardOptions {
+  hideEmpty?: boolean
+  density?: 'cozy' | 'compact'
+  cards?: {
+    agenda?: { hideEnded?: boolean }
+    grocery?: { maxItems?: number }
+    chores?: { hideOpen?: boolean }
+  }
+}
+
+// A normalized layout: the FancyZones-style zone tree (recursive row/col splits
+// whose leaves hold ordered card stacks), the cards the user explicitly hid
+// from Today, and the board options. `hidden` is what lets a removed card
+// (esp. a module card that would otherwise auto-reappear) stay gone until the
+// user shows it again.
 export interface StoredLayout {
-  full: string[]
-  cols: string[][]
+  zones: ZoneNode
   hidden: string[]
-  bandHeight?: number
-  colWidths?: number[]
+  options?: BoardOptions
 }
 
 export interface TodayLayoutResponse {
@@ -46,7 +57,16 @@ export interface TodayLayoutState {
   refetch: () => void
 }
 
-const FALLBACK: StoredLayout = { full: ['weekCalendar'], cols: [['agenda'], ['tonight', 'week'], ['chores', 'grocery']], hidden: [] }
+const FALLBACK: StoredLayout = {
+  zones: {
+    dir: 'col',
+    children: [
+      { cards: ['weekCalendar'], size: 1 },
+      { dir: 'row', children: [{ cards: ['agenda'] }, { cards: ['tonight', 'week'] }, { cards: ['chores', 'grocery'] }] },
+    ],
+  },
+  hidden: [],
+}
 
 export function useTodayLayout(): TodayLayoutState {
   const [data, setData] = useState<TodayLayoutResponse | null>(null)

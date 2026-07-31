@@ -253,23 +253,37 @@ body {
 @media (max-width: 720px) {
   .today-wrap > .recap-bar { margin: 6px 16px 14px; }
 }
-/* The board is N flex columns (data-driven from the saved layout) so cards can
-   be placed in any column. min-width:0 lets long titles cap instead of widening. */
+/* fork — The board renders a FancyZones-style zone tree: nested row/col splits
+   whose leaves stack cards. Row-split children share the width by --z-size flex
+   ratios; a col-split child with an explicit size pins its height via --z-h
+   (like the old fixed band) and scrolls internally on the kiosk breakpoint.
+   min-width:0 lets long titles cap instead of widening. */
 .today-board {
   display: flex;
-  gap: 18px;
+  flex-direction: column;
   padding: 6px 30px 26px;
   align-items: stretch;
 }
-.today-col {
-  flex: var(--col-w, 1) 1 0;
-  min-width: 0;
+.today-board > .today-zone-split,
+.today-board > .today-zone { flex: 1; min-height: 0; }
+.today-zone-split { display: flex; gap: 18px; min-width: 0; }
+.today-zone-split[data-dir='row'] { flex-direction: row; align-items: stretch; }
+.today-zone-split[data-dir='col'] { flex-direction: column; }
+.today-zone {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  min-width: 0;
+}
+/* Width sharing inside a row split. */
+.today-zone-split[data-dir='row'] > .today-zone,
+.today-zone-split[data-dir='row'] > .today-zone-split {
+  flex: var(--z-size, 1) 1 0;
+  min-width: 0;
 }
 /* Each view card sits in a slot. `fill` slots are long scrollable lists (agenda,
-   grocery): they take the spare room in the column and scroll INSIDE the card.
+   grocery): they take the spare room in the zone and scroll INSIDE the card.
    Every other card sizes to its content and never shrinks. */
 .today-slot {
   display: flex;
@@ -280,52 +294,37 @@ body {
   width: 100%;
 }
 
-/* Full-width band above the columns (the week calendar by default). Cards stack
-   full-width and the band sizes to its content by default. When the user pins a
-   height with the Customize divider (`today-full--fixed`), the band takes that
-   fixed height on a roomy landscape display and scrolls its card internally, so a
-   busy week never pushes the columns off-screen. Narrow screens always size to
-   content and scroll the page. */
-.today-full {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 6px 30px 0;
-  flex: 0 0 auto;
-}
-.today-full > .today-slot { width: 100%; }
-@media (min-width: 1101px) and (min-height: 680px) {
-  .today-wrap:not(.today-editing) .today-full--fixed {
-    height: var(--band-h);
-    overflow: hidden;
-  }
-  .today-wrap:not(.today-editing) .today-full--fixed > .today-slot.fill {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: hidden;
-  }
-  .today-wrap:not(.today-editing) .today-full--fixed > .today-slot.fill > .card {
-    height: 100%;
-    min-height: 0;
-    overflow: auto;
-  }
-  /* In Customize the band shows its pinned height so the divider resize is WYSIWYG. */
-  .today-editing .today-full--fixed { min-height: var(--band-h); }
-}
-
-/* On a roomy landscape display, fill the height like the design. Content cards
-   size to their content and never shrink/clip; fill cards (agenda, grocery) absorb
-   the leftover room and scroll their list inside the card — so a long grocery list
-   doesn't stretch the column. View mode only — editing flows naturally. */
+/* On a roomy landscape display: pinned zones (`today-zone--pinned`, an explicit
+   size in a col split) take their fixed height and scroll internally — a busy
+   week calendar never pushes the rest off-screen. Fill cards (agenda, grocery)
+   absorb their zone's leftover room and scroll their list inside the card.
+   View mode only — editing flows naturally (min-height keeps resize WYSIWYG). */
 @media (min-width: 1101px) and (min-height: 680px) {
   .today-wrap:not(.today-editing) .today-board {
     flex: 1;
     min-height: 0;
   }
-  .today-wrap:not(.today-editing) .today-col {
+  .today-wrap:not(.today-editing) .today-zone {
     min-height: 0;
     overflow-y: auto;
   }
+  .today-wrap:not(.today-editing) .today-zone--pinned {
+    height: var(--z-h);
+    flex: 0 0 var(--z-h);
+    overflow: hidden;
+  }
+  .today-wrap:not(.today-editing) .today-zone--pinned > .today-slot.fill {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .today-wrap:not(.today-editing) .today-zone--pinned > .today-slot.fill > .card {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+  /* In Customize the pinned zone keeps its height so divider resize is WYSIWYG. */
+  .today-editing .today-zone--pinned { min-height: var(--z-h); }
   /* Content cards: their content height, no grow, no shrink. */
   .today-wrap:not(.today-editing) .today-slot {
     flex: 0 0 auto;
@@ -343,19 +342,17 @@ body {
   }
 }
 
-/* Below the kiosk width, stack the columns into a single feed (cards keep their
-   per-column grouping order). The band already stacks full-width above them. */
+/* Below the kiosk width, the whole tree degrades to one vertical feed (cards
+   keep their pre-order zone grouping) and pinned heights release. */
 @media (max-width: 1100px) {
-  .today-board {
+  .today-zone-split[data-dir='row'] {
     flex-direction: column;
   }
+  .today-zone--pinned { height: auto; flex: 0 0 auto; overflow: visible; }
 }
 @media (max-width: 720px) {
   .today-board {
     padding: 6px 16px 22px;
-  }
-  .today-full {
-    padding: 6px 16px 0;
   }
   .topbar {
     padding: 16px 16px 10px;
@@ -520,11 +517,53 @@ body {
   font-size: 13px;
 }
 /* Live drag (long-press a card on the board — no Customize needed): while a
-   card is lifted, the columns read as drop zones. */
-.today-board.dragging .today-col {
+   card is lifted, every zone reads as a drop target, and the one under the
+   pointer flashes FancyZones-style. */
+.today-board.dragging .today-zone {
   outline: 1.5px dashed var(--hair);
   outline-offset: 4px;
   border-radius: var(--r-lg);
+}
+.today-board.dragging .today-zone.zone-drop-active {
+  outline: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/* Zone tools (Customize): a small overlay toolbar per zone — split ↔ / split ↕ /
+   delete. Sits at the zone's top-right, above the card chips. */
+.today-zone-tools {
+  position: absolute;
+  top: -12px;
+  right: 6px;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  box-shadow: var(--sh-1);
+  padding: 2px 4px;
+}
+.today-zone-tool {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 5px;
+  border-radius: 999px;
+  color: var(--ink-2);
+}
+.today-zone-tool:hover { color: var(--primary); background: var(--panel); }
+.today-zone-tool.danger:hover { color: var(--danger); }
+.today-zone-tool:disabled { opacity: 0.35; cursor: default; }
+.today-zone-tool:disabled:hover { color: var(--ink-2); background: none; }
+/* Editing: zones show their bounds so split/delete targets are obvious. */
+.today-editing .today-zone {
+  outline: 1.5px dashed var(--hair);
+  outline-offset: 4px;
+  border-radius: var(--r-lg);
+  padding-top: 6px;
 }
 /* While a card is lifted, slots don't scroll (the gesture is a drag, not a pan) —
    this also stops touch from starting a native scroll that cancels the drag. */
@@ -538,23 +577,24 @@ body {
   pointer-events: none;
 }
 
-/* Zone dividers — drag to resize the band (horizontal) or rebalance columns
-   (vertical). They live on the normal dashboard AND in Customize; only meaningful
-   on the roomy landscape breakpoint where the band + columns have resizable space
-   (below it everything stacks and scrolls, so they're hidden). The vertical
-   dividers sit BETWEEN columns and provide the column separation themselves, so the
-   board drops its gap where they're shown. Grips stay faint so they don't clutter,
-   brightening on hover; they're wide enough to grab on a touchscreen. */
+/* Zone dividers — drag to resize: between row-split siblings they rebalance
+   widths (vertical grip); between col-split siblings they drag the upper
+   zone's pinned height (horizontal grip). They live on the normal dashboard
+   AND in Customize; only meaningful on the roomy landscape breakpoint where
+   zones have resizable space (below it everything stacks and scrolls, so
+   they're hidden). Dividers sit BETWEEN zones and provide the separation
+   themselves, so splits drop their gap where they're shown. Grips stay faint
+   so they don't clutter, brightening on hover; wide enough for touch. */
 .today-divider-h,
 .today-divider-v { display: none; }
 @media (min-width: 1101px) and (min-height: 680px) {
-  .today-board { gap: 0; }
+  .today-zone-split { gap: 0; }
   .today-divider-h {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 16px;
-    margin: 2px 30px;
+    margin: 2px 8px;
     cursor: ns-resize;
     touch-action: none;
   }
