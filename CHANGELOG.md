@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Server-move scripts survive a real migration.** Three rough edges found moving
+  the server off the laptop: the export now lands on the *actual* Desktop even when
+  OneDrive redirects it, the freeze step also stops the voice-profile whisper
+  container (which kept the Docker network alive and blocked `./waffled down` from
+  cleaning up), and the new-machine setup waits up to a minute for the Tailscale
+  name "waffled" to propagate instead of falsely warning it's taken after 3 seconds.
 - **Week-strip filter chips no longer waste a row.** On the Today board's week
   calendar card, the person filter chips now sit in line with the "This week" title
   and the Calendar button instead of on their own row of white space (they wrap

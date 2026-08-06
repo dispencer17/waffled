@@ -164,10 +164,22 @@ if (-not $SkipTailscale) {
         if ($LASTEXITCODE -ne 0) { Write-Host "tailscale up failed -- rerun the script after logging in." -ForegroundColor Red; exit 1 }
     }
     tailscale set --hostname waffled
-    Start-Sleep -Seconds 3
+    # The rename takes a while to propagate to MagicDNS (~20s observed) -- poll
+    # before concluding the name is taken, or a slow control plane false-warns.
+    $claimed = $false
+    $deadline = (Get-Date).AddSeconds(60)
+    do {
+        Start-Sleep -Seconds 3
+        $dnsName = ''
+        try {
+            $tsJson = (tailscale status --json 2>$null) -join "`n"
+            $dnsName = "$((ConvertFrom-Json $tsJson).Self.DNSName)"
+        } catch { }
+        if ($dnsName -match '^waffled\.') { $claimed = $true }
+    } until ($claimed -or (Get-Date) -gt $deadline)
     $self = tailscale status --self --peers=false
     Write-Host "This device is now: $self"
-    if ("$self" -notmatch '\bwaffled\b' -or "$self" -match 'waffled-\d') {
+    if (-not $claimed) {
         Write-Host "The name 'waffled' looks TAKEN (old server still holds it)." -ForegroundColor Yellow
         Write-Host "Free it: on the old machine run the export with -Freeze, or rename/remove the old" -ForegroundColor Yellow
         Write-Host "device at https://login.tailscale.com/admin/machines -- then rerun this script." -ForegroundColor Yellow
