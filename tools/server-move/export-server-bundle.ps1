@@ -102,6 +102,12 @@ if ($doFreeze) {
     Write-Host "[4/5] Freezing this machine..." -ForegroundColor Cyan
     schtasks /change /tn "Waffled Fork Update" /disable 2>$null | Out-Null
     & $gitBash ./waffled down
+    # './waffled down' skips profile-gated services; a running whisper (voice
+    # profile) keeps the compose network alive and blocks its removal.
+    $stillUp = docker ps --format '{{.Names}}' 2>$null
+    if ($stillUp -contains 'waffled-whisper') {
+        docker compose -f (Join-Path $repo 'infra\compose\docker-compose.yml') --profile voice down
+    }
     $ts = Get-Command tailscale -ErrorAction SilentlyContinue
     if ($ts) {
         tailscale serve reset
