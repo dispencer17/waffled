@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   below only when the card is genuinely too narrow).
 
 ### Added
+- **Move the server to another Windows machine with two scripts.** New
+  `tools/server-move/` kit for operators: `export-server-bundle.ps1` snapshots the
+  running server (fresh database dump, `.env` secrets, uploaded media) into one zip
+  and can freeze the old machine, and `setup-pc-server.ps1` turns a fresh Windows PC
+  into the always-on server — installing prerequisites, building from source,
+  restoring the data, re-claiming the Tailscale name, and re-creating the nightly
+  auto-update task, power, and firewall settings.
 - **FancyZones-style dashboard zones.** The Today board is now a real zone grid, in the
   spirit of PowerToys FancyZones: split any zone into side-by-side or stacked zones,
   delete one (its cards slide into the neighbor), and drag the dividers to resize —
