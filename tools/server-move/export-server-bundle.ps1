@@ -17,8 +17,9 @@
 # export exists only on this machine and will NOT reach the new server.
 
 param(
-    # Where the finished zip lands.
-    [string]$OutDir = (Join-Path $env:USERPROFILE 'Desktop'),
+    # Where the finished zip lands. GetFolderPath follows OneDrive's Desktop
+    # redirect; $env:USERPROFILE\Desktop may not exist on those machines.
+    [string]$OutDir = ([Environment]::GetFolderPath('Desktop')),
     # Retire this machine as the server right after the export (no prompt).
     [switch]$Freeze
 )
