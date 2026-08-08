@@ -302,7 +302,7 @@ t "verify_backup_restore rejects a corrupt archive before starting Postgres" '
     printf "%s\n" "$*" >> "$DOCKER_LOG"
     case "$*" in
       "ps --format {{.Names}}") echo "waffled-backup" ;;
-      "exec waffled-backup test -f "*) return 0 ;;
+      "exec waffled-backup sh -c test -f "*) return 0 ;;
       "exec waffled-backup sh -c gunzip -t "*) return 1 ;;
       *) return 0 ;;
     esac
@@ -316,6 +316,38 @@ t "verify_backup_restore rejects a corrupt archive before starting Postgres" '
   if grep -q "^run " "$DOCKER_LOG"; then
     echo "FAIL: Postgres started for a corrupt archive"; exit 0
   fi
+  echo "PASS"
+'
+
+# --- 12. container paths stay inside sh -c (Git Bash/MSYS-safe) ---------------------
+# Git Bash for Windows rewrites bare absolute args like /backups/<file> into
+# C:/Program Files/Git/backups/<file> before docker.exe sees them (MSYS path
+# conversion), so /backups checks must be embedded in the sh -c string, never
+# passed as a standalone docker argument.
+t "backup checks keep /backups paths inside sh -c (MSYS-safe)" '
+  source "$WAFFLED" help >/dev/null 2>&1
+  if grep -q "docker exec waffled-backup test -f" "$WAFFLED"; then
+    echo "FAIL: the script still passes /backups/\$file as a bare docker arg"; exit 0
+  fi
+  tmp="$(mktemp -d)"; trap "rm -rf \"$tmp\"" EXIT
+  DOCKER_LOG="$tmp/docker.log"
+
+  docker() {
+    printf "%s\n" "$*" >> "$DOCKER_LOG"
+    case "$*" in
+      "ps --format {{.Names}}") echo "waffled-backup" ;;
+      *) return 0 ;;
+    esac
+  }
+
+  set +e
+  verify_backup_restore "waffled-msys.sql.gz" >/dev/null 2>&1
+  set -e
+  if grep -Eq "(test -f| sh) /backups/" "$DOCKER_LOG"; then
+    echo "FAIL: a /backups path was passed as a standalone docker arg (MSYS rewrites those)"; exit 0
+  fi
+  grep -q "sh -c test -f ./backups/waffled-msys.sql.gz" "$DOCKER_LOG" || {
+    echo "FAIL: the existence check no longer runs"; exit 0; }
   echo "PASS"
 '
 

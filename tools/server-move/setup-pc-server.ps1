@@ -195,6 +195,12 @@ Step "Building images from source and starting the stack (5-15 min first time)"
 $gitBash = Find-GitBash
 if (-not $gitBash) { Write-Host "Git Bash not found even after install -- open a new admin PowerShell and rerun." -ForegroundColor Red; exit 1 }
 Set-Location $RepoDir
+# Git Bash (MSYS) rewrites absolute-looking args such as /backups/<file> into
+# C:/Program Files/Git/backups/<file> before the command sees them, which broke
+# './waffled restore' during the 2026-08 migration. Disable that conversion for
+# every Git Bash invocation below (harmless to the native tools).
+$env:MSYS_NO_PATHCONV = '1'
+$env:MSYS2_ARG_CONV_EXCL = '*'
 & $gitBash ./waffled up --build
 if ($LASTEXITCODE -ne 0) { Write-Host "./waffled up --build failed -- see output above." -ForegroundColor Red; exit 1 }
 

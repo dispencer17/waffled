@@ -522,11 +522,13 @@ verify_backup_restore() (
       ;;
   esac
 
-  if ! docker exec waffled-backup test -f "/backups/$file"; then
+  # /backups/$file stays inside the sh -c string: as a standalone docker arg,
+  # Git Bash (MSYS) rewrites it to C:/Program Files/Git/backups/... on Windows.
+  if ! docker exec waffled-backup sh -c "test -f '/backups/$file'"; then
     echo "${c_red}/backups/$file not found. Run './waffled backup list'.${c_reset}"
     return 1
   fi
-  if ! docker exec waffled-backup sh -c 'gunzip -t "$1"' sh "/backups/$file"; then
+  if ! docker exec waffled-backup sh -c "gunzip -t '/backups/$file'"; then
     echo "${c_red}$file is corrupt or is not a readable gzip archive.${c_reset}"
     return 1
   fi
@@ -572,7 +574,7 @@ verify_backup_restore() (
     return 1
   fi
 
-  if ! docker exec waffled-backup sh -c 'gunzip -c "$1"' sh "/backups/$file" \
+  if ! docker exec waffled-backup sh -c "gunzip -c '/backups/$file'" \
     | docker exec -i "$drill_container" psql \
         -U waffled_verify -d waffled_verify \
         -v ON_ERROR_STOP=1 --single-transaction >/dev/null; then
@@ -792,7 +794,9 @@ case "$cmd" in
     if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^waffled-backup$'; then
       echo "${c_red}waffled-backup is not running — start it with ./waffled up${c_reset}"; exit 2
     fi
-    if ! docker exec waffled-backup test -f "/backups/$file"; then
+    # Inside the sh -c string, not a bare arg — Git Bash (MSYS) rewrites bare
+    # /backups/... args to C:/Program Files/Git/backups/... on Windows.
+    if ! docker exec waffled-backup sh -c "test -f '/backups/$file'"; then
       echo "${c_red}/backups/$file not found. Run './waffled backup list'.${c_reset}"; exit 1
     fi
     echo "${c_ylw}This OVERWRITES the current database with $file — all current data is replaced.${c_reset}"

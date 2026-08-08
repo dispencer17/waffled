@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`./waffled restore` and `backup verify` work from Git Bash on Windows.** Git
+  Bash's MSYS path conversion silently rewrote the container path `/backups/<file>`
+  into `C:/Program Files/Git/backups/<file>` before Docker saw it, so the new-PC
+  setup script's restore step failed with "not found" moments after copying the
+  dump into the backup container. The CLI now keeps container paths inside the
+  command string it hands to the container's shell, and the setup script disables
+  MSYS path conversion when it invokes Git Bash.
 - **Server-move scripts survive a real migration.** Three rough edges found moving
   the server off the laptop: the export now lands on the *actual* Desktop even when
   OneDrive redirects it, the freeze step also stops the voice-profile whisper
