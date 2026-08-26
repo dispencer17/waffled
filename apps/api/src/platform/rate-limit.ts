@@ -107,6 +107,13 @@ function routeLimits(req: Request): Limit[] {
         scope: 'kiosk-device-token', key: ip,
         max: positiveInt('RATE_LIMIT_KIOSK_TOKEN_MAX', 30), windowMs: 10 * 60_000,
       }]
+    // fork: public path (the host agent has no session), so this is what makes
+    // guessing UPDATE_AGENT_TOKEN pointless. The real agent polls 5x per window.
+    case 'POST /api/updates/agent-poll':
+      return [{
+        scope: 'update-agent-poll', key: ip,
+        max: positiveInt('RATE_LIMIT_UPDATE_AGENT_MAX', 60), windowMs: 5 * 60_000,
+      }]
     case 'POST /api/media':
       return [{
         scope: 'media-upload', key: ip,

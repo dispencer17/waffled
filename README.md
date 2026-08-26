@@ -54,12 +54,18 @@ pins the image names to local-only tags (`waffled-fork/*:local`), so a plain `./
 can never pull upstream's images over your build — and `UPDATE_CHECK_REPO` points the
 in-app notifier (Settings → System Health) at this repo instead of upstream.
 
-- **Deploy the latest fork code (the "update button"):** run `.\update.ps1` from
-  PowerShell (or a desktop shortcut to it). It fast-forwards to `origin/main` — which is
-  always CI-tested — and rebuilds the stack from source. Refuses to run on a dirty tree;
-  exits early when nothing's new (`-Force` rebuilds anyway). For hands-free updates,
-  schedule it nightly (Task Scheduler); the kiosk display then reloads itself once idle
-  when it notices the new build — no one touches the tablet.
+- **Deploy the latest fork code (the update button):** press **Update now** in
+  Settings → System Health. The display shows a banner when commits are waiting; a host
+  task ("Waffled Fork Update Agent") picks the request up within a minute and runs
+  `update.ps1`, which fast-forwards to `origin/main` — always CI-tested — and rebuilds
+  from source. The kiosk then reloads itself once idle when it notices the new build, so
+  no one touches the tablet. Running `.\update.ps1` from PowerShell does exactly the same
+  thing. It refuses to run on a dirty tree and exits early when nothing's new (`-Force`
+  rebuilds anyway). Full walkthrough: `website/docs/.../operations/update-button.md`.
+- **Nightly auto-update is suspended.** The "Waffled Fork Update" task is registered but
+  disabled now that the button exists — re-enable it with
+  `schtasks /change /tn "Waffled Fork Update" /enable`. Both are safe to run together:
+  `update.ps1` takes an exclusive lock, so a second concurrent run bows out.
 - **Integrate an upstream release:** deliberate, not automatic — `git fetch upstream`,
   `git merge upstream/main`, resolve, test, push (CI gates it), then press the button.
 - **Don't use `./waffled upgrade`:** it fast-forwards from a release tag and pulls

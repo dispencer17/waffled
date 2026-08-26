@@ -83,3 +83,66 @@ describe('UpdateModal', () => {
     expect(screen.queryByText(/is here/i)).not.toBeInTheDocument()
   })
 })
+
+// ── Deploy prompt (fork) ──────────────────────────────────────────────────────
+// A second reason to open: commits are on the fork's main but not deployed. This
+// one is actionable in-app (the Update button) rather than a "go run a command".
+describe('UpdateModal — fork deploy prompt', () => {
+  const deployBody = (update: Record<string, unknown>) => ({
+    enabled: true,
+    current: { version: '0.8.0', sha: 'abc', fork: 'v0.8.0-12-gabc' },
+    latest: null,
+    updateAvailable: false,
+    update: { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false, ...update },
+  })
+
+  function mockDeploy(update: Record<string, unknown>) {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/household')) return ok({ provisioned: true, household, person: adminPerson })
+      if (u.includes('/api/updates')) return ok(deployBody(update))
+      return ok({})
+    }) as unknown as typeof fetch
+  }
+
+  it('offers to deploy waiting fork commits', async () => {
+    mockDeploy({ behindCount: 4 })
+    render(<UpdateModal />)
+    expect(await screen.findByText(/4 new commits ready to deploy/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /update now/i })).toBeInTheDocument()
+  })
+
+  it('stays shut when nothing is waiting', async () => {
+    mockDeploy({ behindCount: 0 })
+    render(<UpdateModal />)
+    await waitFor(() => expect(screen.queryByText(/ready to deploy/i)).not.toBeInTheDocument())
+  })
+
+  it('does not re-nag at the same commit count once dismissed', async () => {
+    localStorage.setItem('waffled.update.deployDismissed', '4')
+    mockDeploy({ behindCount: 4 })
+    render(<UpdateModal />)
+    await waitFor(() => expect(screen.queryByText(/ready to deploy/i)).not.toBeInTheDocument())
+  })
+
+  it('re-nags once more commits land', async () => {
+    localStorage.setItem('waffled.update.deployDismissed', '4')
+    mockDeploy({ behindCount: 6 })
+    render(<UpdateModal />)
+    expect(await screen.findByText(/6 new commits ready to deploy/i)).toBeInTheDocument()
+  })
+
+  it('surfaces a failed update so an overnight failure is noticed', async () => {
+    mockDeploy({ status: 'failed', message: 'Working tree has uncommitted changes' })
+    render(<UpdateModal />)
+    expect(await screen.findByText(/update failed/i)).toBeInTheDocument()
+    expect(screen.getByText(/uncommitted changes/i)).toBeInTheDocument()
+  })
+
+  it('does not nag the family about operator-only conditions', async () => {
+    mockDeploy({ agentDown: true, stuck: true })
+    render(<UpdateModal />)
+    await waitFor(() => expect(screen.queryByText(/ready to deploy/i)).not.toBeInTheDocument())
+    expect(screen.queryByText(/isn't responding/i)).not.toBeInTheDocument()
+  })
+})

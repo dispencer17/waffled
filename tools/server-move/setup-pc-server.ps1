@@ -8,7 +8,8 @@
 #   * whisper (voice profile) running for the kiosk voice assistant
 #   * Tailscale device named "waffled", serving 443->8080 and 8090->8090
 #     (so https://waffled.tail5cf530.ts.net keeps working for every device)
-#   * nightly "Waffled Fork Update" task at 3:30 AM running update.ps1
+#   * "Waffled Fork Update Agent" task every 60s (powers the in-app Update button)
+#   * "Waffled Fork Update" nightly task at 3:30 AM -- registered but DISABLED
 #   * machine never sleeps on AC power; firewall open on 8080/8090 for the LAN
 #
 # Usage: open PowerShell AS ADMINISTRATOR in the extracted bundle folder:
@@ -226,11 +227,23 @@ if (-not $SkipRestore) {
 }
 
 # ── Always-on server plumbing ──────────────────────────────────────────────
-Step "Nightly auto-update task (3:30 AM, same as the old server)"
+Step "Update tasks (button agent every minute; nightly job suspended)"
 $updatePs1 = Join-Path $RepoDir 'update.ps1'
+$agentPs1  = Join-Path $RepoDir 'tools\update-agent\poll-update.ps1'
+
+# The in-app "Update now" button (Settings -> System Health) is the update path now.
+# This task is what makes it work -- without it the button queues and nothing happens.
+schtasks /create /f /tn "Waffled Fork Update Agent" /sc minute /mo 1 `
+    /tr "powershell -NoProfile -ExecutionPolicy Bypass -File `"$agentPs1`"" | Out-Null
+Write-Host "Task 'Waffled Fork Update Agent' registered (every 60s)."
+
+# Registered but DISABLED: the button replaced it. Suspended rather than deleted so
+# bringing hands-free nightly updates back is one command, not a rebuild:
+#   schtasks /change /tn "Waffled Fork Update" /enable
 schtasks /create /f /tn "Waffled Fork Update" /sc daily /st 03:30 `
     /tr "powershell -NoProfile -ExecutionPolicy Bypass -File `"$updatePs1`"" | Out-Null
-Write-Host "Task 'Waffled Fork Update' registered."
+schtasks /change /tn "Waffled Fork Update" /disable | Out-Null
+Write-Host "Task 'Waffled Fork Update' registered but DISABLED (nightly auto-update suspended)."
 
 Step "Power settings: never sleep while plugged in"
 powercfg /change standby-timeout-ac 0

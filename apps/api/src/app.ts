@@ -103,6 +103,9 @@ const PUBLIC_PATHS = new Set([
   // Waffled-Bites pairing: same shape, pre-session.
   '/api/waffled-bites/pair',
   '/api/waffled-bites/device/token',
+  // fork: the host update agent is a scheduled task with no session; it
+  // authenticates with the UPDATE_AGENT_TOKEN shared secret in the handler.
+  '/api/updates/agent-poll',
 ])
 
 // Auth gate — authenticates every non-public route. An `x-api-key` header takes the

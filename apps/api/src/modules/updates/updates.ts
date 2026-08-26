@@ -7,9 +7,12 @@
 // settings.updateCheck.enabled. Never throws: any network error is captured, and the
 // GitHub result is cached (6h) so we never hammer their API or block the panel.
 import createAPI from 'lambda-api'
+import type { Request, Response } from 'lambda-api'
+import { timingSafeEqual } from 'node:crypto'
 import { query } from '../../platform/db'
 import { version } from '../../platform/version'
 import { adminRoute, tenantRoute } from '../../platform/route-guards'
+import { derive, readState, requestUpdate, agentPoll } from './update-state'
 
 type Api = ReturnType<typeof createAPI>
 
@@ -85,6 +88,22 @@ async function getLatest(): Promise<Cache> {
   return cache
 }
 
+// fork: the host update agent's shared secret (generated into infra/compose/.env
+// by ./waffled up). Unset → the agent route is closed entirely, so the button
+// degrades to unavailable rather than becoming an unauthenticated way to queue
+// rebuilds. The route is in PUBLIC_PATHS, so this check is the only gate.
+const agentToken = (): string => (process.env.UPDATE_AGENT_TOKEN || '').trim()
+
+function agentAuthorized(req: Request): boolean {
+  const expected = agentToken()
+  if (!expected) return false
+  const got = String(req.headers['x-waffled-update-token'] ?? '')
+  const a = Buffer.from(got)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false // length alone is not secret
+  return timingSafeEqual(a, b)
+}
+
 export function registerUpdateRoutes(api: Api): void {
   // Build/version provenance for the About panel — every signed-in member, not
   // admin-gated (caddy answers /healthz itself, so the SPA can't read it there).
@@ -92,8 +111,13 @@ export function registerUpdateRoutes(api: Api): void {
 
   api.get('/api/updates', adminRoute(async (tenant) => {
     const current = { version: version.pkg, sha: version.sha, fork: version.fork }
-    if (!envEnabled()) return { enabled: false, reason: 'env', current }
-    if (!(await householdEnabled(tenant.householdId))) return { enabled: false, current }
+    // fork: deploy state rides along on every response, INCLUDING the disabled
+    // ones. The switches below suppress the outbound GitHub call for privacy;
+    // deploying local commits makes no outbound call at all, so gating the button
+    // on them would strip the only deploy path from an air-gapped operator.
+    const update = derive(await readState(), Date.now())
+    if (!envEnabled()) return { enabled: false, reason: 'env', current, update }
+    if (!(await householdEnabled(tenant.householdId))) return { enabled: false, current, update }
     const c = await getLatest()
     const latest = c.release
     const updateAvailable = !!latest && isNewer(latest.tag, version.pkg)
@@ -103,9 +127,35 @@ export function registerUpdateRoutes(api: Api): void {
       latest,
       updateAvailable,
       checkedAt: new Date(c.at).toISOString(),
+      update,
       ...(c.error ? { error: c.error } : {}),
     }
   }))
+
+  // fork: "Update now" — queue a deploy of the fork's own commits. The host agent
+  // picks it up within a minute; see tools/update-agent/poll-update.ps1.
+  api.post('/api/updates/request', adminRoute(async (tenant) => ({
+    update: derive(await requestUpdate(tenant.personId), Date.now()),
+  })))
+
+  // fork: the host agent's only endpoint. Reports liveness + how far behind
+  // origin/main we are, and claims a pending request in the same round trip.
+  api.post('/api/updates/agent-poll', async (req: Request, res: Response) => {
+    if (!agentToken()) {
+      return res.status(503).json({ error: 'ServiceUnavailable', message: 'UPDATE_AGENT_TOKEN not configured' })
+    }
+    if (!agentAuthorized(req)) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'bad agent token' })
+    }
+    const body = (req.body ?? {}) as { behind?: unknown; result?: { exitCode?: unknown; message?: unknown } }
+    const behind = Number.isInteger(body.behind) ? Math.max(0, body.behind as number) : 0
+    const result =
+      body.result && Number.isInteger(body.result.exitCode)
+        ? { exitCode: body.result.exitCode as number, message: String(body.result.message ?? '').slice(0, 2000) }
+        : undefined
+    const { state, pending } = await agentPoll(behind, result)
+    return { pending, update: derive(state, Date.now()) }
+  })
 
   api.put('/api/updates/settings', adminRoute(async (tenant, req, res) => {
     const body = (req.body ?? {}) as { enabled?: unknown }

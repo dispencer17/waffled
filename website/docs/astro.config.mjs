@@ -37,6 +37,7 @@ export default defineConfig({
 						{ label: 'Environment variables', slug: 'install/environment-variables' },
 						{ label: 'Reverse proxy & TLS', slug: 'install/reverse-proxy' },
 						{ label: 'Upgrading', slug: 'operations/upgrading' },
+						{ label: 'The update button', slug: 'operations/update-button' },
 					],
 				},
 				{
