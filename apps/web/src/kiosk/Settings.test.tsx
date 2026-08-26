@@ -681,3 +681,70 @@ describe('Settings screen', () => {
     await waitFor(() => expect(putBodies.some((b) => b.prepReminder === true)).toBe(true), { timeout: 2000 })
   })
 })
+
+// ── Update button (fork) ──────────────────────────────────────────────────────
+// The deploy row in System Health: it reports the fork's own commits (from the
+// host agent), which is a different thing from the upstream-release notifier
+// right below it.
+describe('update deploy row', () => {
+  const healthReport = {
+    status: 'ok',
+    version: { pkg: '0.0.0', sha: 'abc123', fork: 'v0.8.0-12-gabc1234', buildTime: null },
+    generatedAt: '2026-08-26T12:00:00Z',
+    checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+  }
+  const deploy = (over: Record<string, unknown> = {}) => ({
+    status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false, ...over,
+  })
+  const updatePayload = (over: Record<string, unknown> = {}) => ({
+    enabled: true,
+    current: { version: '0.8.0', sha: 'abc1234', fork: 'v0.8.0-12-gabc1234' },
+    latest: null,
+    updateAvailable: false,
+    checkedAt: '2026-08-26T12:00:00Z',
+    update: deploy(over),
+  })
+
+  async function openHealth(over: Record<string, unknown> = {}) {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/updates')) return { ok: true, json: async () => updatePayload(over) }
+      if (u.includes('/api/health')) return { ok: true, json: async () => healthReport }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+  }
+
+  it('offers a deploy when commits are waiting', async () => {
+    await openHealth({ behindCount: 3 })
+    expect(await screen.findByText(/3 new commits ready to deploy/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /update now/i })).toBeEnabled()
+  })
+
+  it('disables the button while queued', async () => {
+    await openHealth({ status: 'queued', behindCount: 3 })
+    expect(await screen.findByText(/starting within a minute/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /update now/i })).toBeDisabled()
+  })
+
+  it('shows progress, not an error, while running', async () => {
+    await openHealth({ status: 'running' })
+    expect(await screen.findByText(/kiosk will reload itself/i)).toBeInTheDocument()
+    expect(screen.queryByText(/update failed/i)).not.toBeInTheDocument()
+  })
+
+  it('surfaces the real failure message', async () => {
+    await openHealth({ status: 'failed', message: 'Working tree has uncommitted changes' })
+    expect(await screen.findByText(/uncommitted changes/i)).toBeInTheDocument()
+  })
+
+  it('warns when the host agent is silent', async () => {
+    await openHealth({ agentDown: true, behindCount: 2 })
+    expect(await screen.findByText(/agent isn't responding/i)).toBeInTheDocument()
+  })
+})

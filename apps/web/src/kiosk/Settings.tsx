@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
-import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
+import { personsApi, permissionsApi, healthApi, updatesApi, type UpdateInfo, type DeployState, versionApi, type BuildVersion, voiceApi, accountApi, type AccountInfo, apiKeysApi, captureApi, calendarsApi, mealsApi, currenciesApi, conversionsApi, rewardsApi, choresApi, goalCalendarApi, groceryApi, authApi, kioskApi, usePantry, pantryApi, useCountdowns, countdownsApi, DEFAULT_BIRTHDAY_HORIZON_DAYS, useFamilyNight, familyNightApi, weekdayName, type FamilyNightPart, ALLERGEN_LABELS, ALLERGEN_KEYS, isDisplayMode, setDisplayMode, isKioskMode, usePersons, useCurrencies, useConversions, useHousehold, useHouseholdSettings, useWeather, useEventsToday, usePhotos, emitHouseholdChanged, CAPABILITIES, CAPABILITY_LABELS, ROLE_LABELS, type SettingsMember, type CaptureConfig, type Provider, type CalendarStatus, type CalendarLink, type IcsFeed, type MealCalendarSettings, type Currency, type MemoryGroup, type PantryStaple, type OidcConfig, type OidcConfigPatch, type KioskDevice, type DisplayConfig, type StoredProof, type PermissionMatrix, type Role, type Capability, type HealthReport, type HealthStatus, type ApiKey, type ApiScopeDef, homeAssistantApi, type HaStatus, type HaEntity } from '../lib/api'
 import { MODULES, moduleEnabled } from '../lib/modules'
 import { eventStyle, weekCardStyle, type EventStyle, type WeekCardStyle } from '../lib/display'
 import { familyColorHex } from '../lib/event-color'
@@ -480,16 +480,40 @@ function SystemHealthPanel() {
   const [error, setError] = useState(false)
   const [upd, setUpd] = useState<UpdateInfo | null>(null)
   const [togglingUpd, setTogglingUpd] = useState(false)
+  const [deploying, setDeploying] = useState(false)
   useEffect(() => {
     let alive = true
     const load = () =>
       healthApi.get().then((d) => alive && setReport(d)).catch(() => alive && setError(true))
     load()
     const t = setInterval(load, 10000)
-    // Update check is a slow outbound call (cached server-side) — fetch once, not on the loop.
-    updatesApi.get().then((d) => alive && setUpd(d)).catch(() => {})
     return () => { alive = false; clearInterval(t) }
   }, [])
+
+  // fork: deploy state is live (queued → running → idle/failed), so this polls —
+  // but on its own slower loop, because the same payload carries the notifier's
+  // slow cached GitHub check. Fetch failures are swallowed on purpose: a rebuild
+  // restarts the API mid-update, and rendering that as an error would flash
+  // "connection lost" on every SUCCESSFUL update.
+  useEffect(() => {
+    let alive = true
+    const loadUpd = () => updatesApi.get().then((d) => alive && setUpd(d)).catch(() => {})
+    loadUpd()
+    const t = setInterval(loadUpd, 15000)
+    return () => { alive = false; clearInterval(t) }
+  }, [])
+
+  async function deployNow() {
+    setDeploying(true)
+    try {
+      const r = await updatesApi.requestUpdate()
+      setUpd((prev) => (prev ? { ...prev, update: r.update } : prev))
+    } catch {
+      // The poll above re-syncs; a failed queue attempt needs no separate alarm.
+    } finally {
+      setDeploying(false)
+    }
+  }
 
   async function toggleUpd(v: boolean) {
     setTogglingUpd(true)
@@ -515,7 +539,7 @@ function SystemHealthPanel() {
       <div className="tiny muted" style={{ fontWeight: 600, margin: '-6px 2px 14px' }}>
         Live status of the self-hosted stack. Same data as <code>./waffled doctor</code> in a terminal.
       </div>
-      {upd && <UpdateBanner upd={upd} onToggle={toggleUpd} toggling={togglingUpd} />}
+      {upd && <UpdateBanner upd={upd} onToggle={toggleUpd} toggling={togglingUpd} onDeploy={deployNow} deploying={deploying} />}
       {!report ? (
         <div className="tiny muted" style={{ fontWeight: 600, padding: 8 }}>Loading…</div>
       ) : (
@@ -604,17 +628,67 @@ function BrowserSyncCard() {
 
 // Update notifier row inside System Health: "update available / up to date / off",
 // with an admin toggle. Hidden entirely when the operator disabled it via env.
-function UpdateBanner({ upd, onToggle, toggling }: { upd: UpdateInfo; onToggle: (v: boolean) => void; toggling: boolean }) {
+function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: UpdateInfo; onToggle: (v: boolean) => void; toggling: boolean; onDeploy: () => void; deploying: boolean }) {
   const envOff = !upd.enabled && upd.reason === 'env'
   // Prefer the fork version (git describe: upstream base + commits ahead + sha)
   // when the build has one — it names the exact build, not just the upstream base.
   const running = upd.current.fork && upd.current.fork !== 'dev'
     ? `${upd.current.fork} (upstream base ${upd.current.version})`
     : `${upd.current.version} (${upd.current.sha})`
+  // fork: deploying THIS fork's commits is a different act from upgrading to an
+  // upstream release — this row is about origin/main, the block below is about
+  // GitHub releases. Reported by the host agent; the API can't see git.
+  const d: DeployState = upd.update ?? { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false }
+  const busy = d.status === 'queued' || d.status === 'running'
+  const showDeploy = busy || d.status === 'failed' || d.behindCount > 0 || d.agentDown
+  const deployRow = showDeploy ? (
+    <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(0,0,0,.08)' }}>
+      {d.status === 'failed' ? (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>⚠ Update failed</div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>{d.message || 'update.ps1 exited non-zero.'}</div>
+        </>
+      ) : d.stuck ? (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>⚠ Update seems stuck</div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>Still running after 30 minutes — check the server.</div>
+        </>
+      ) : d.status === 'running' ? (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>⟳ Updating…</div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>
+            This takes a few minutes; the kiosk will reload itself when it's done.
+          </div>
+        </>
+      ) : d.status === 'queued' ? (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>⟳ Queued</div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>Starting within a minute.</div>
+        </>
+      ) : d.behindCount > 0 ? (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>
+            ⬆ {d.behindCount} new commit{d.behindCount === 1 ? '' : 's'} ready to deploy
+          </div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>From this fork's main. Running {running}.</div>
+        </>
+      ) : null}
+      {d.agentDown && (
+        <div className="tiny muted" style={{ fontWeight: 600, marginTop: 2 }}>
+          ⚠ The update agent isn't responding — check the "Waffled Fork Update Agent" task on the server.
+        </div>
+      )}
+      <button className="btn btn-primary" style={{ marginTop: 8 }} disabled={busy || deploying} onClick={onDeploy}>
+        Update now
+      </button>
+    </div>
+  ) : null
+
   return (
     <SettingCard style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>
+          {deployRow}
           {upd.updateAvailable && upd.latest ? (
             <>
               <div className="card-h" style={{ margin: 0 }}>⬆ Update available — {upd.latest.tag}</div>
