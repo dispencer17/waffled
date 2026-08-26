@@ -200,8 +200,12 @@ fork on top of the upstream feature set above:
   notifier is fork-aware: a new upstream release means "merge upstream", never
   `./waffled upgrade` (which would install upstream's images over the fork's features).
   Deploys ride `update.ps1` (fast-forward the fork's CI-tested `main` + rebuild from
-  source), schedulable nightly; the kiosk display reloads itself once idle when it
-  notices a new build.
+  source); the kiosk display reloads itself once idle when it notices a new build.
+- **Update at the push of a button** — Settings → System Health has an admin **Update
+  now** button that deploys the fork's latest `main`, with a banner when commits are
+  waiting and honest failure reporting (dirty tree, diverged history, dead agent). The
+  API can't rebuild its own host, so a host task ("Waffled Fork Update Agent") polls for
+  requests and runs `update.ps1`. Nightly auto-update is suspended in favour of it.
 - **Sync watchdog (web)** — the browser supervises its own PowerSync engine: a silently
   stalled sync is restarted automatically (soft first, then a full rebuild, backing off
   between tries) while a quiet strip explains data is coming straight from the server,

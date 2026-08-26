@@ -356,6 +356,7 @@ client renders its own native UI, so a module with no iOS screen simply doesn't 
 | **`./waffled doctor`** CLI health report (in-container, no token) | ✅ | — | — | ✅ Done |
 | Background-**job run registry** (last-run / duration / error per scheduler) | ✅ | — | — | ✅ Done |
 | Build **provenance** (git sha + build time + fork version on /healthz, /api/health + member-visible /api/version; shown in Settings → About and the System Health build line) | ✅ | — | — | ✅ Done |
+| **Update now** button in System Health — deploys the fork's latest CI-tested `main` from the UI; banner when commits are waiting, kiosk reloads itself when the new build is live | ✅ | ⬜ | ⬜ | ✅ Done (fork) |
 | **OpenTelemetry** traces+metrics (OTLP, **off by default**) | ✅ | — | — | ✅ Done |
 | All-local **Grafana/OTEL stack** (`./waffled observability up`, profile) | ✅ | — | — | ✅ Done |
 

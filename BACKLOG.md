@@ -56,7 +56,7 @@ upstream wins on structure, fork wins on features.
 migrations don't collide with 0100/0101 (`npm run check:migrations`).
 
 **Done when:** merged to `main`, pushed, CI green, and a spot-check of the
-running stack after `.\update.ps1 -Force` (or the nightly task) still shows the
+running stack after `.\update.ps1 -Force` (or the Update button) still shows the
 fork features (Appearance tab, Smart Home in Modules, Connect Outlook button).
 
 ---
@@ -238,7 +238,7 @@ never hand-bumped. Mirror the existing GIT_SHA plumbing end to end:
 fork version and upstream base from the health/updates payload; typecheck both.
 
 **Done when:** tests green, merged, pushed, CI green, CHANGELOG entry, and after
-a `.\update.ps1 -Force` (or the nightly run) Settings → About on the live kiosk
+a `.\update.ps1 -Force` (or the Update button) Settings → About on the live kiosk
 shows a `v0.8.0-<n>-g<sha>` fork version.
 
 ---

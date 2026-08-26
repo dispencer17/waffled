@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   below only when the card is genuinely too narrow).
 
 ### Added
+- **Update at the push of a button.** Admins can now deploy the latest fork code from
+  Settings → System Health — the display shows a banner when new commits are waiting,
+  applies them in the background, and reloads itself once the new build is live, so
+  nobody has to open PowerShell on the server. Failures say what actually went wrong
+  (uncommitted changes, diverged history, or an update agent that isn't running). The
+  nightly 3:30 AM auto-update is suspended now that updates are on demand — re-enable
+  it with `schtasks /change /tn "Waffled Fork Update" /enable`.
 - **Move the server to another Windows machine with two scripts.** New
   `tools/server-move/` kit for operators: `export-server-bundle.ps1` snapshots the
   running server (fresh database dump, `.env` secrets, uploaded media) into one zip
