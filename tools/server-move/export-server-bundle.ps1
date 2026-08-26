@@ -12,7 +12,7 @@
 #   powershell -ExecutionPolicy Bypass -File tools\server-move\export-server-bundle.ps1 -Freeze
 #
 # -Freeze (recommended, also offered interactively): after the export it disables the
-# nightly update task, stops the stack, and releases the Tailscale name "waffled" so
+# update tasks, stops the stack, and releases the Tailscale name "waffled" so
 # the new machine can claim it. Without freezing, anything the family adds after the
 # export exists only on this machine and will NOT reach the new server.
 
@@ -94,13 +94,16 @@ if (-not $doFreeze) {
     Write-Host ""
     Write-Host "Freeze this machine as the server now? Recommended: anything added here after" -ForegroundColor Yellow
     Write-Host "this export will NOT reach the new server. This stops the stack, disables the" -ForegroundColor Yellow
-    Write-Host "nightly update task, and releases the Tailscale name 'waffled'." -ForegroundColor Yellow
+    Write-Host "update tasks, and releases the Tailscale name 'waffled'." -ForegroundColor Yellow
     $ans = Read-Host "Type 'freeze' to do it now (anything else skips)"
     if ($ans -eq 'freeze') { $doFreeze = $true }
 }
 if ($doFreeze) {
     Write-Host "[4/5] Freezing this machine..." -ForegroundColor Cyan
     schtasks /change /tn "Waffled Fork Update" /disable 2>$null | Out-Null
+    # The agent runs every 60s and would rebuild + re-grab the Tailscale name on a
+    # machine we just retired. Freezing means freezing BOTH update tasks.
+    schtasks /change /tn "Waffled Fork Update Agent" /disable 2>$null | Out-Null
     & $gitBash ./waffled down
     # './waffled down' skips profile-gated services; a running whisper (voice
     # profile) keeps the compose network alive and blocks its removal.
@@ -130,6 +133,7 @@ Write-Host "  3. Follow its prompts (Docker/WSL may ask for one reboot; Tailscal
 if (-not $doFreeze) {
     Write-Host ""
     Write-Host "Then come back HERE and freeze this machine (rerun with -Freeze, or manually:" -ForegroundColor Yellow
-    Write-Host "disable the 'Waffled Fork Update' task, ./waffled down, tailscale serve reset," -ForegroundColor Yellow
+    Write-Host "disable BOTH 'Waffled Fork Update' and 'Waffled Fork Update Agent' tasks," -ForegroundColor Yellow
+    Write-Host "./waffled down, tailscale serve reset," -ForegroundColor Yellow
     Write-Host "tailscale set --hostname waffled-retired-...)." -ForegroundColor Yellow
 }

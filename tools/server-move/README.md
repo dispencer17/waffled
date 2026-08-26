@@ -1,7 +1,7 @@
 # Moving the Waffled server to another Windows machine
 
 Two scripts that move the *whole* server — code, secrets, database, uploaded
-media, Tailscale identity, nightly auto-update — from one Windows box (e.g. a
+media, Tailscale identity, auto-update tasks — from one Windows box (e.g. a
 laptop) to another (e.g. an always-on PC). The git repo alone is **not** the
 server: `infra/compose/.env` (gitignored) holds the encryption/JWT keys that
 are paired with the database, and the family's data lives in Docker volumes.
@@ -15,7 +15,8 @@ powershell -ExecutionPolicy Bypass -File tools\server-move\export-server-bundle.
 
 Takes a fresh DB dump, bundles it with `.env`, uploaded media, and the
 installer script into a zip on the Desktop. `-Freeze` (recommended) then stops
-the stack, disables the nightly "Waffled Fork Update" task, and renames the
+the stack, disables both update tasks ("Waffled Fork Update Agent" and the
+suspended nightly "Waffled Fork Update"), and renames the
 Tailscale device so the new machine can claim the name `waffled`. Skip
 `-Freeze` only if you need the old server to keep running a bit longer — but
 anything added after the export stays behind.
@@ -44,8 +45,10 @@ Tailscale name still taken), fix the thing it names and run it again. It:
    (`tailscale serve` 443→8080 and 8090→8090), so
    `https://waffled.tail5cf530.ts.net` keeps working on every device with no
    OAuth or kiosk reconfiguration.
-6. Registers the nightly 3:30 AM auto-update task, disables sleep on AC power,
-   and opens firewall ports 8080/8090 for the LAN.
+6. Registers the "Waffled Fork Update Agent" task (every 60s — it powers the
+   in-app Update button), registers the nightly 3:30 AM auto-update task but
+   leaves it **disabled**, disables sleep on AC power, and opens firewall ports
+   8080/8090 for the LAN.
 7. Verifies `/healthz` and prints the two remaining manual clicks
    (Docker Desktop auto-start; Windows auto sign-in).
 
