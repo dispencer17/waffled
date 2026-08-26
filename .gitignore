@@ -44,3 +44,9 @@ postgres/data/
 
 # claude code agent workspace (local only)
 .claude/
+
+# Mutex held while update.ps1 runs (see tools/update-lock.ps1).
+.update.lock
+
+# Host update agent last-fetch stamp (tools/update-agent/poll-update.ps1).
+.update-agent/

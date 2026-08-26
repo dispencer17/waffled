@@ -20,6 +20,16 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
+# Only one update at a time. The in-app Update button (via the update agent), the
+# nightly task, and a manual run all land here; two concurrent builds against one
+# stack corrupt each other. Held for the life of this process -- see tools/update-lock.ps1.
+. (Join-Path $PSScriptRoot 'tools\update-lock.ps1')
+$script:UpdateLock = Enter-UpdateLock (Join-Path $PSScriptRoot '.update.lock')
+if (-not $script:UpdateLock) {
+    Write-Host "Another update is already running -- nothing to do." -ForegroundColor Yellow
+    exit 0
+}
+
 Write-Host ""
 Write-Host "Waffled fork updater" -ForegroundColor Cyan
 Write-Host "--------------------"
