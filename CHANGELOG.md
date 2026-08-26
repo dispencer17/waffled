@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **The update agent no longer flashes a window on the desktop.** The task that powers
+  the Update button checks in every 60 seconds, and was opening a PowerShell console
+  that stole focus each time it ran. It now runs hidden — same schedule, same behavior,
+  no interruption.
 - **Server-move scripts survive a real migration.** Three rough edges found moving
   the server off the laptop: the export now lands on the *actual* Desktop even when
   OneDrive redirects it, the freeze step also stops the voice-profile whisper

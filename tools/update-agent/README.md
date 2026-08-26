@@ -42,4 +42,12 @@ machine for the Tailscale name `waffled`.
 `tools/server-move/setup-pc-server.ps1` does this for you:
 
     schtasks /create /f /tn "Waffled Fork Update Agent" /sc minute /mo 1 ^
-      /tr "powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\repo\tools\update-agent\poll-update.ps1"
+      /tr "wscript.exe C:\path\to\repo\tools\update-agent\run-hidden.vbs"
+
+**Always register it through `run-hidden.vbs`, never `powershell.exe` directly.** The
+task runs every 60 seconds in the logged-in session, so launching PowerShell directly
+pops a console window onto the family's desktop and steals focus once a minute. The
+session has to stay interactive (Docker Desktop's engine pipe lives there, and
+`update.ps1` needs it), so the window is hidden rather than the session changed —
+`run-hidden.vbs` explains the details, and `tests/update-agent-shim.test.ps1` guards
+against it regressing.
