@@ -229,13 +229,18 @@ if (-not $SkipRestore) {
 # ── Always-on server plumbing ──────────────────────────────────────────────
 Step "Update tasks (button agent every minute; nightly job suspended)"
 $updatePs1 = Join-Path $RepoDir 'update.ps1'
-$agentPs1  = Join-Path $RepoDir 'tools\update-agent\poll-update.ps1'
+$agentVbs  = Join-Path $RepoDir 'tools\update-agent\run-hidden.vbs'
 
 # The in-app "Update now" button (Settings -> System Health) is the update path now.
 # This task is what makes it work -- without it the button queues and nothing happens.
+#
+# Launched through run-hidden.vbs, NOT powershell.exe directly: this runs every 60s in
+# the logged-in session, and pointing it at powershell popped a console window onto the
+# family's desktop once a minute. See that file for why the session has to stay
+# interactive (Docker Desktop) and why we hide the window instead.
 schtasks /create /f /tn "Waffled Fork Update Agent" /sc minute /mo 1 `
-    /tr "powershell -NoProfile -ExecutionPolicy Bypass -File `"$agentPs1`"" | Out-Null
-Write-Host "Task 'Waffled Fork Update Agent' registered (every 60s)."
+    /tr "wscript.exe `"$agentVbs`"" | Out-Null
+Write-Host "Task 'Waffled Fork Update Agent' registered (every 60s, hidden)."
 
 # Registered but DISABLED: the button replaced it. Suspended rather than deleted so
 # bringing hands-free nightly updates back is one command, not a rebuild:
