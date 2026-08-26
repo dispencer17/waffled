@@ -104,6 +104,10 @@ ensure_env() {
     # the one-shot migrate on a fresh install — so generate it as hex, not base64.
     [ -n "$(env_val LOCAL_JWT_SECRET)" ] || set_env_var LOCAL_JWT_SECRET "$(openssl rand -base64 48 | tr -d '\n')"
     [ -n "$(env_val TOKEN_ENCRYPTION_KEY)" ] || set_env_var TOKEN_ENCRYPTION_KEY "$(openssl rand -base64 32 | tr -d '\n')"
+    # fork: shared secret for the host update agent (the in-app Update button).
+    # Hex, not base64 — the agent reads this straight out of .env into an HTTP
+    # header, and base64's '+' and '/' only invite PowerShell quoting bugs.
+    [ -n "$(env_val UPDATE_AGENT_TOKEN)" ] || set_env_var UPDATE_AGENT_TOKEN "$(openssl rand -hex 32 | tr -d '\n')"
     [ -n "$(env_val POWERSYNC_JWT_PRIVATE_KEY)" ] || set_env_var POWERSYNC_JWT_PRIVATE_KEY "$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null | openssl base64 -A)"
     postgres_password="$(env_val POSTGRES_PASSWORD)"
     if [ -z "$postgres_password" ] || { [ "$created" -eq 1 ] && [ "$postgres_password" = "change-me" ]; }; then
