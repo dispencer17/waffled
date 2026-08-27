@@ -748,3 +748,53 @@ describe('update deploy row', () => {
     expect(await screen.findByText(/agent isn't responding/i)).toBeInTheDocument()
   })
 })
+
+// The button must be reachable when there is nothing to deploy — that is the
+// state an operator is in almost all the time, and it is how you'd force a
+// redeploy after editing .env. Hiding it here is the bug from 2026-08-26.
+describe('update deploy row — up to date', () => {
+  const healthReport = {
+    status: 'ok',
+    version: { pkg: '0.0.0', sha: 'dade374', fork: 'v0.7.0-715-gdade374b', buildTime: null },
+    generatedAt: '2026-08-26T12:00:00Z',
+    checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+  }
+  async function openHealth() {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/updates')) return { ok: true, json: async () => ({
+        enabled: true,
+        current: { version: '0.12.0', sha: 'dade374', fork: 'v0.7.0-715-gdade374b' },
+        latest: { tag: 'v0.13.1', url: 'https://example.test/v0.13.1', publishedAt: null },
+        updateAvailable: true, // upstream release banner also showing — both must coexist
+        checkedAt: '2026-08-26T12:00:00Z',
+        update: { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false },
+      }) }
+      if (u.includes('/api/health')) return { ok: true, json: async () => healthReport }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+  }
+
+  it('still offers an enabled Update now button with nothing to deploy', async () => {
+    await openHealth()
+    const btn = await screen.findByRole('button', { name: /update now/i })
+    expect(btn).toBeEnabled()
+  })
+
+  it('says the fork code is current rather than going blank', async () => {
+    await openHealth()
+    expect(await screen.findByText(/up to date/i)).toBeInTheDocument()
+  })
+
+  it('coexists with the upstream release notice', async () => {
+    await openHealth()
+    expect(await screen.findByText(/Update available — v0\.13\.1/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /update now/i })).toBeInTheDocument()
+  })
+})

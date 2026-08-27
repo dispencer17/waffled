@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **The Update now button is always visible.** It only appeared when commits were
+  already waiting, so on an up-to-date server the button an operator was looking for
+  simply wasn't there. It now always shows, with the fork's deploy status beside it.
 - **The update agent no longer flashes a window on the desktop.** The task that powers
   the Update button checks in every 60 seconds, and was opening a PowerShell console
   that stole focus each time it ran. It now runs hidden — same schedule, same behavior,
