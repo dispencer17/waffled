@@ -13,11 +13,14 @@
 # which needs Docker — available out of the box on ubuntu-latest.
 #
 # Scope: this workflow covers apps/api + apps/web (each fully self-contained —
-# no root package.json / tsconfig / lockfile, see the note above) plus the
-# ./waffled operator CLI (plain-bash tests in tests/waffled.test.sh), so we run
-# it ONLY when those paths or this file change. Docs-only, iOS-only (apps/ios is
+# no root package.json / tsconfig / lockfile, see the note above), the ./waffled
+# operator CLI (plain-bash tests in tests/waffled.test.sh), and the Windows
+# operator tooling (update.ps1 + tools/, covered by tests/*.test.ps1 on a Windows
+# runner), so we run it ONLY when those paths or this file change. tools/** is in
+# the filter deliberately: without it, editing the update agent would skip the
+# very suites that guard it. Docs-only, iOS-only (apps/ios is
 # built by Xcode Cloud, not here), and website-only PRs skip CI entirely.
-# Because CI's coverage *is* api+web+cli, an allowlist can't silently skip
+# Because CI's coverage *is* api+web+cli+Windows tooling, an allowlist can't silently skip
 # something it was actually testing. (Safe today because `main` has no
 # required-status-check branch protection — a path-skipped run reports nothing,
 # which would otherwise block a PR waiting on a required check.)
@@ -29,6 +32,8 @@ on:
       - 'apps/api/**'
       - 'apps/web/**'
       - 'waffled'
+      - 'update.ps1'
+      - 'tools/**'
       - 'tests/**'
       - '.github/workflows/ci.yml'
   push:
@@ -37,6 +42,8 @@ on:
       - 'apps/api/**'
       - 'apps/web/**'
       - 'waffled'
+      - 'update.ps1'
+      - 'tools/**'
       - 'tests/**'
       - '.github/workflows/ci.yml'
 
@@ -82,6 +89,37 @@ jobs:
 
       - name: Run waffled CLI tests
         run: bash tests/waffled.test.sh
+
+  powershell-tests:
+    name: Windows tool tests (update agent, lock)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    # The Windows operator tooling (update.ps1, the update agent behind the in-app
+    # Update button) had no CI at all, and bugs shipped into that blind spot twice
+    # in one day: a scheduled task that flashed a console window every 60s, and an
+    # agent that died reporting its result because PowerShell 5.1 turns a native
+    # command's redirected stderr into a throwing error record.
+    #
+    # `shell: powershell` is Windows PowerShell 5.1 ON PURPOSE -- that stderr
+    # behavior is a 5.1 quirk, and running these under pwsh 7 would not reproduce it.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run PowerShell tool tests
+        shell: powershell
+        run: |
+          $failed = @()
+          Get-ChildItem tests\*.test.ps1 | Sort-Object Name | ForEach-Object {
+            Write-Host "=== $($_.Name) ==="
+            & powershell -NoProfile -ExecutionPolicy Bypass -File $_.FullName
+            if ($LASTEXITCODE -ne 0) { $failed += $_.Name }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Host "FAILED: $($failed -join ', ')"
+            exit 1
+          }
+          Write-Host "All PowerShell tool suites passed."
 
   production-audit:
     name: Production dependency audit
