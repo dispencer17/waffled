@@ -10,6 +10,11 @@ export interface DeployState {
   message: string | null
   agentDown: boolean
   stuck: boolean
+  // The last run's outcome. Surfaced on success too, not just failure: pressing
+  // Update now on an already-current server is a legitimate no-op, and without
+  // these the UI snaps back to its previous text and looks like nothing happened.
+  finishedAt: string | null
+  exitCode: number | null
 }
 
 export interface UpdateInfo {

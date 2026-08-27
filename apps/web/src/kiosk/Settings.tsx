@@ -626,6 +626,14 @@ function BrowserSyncCard() {
   )
 }
 
+// fork: update.ps1 reports a multi-line tail; the last non-empty line is its verdict
+// ("Stack already runs abc1234 -- nothing to deploy.", "Done. Open http://...",
+// "Fast-forward failed ..."). That one line is what belongs in a status row.
+function deployVerdict(message: string | null): string {
+  const lines = (message ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+  return lines[lines.length - 1] ?? 'Finished.'
+}
+
 // Update notifier row inside System Health: "update available / up to date / off",
 // with an admin toggle. Hidden entirely when the operator disabled it via env.
 function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: UpdateInfo; onToggle: (v: boolean) => void; toggling: boolean; onDeploy: () => void; deploying: boolean }) {
@@ -638,7 +646,10 @@ function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: U
   // fork: deploying THIS fork's commits is a different act from upgrading to an
   // upstream release — this row is about origin/main, the block below is about
   // GitHub releases. Reported by the host agent; the API can't see git.
-  const d: DeployState = upd.update ?? { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false }
+  const d: DeployState = upd.update ?? {
+    status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false,
+    finishedAt: null, exitCode: null,
+  }
   const busy = d.status === 'queued' || d.status === 'running'
   // Always rendered, including when there is nothing to deploy — that is the state
   // an operator is in almost all the time, and it's how you force a redeploy after
@@ -681,6 +692,15 @@ function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: U
             Nothing new on this fork's main. Redeploying anyway is harmless.
           </div>
         </>
+      )}
+      {/* fork: a successful run must say so. update.ps1 exiting 0 with "nothing to
+          deploy" is a legitimate outcome, and without this the row snaps back to
+          exactly the text it showed before the press — indistinguishable from the
+          button doing nothing. Failures already print their message above. */}
+      {d.status === 'idle' && d.finishedAt && (
+        <div className="tiny muted" style={{ fontWeight: 600, marginTop: 2 }}>
+          Last run {new Date(d.finishedAt).toLocaleTimeString()} — {deployVerdict(d.message)}
+        </div>
       )}
       {d.agentDown && (
         <div className="tiny muted" style={{ fontWeight: 600, marginTop: 2 }}>

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **The Update button now tells you what it did.** Pressing it on an already-current
+  server is a legitimate no-op, but the status simply snapped back to its previous
+  text, so it looked like nothing had happened. System Health now reports the last
+  run's outcome and when it finished — including "nothing to deploy".
 - **A finished update no longer looks like it's still running.** After a real deploy
   the status could stay on "Updating..." for half an hour even though the update had
   already succeeded, because the agent crashed while reporting the result back. It now

@@ -798,3 +798,64 @@ describe('update deploy row — up to date', () => {
     expect(screen.getByRole('button', { name: /update now/i })).toBeInTheDocument()
   })
 })
+
+// A run that succeeds must SAY so. The 2026-08-27 report: pressed Update now on an
+// already-current server, watched it go Queued and then snap back to the same
+// "up to date" text it showed before — no account of what happened. The API had
+// stored the outcome the whole time; the UI only rendered it on failure.
+describe('update deploy row — last run outcome', () => {
+  const healthReport = {
+    status: 'ok',
+    version: { pkg: '0.0.0', sha: 'ad76d49', fork: 'v0.7.0-720-gad76d49e', buildTime: null },
+    generatedAt: '2026-08-27T06:40:00Z',
+    checks: { db: { status: 'ok', total: 3, idle: 1, waiting: 0 } },
+  }
+  async function openHealth(update: Record<string, unknown>) {
+    globalThis.fetch = vi.fn(async (url: string) => {
+      const u = String(url)
+      if (u.includes('/api/updates')) return { ok: true, json: async () => ({
+        enabled: true,
+        current: { version: '0.12.0', sha: 'ad76d49', fork: 'v0.7.0-720-gad76d49e' },
+        latest: null,
+        updateAvailable: false,
+        checkedAt: '2026-08-27T06:40:00Z',
+        update: { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false,
+                  finishedAt: null, exitCode: null, ...update },
+      }) }
+      if (u.includes('/api/health')) return { ok: true, json: async () => healthReport }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('System Health'))
+  }
+
+  it('reports a no-op run instead of silently looking unchanged', async () => {
+    await openHealth({
+      finishedAt: '2026-08-27T06:34:03Z',
+      exitCode: 0,
+      message: 'Waffled fork updater\n--------------------\nCode already up to date with origin/main.\nStack already runs ad76d49e -- nothing to deploy.',
+    })
+    expect(await screen.findByText(/last run/i)).toBeInTheDocument()
+    expect(screen.getByText(/nothing to deploy/i)).toBeInTheDocument()
+  })
+
+  it('reports a successful real deploy', async () => {
+    await openHealth({
+      finishedAt: '2026-08-27T06:34:03Z',
+      exitCode: 0,
+      message: 'Done. Open http://localhost:8080 (hard-refresh once: Ctrl+Shift+R).',
+    })
+    expect(await screen.findByText(/last run/i)).toBeInTheDocument()
+    expect(screen.getByText(/Done\./i)).toBeInTheDocument()
+  })
+
+  it('says nothing about a last run when there has never been one', async () => {
+    await openHealth({})
+    expect(await screen.findByText(/up to date/i)).toBeInTheDocument()
+    expect(screen.queryByText(/last run/i)).not.toBeInTheDocument()
+  })
+})
