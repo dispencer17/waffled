@@ -640,8 +640,10 @@ function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: U
   // GitHub releases. Reported by the host agent; the API can't see git.
   const d: DeployState = upd.update ?? { status: 'idle', behindCount: 0, message: null, agentDown: false, stuck: false }
   const busy = d.status === 'queued' || d.status === 'running'
-  const showDeploy = busy || d.status === 'failed' || d.behindCount > 0 || d.agentDown
-  const deployRow = showDeploy ? (
+  // Always rendered, including when there is nothing to deploy — that is the state
+  // an operator is in almost all the time, and it's how you force a redeploy after
+  // editing .env. Gating this on "something is pending" made the button vanish.
+  const deployRow = (
     <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid rgba(0,0,0,.08)' }}>
       {d.status === 'failed' ? (
         <>
@@ -672,7 +674,14 @@ function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: U
           </div>
           <div className="tiny muted" style={{ fontWeight: 600 }}>From this fork's main. Running {running}.</div>
         </>
-      ) : null}
+      ) : (
+        <>
+          <div className="card-h" style={{ margin: 0 }}>✓ Fork code is up to date</div>
+          <div className="tiny muted" style={{ fontWeight: 600 }}>
+            Nothing new on this fork's main. Redeploying anyway is harmless.
+          </div>
+        </>
+      )}
       {d.agentDown && (
         <div className="tiny muted" style={{ fontWeight: 600, marginTop: 2 }}>
           ⚠ The update agent isn't responding — check the "Waffled Fork Update Agent" task on the server.
@@ -682,7 +691,7 @@ function UpdateBanner({ upd, onToggle, toggling, onDeploy, deploying }: { upd: U
         Update now
       </button>
     </div>
-  ) : null
+  )
 
   return (
     <SettingCard style={{ marginBottom: 14 }}>
