@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **A finished update no longer looks like it's still running.** After a real deploy
+  the status could stay on "Updating..." for half an hour even though the update had
+  already succeeded, because the agent crashed while reporting the result back. It now
+  reports reliably, and reports a failure rather than going silent if anything else
+  goes wrong.
 - **The Update now button is always visible.** It only appeared when commits were
   already waiting, so on an up-to-date server the button an operator was looking for
   simply wasn't there. It now always shows, with the fork's deploy status beside it.

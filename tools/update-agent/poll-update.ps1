@@ -11,6 +11,7 @@
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 Set-Location $repo
+. (Join-Path $PSScriptRoot 'invoke-update.ps1')
 
 $api      = if ($env:WAFFLED_API) { $env:WAFFLED_API } else { 'http://127.0.0.1:3000' }
 $envFile  = Join-Path $repo 'infra\compose\.env'
@@ -47,17 +48,22 @@ if (-not $r.pending) { exit 0 }
 # An admin pressed the button. Run the real updater and keep its tail for the UI --
 # update.ps1's own messages ("working tree has uncommitted changes", "fast-forward
 # failed") are exactly what an operator needs to see in Settings.
-$out  = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo 'update.ps1') 2>&1
-$code = $LASTEXITCODE
-$msg  = ($out | Select-Object -Last 12 | Out-String).Trim()
-if (-not $msg) { $msg = if ($code -eq 0) { 'Update complete.' } else { "update.ps1 exited $code." } }
+# Never let a crash here escape: if we claimed the request and then died, the UI
+# sits on "Updating..." until the 30-minute stuck timeout. Reporting a failure is
+# always better than reporting nothing. (See invoke-update.ps1 for the stderr trap
+# that caused exactly that.)
+try {
+    $result = Invoke-UpdateScript (Join-Path $repo 'update.ps1')
+} catch {
+    $result = @{ ExitCode = 1; Message = "Update agent error: $($_.Exception.Message)" }
+}
 
 # The rebuild just restarted the API, so it is NOT up the instant update.ps1
-# returns. Retry for ~2 minutes, or the result is lost and the UI sits on
-# "updating" until the 30-minute stuck timeout.
-for ($i = 0; $i -lt 12; $i++) {
+# returns. Retry for ~3 minutes, or the result is lost and the UI sits on
+# "updating" until the stuck timeout.
+for ($i = 0; $i -lt 18; $i++) {
     try {
-        Send-Poll @{ behind = 0; result = @{ exitCode = $code; message = $msg } } | Out-Null
+        Send-Poll @{ behind = 0; result = @{ exitCode = $result.ExitCode; message = $result.Message } } | Out-Null
         break
     } catch {
         Start-Sleep -Seconds 10
