@@ -50,6 +50,31 @@ try {
 
     # The caller relies on Stop semantics elsewhere; we must not leak Continue.
     Check "ErrorActionPreference is restored" ($ErrorActionPreference -eq 'Stop')
+
+    # `waffled up` is a bash script that colourises its health table and prints
+    # ✓/⚠ glyphs, so a captured tail arrives as "<ESC>[32m<check> api healthy<ESC>[0m"
+    # and the escapes reach the UI verbatim.
+    #
+    # The glyph assertion below is weaker than it looks: whether non-ASCII survives
+    # depends on the PARENT's [Console]::OutputEncoding, which was already UTF-8 in
+    # the shell where this was written (so it would pass either way). It is kept
+    # because Invoke-UpdateScript now pins that encoding rather than inheriting
+    # whatever codepage the scheduled-task host happens to start with.
+    $pretty = Join-Path $env:TEMP "waffled-pretty-$PID.ps1"
+    Set-Content $pretty -Encoding utf8 -Value @(
+        '[Console]::OutputEncoding = [Text.Encoding]::UTF8'
+        '$e = [char]27'
+        'Write-Output "$e[32m' + [char]0x2713 + ' api        running    healthy$e[0m"'
+        'Write-Output "$e[33m' + [char]0x26A0 + ' Backup note: media not included$e[0m"'
+        'Write-Output "$e[2mDone.$e[0m"'
+        'exit 0'
+    )
+    $pretty2 = Invoke-UpdateScript $pretty
+    Check "escape sequences are stripped" ($pretty2.Message -notmatch [char]27)
+    Check "no bare colour codes survive" ($pretty2.Message -notmatch '\[\d+m')
+    Check "readable text is preserved" ($pretty2.Message -match 'api\s+running\s+healthy')
+    Check "non-ASCII glyphs are not mangled" ($pretty2.Message -notmatch '\?\?|�')
+    Remove-Item $pretty -ErrorAction SilentlyContinue
 } finally {
     Remove-Item $noisy, $angry -ErrorAction SilentlyContinue
 }

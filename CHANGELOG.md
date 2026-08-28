@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Update messages read as plain English.** The deploy output is colourised for a
+  terminal, and those colour codes were reaching System Health as stray characters
+  mixed into the text. They're now stripped before the message is stored.
 - **The Update button now tells you what it did.** Pressing it on an already-current
   server is a legitimate no-op, but the status simply snapped back to its previous
   text, so it looked like nothing had happened. System Health now reports the last
