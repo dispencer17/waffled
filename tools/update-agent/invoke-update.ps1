@@ -15,21 +15,40 @@
 # So: drop to 'Continue' for the duration of the call, and restore it afterwards
 # (the caller still wants Stop semantics for its own logic).
 
+# `waffled up` is a bash script: it colourises its health table with ANSI escapes.
+# Those are meaningless in a browser, so a failure banner would show the operator
+# fragments like "<ESC>[32m" mixed into the reason. Strip CSI and OSC sequences, then
+# any stray lone escape.
+function Remove-AnsiCodes {
+    param([string]$Text)
+    if (-not $Text) { return $Text }
+    $esc = [char]27
+    $out = [regex]::Replace($Text, "$esc\[[0-?]*[ -/]*[@-~]", '')          # CSI (colours, cursor)
+    $out = [regex]::Replace($out, "$esc\][^$esc`a]*(`a|$esc\\)", '')       # OSC (window title)
+    return $out -replace $esc, ''
+}
+
 function Invoke-UpdateScript {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
+    # Pin the decoding of the child's stdout. The scheduled-task host does not
+    # necessarily start with the same codepage as an interactive shell, and the
+    # bash half of the deploy emits UTF-8 glyphs.
+    $prevEnc = [Console]::OutputEncoding
     try {
+        try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
         $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $Path 2>&1
         $code = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $prev
+        try { [Console]::OutputEncoding = $prevEnc } catch { }
     }
 
     # The tail is what an operator reads in Settings, so keep update.ps1's own
     # wording ("Working tree has uncommitted changes", "Fast-forward failed", ...).
-    $msg = ($out | Select-Object -Last 12 | Out-String).Trim()
+    $msg = (Remove-AnsiCodes (($out | Select-Object -Last 12 | Out-String))).Trim()
     if (-not $msg) {
         $msg = if ($code -eq 0) { 'Update complete.' } else { "update.ps1 exited $code." }
     }
