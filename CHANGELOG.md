@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Patched a denial-of-service advisory in a bundled dependency.** The pinned
+  `brace-expansion` version was the one the new advisory targets (it bypasses the
+  earlier mitigation); it now pins the patched release. No functional change.
+
 ### Fixed
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
