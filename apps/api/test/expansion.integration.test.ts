@@ -95,6 +95,19 @@ describe('expansion.service', () => {
     expect(idsAfter).toEqual(idsBefore)
   })
 
+  it('an unchanged re-run writes nothing (every UPDATE is a PowerSync op)', async () => {
+    // xmin changes on every row write, even a same-value one. A rewrite of an
+    // unchanged series re-streams it to every client and bloats the bucket's
+    // history — the 2026-10 kiosk incident (2.4M ops for ~1k live rows).
+    const versions = () =>
+      withClient((c) =>
+        c.query<{ id: string; v: string }>(`select id, xmin::text as v from event_occurrences where event_id=$1 order by id`, [eventId]).then((r) => r.rows),
+      )
+    const before = await versions()
+    await materializeMaster(eventId, NOW)
+    expect(await versions()).toEqual(before)
+  })
+
   it('applies a move override (new time + override_id) keyed by original start', async () => {
     await withClient((c) =>
       c.query(

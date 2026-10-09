@@ -106,7 +106,18 @@ async function materializeOne(m: MasterRow, now: Date): Promise<number> {
            title = excluded.title, location = excluded.location,
            starts_at = excluded.starts_at, ends_at = excluded.ends_at,
            all_day = excluded.all_day, starts_on = excluded.starts_on, deleted_at = null,
-           visibility = excluded.visibility, owner_person_id = excluded.owner_person_id`,
+           visibility = excluded.visibility, owner_person_id = excluded.owner_person_id
+         -- Skip identical rows: every UPDATE (even same-value) is a PowerSync op
+         -- re-streamed to every client, and this runs for every slot each pass.
+         where event_occurrences.deleted_at is not null
+            or (event_occurrences.override_id, event_occurrences.person_id, event_occurrences.title,
+                event_occurrences.location, event_occurrences.starts_at, event_occurrences.ends_at,
+                event_occurrences.all_day, event_occurrences.starts_on, event_occurrences.visibility,
+                event_occurrences.owner_person_id)
+               is distinct from
+               (excluded.override_id, excluded.person_id, excluded.title, excluded.location,
+                excluded.starts_at, excluded.ends_at, excluded.all_day, excluded.starts_on,
+                excluded.visibility, excluded.owner_person_id)`,
         [
           m.household_id,
           m.id,

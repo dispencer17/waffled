@@ -255,6 +255,17 @@ async function applyVevent(
        -- visibility/owner follow the feed mapping, so always restamp on re-sync.
        visibility = excluded.visibility,
        owner_person_id = excluded.owner_person_id
+     -- Skip identical rows: every UPDATE (even same-value) is a PowerSync op
+     -- re-streamed to every client, and an unchanged feed is the common case.
+     where events.deleted_at is not null
+        or events.sync_state is distinct from 'synced'
+        or (events.title, events.description, events.location, events.starts_at, events.ends_at,
+            events.all_day, events.timezone, events.rrule, events.exdate, events.status,
+            events.person_id, events.visibility, events.owner_person_id)
+           is distinct from
+           (excluded.title, excluded.description, excluded.location, excluded.starts_at, excluded.ends_at,
+            excluded.all_day, excluded.timezone, excluded.rrule, excluded.exdate, excluded.status,
+            coalesce(events.person_id, excluded.person_id), excluded.visibility, excluded.owner_person_id)
      returning id, rrule, (xmax = 0) as inserted`,
     [
       feed.household_id,
@@ -273,7 +284,17 @@ async function applyVevent(
       feed.visibility,
     ]
   )
-  const row = rows[0]
+  // No row back = the guard skipped an unchanged event; it's still present in
+  // the feed, so report it as updated and look it up for materialization.
+  const row =
+    rows[0] ??
+    (
+      await client.query<{ id: string; rrule: string | null; inserted: boolean }>(
+        `select id, rrule, false as inserted from events
+          where origin = 'ics' and origin_ref_id = $1 and google_event_id = $2`,
+        [feed.id, ev.uid]
+      )
+    ).rows[0]
   return {
     outcome: row.inserted ? 'imported' : 'updated',
     masterId: row.rrule ? row.id : undefined,
