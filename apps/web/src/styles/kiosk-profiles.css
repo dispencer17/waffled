@@ -270,11 +270,12 @@
   .kl-card .kp-key { height: 60px; font-size: 24px; }
   .kl-cancel { margin-top: 10px; }
 }
-/* Lock-now: a small floating pill, bottom-left, clear of the rail's content. */
+/* Lock-now: a small floating button, bottom-right (bottom-left is the rail's
+   Settings item). Cook-mode timers dock in the same corner, so step aside for them. */
 .kl-lock-btn {
   position: fixed;
-  left: 14px;
-  bottom: 14px;
+  right: 24px;
+  bottom: 24px;
   z-index: 800;
   width: 44px;
   height: 44px;
@@ -290,4 +291,7 @@
 .kl-lock-btn:hover,
 .kl-lock-btn:focus-visible {
   opacity: 1;
+}
+body:has(.cm-timers .cm-timer) .kl-lock-btn {
+  right: 316px; /* clear of the timers dock (max-width 280 + its 24 inset + gap) */
 }
