@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sync longer than three minutes as stuck, restarting it and eventually wiping the
   partly-downloaded copy, so a large household could loop forever without ever
   syncing. A sync that is still downloading now counts as healthy.
+- **Live Sync history is trimmed daily.** PowerSync keeps every change as history,
+  and a new device has to download all of it. A new `powersync-compact` service now
+  runs PowerSync's own compaction at startup and then once a day, so a device's
+  first sync stays proportional to your data.
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
   mixed into the text. They're now stripped before the message is stored.
