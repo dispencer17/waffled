@@ -42,7 +42,12 @@ interface DisplaySettings {
   // Wake-word voice control (fork). The Picovoice AccessKey necessarily reaches
   // the kiosk browser (Porcupine runs in-page WASM) — per-install, usage-metered.
   voice: { wakeWord: boolean; picovoiceKey: string | null; keyword: string }
+  // Household lock screen (fork). The code's hash lives in households.kiosk_lock_hash,
+  // never in this blob; reads add a computed `hasCode` (see readDisplay).
+  lock: { enabled: boolean; idleMinutes: number }
 }
+// What GET/PUT /api/kiosk/display serve: the stored settings + lock.hasCode.
+type DisplayView = Omit<DisplaySettings, 'lock'> & { lock: DisplaySettings['lock'] & { hasCode: boolean } }
 const DISPLAY_DEFAULTS: DisplaySettings = {
   screensaverMinutes: 15,
   content: 'photos',
@@ -54,10 +59,12 @@ const DISPLAY_DEFAULTS: DisplaySettings = {
   photoInterval: 10,
   photoShuffle: false,
   voice: { wakeWord: false, picovoiceKey: null, keyword: 'Computer' },
+  lock: { enabled: false, idleMinutes: 3 },
 }
 
 const CODE_TTL_MIN = 10
 const PIN_RE = /^\d{4,8}$/
+const LOCK_CODE_RE = /^\d{4}$/
 const PIN_MAX_ATTEMPTS = Number(process.env.KIOSK_PIN_MAX_ATTEMPTS) || 5
 const PIN_LOCKOUT_SECONDS = Number(process.env.KIOSK_PIN_LOCKOUT_SECONDS) || 30
 
@@ -104,9 +111,9 @@ async function resolveHouseholdId(req: Request): Promise<string> {
   return (await requireDevice(req)).householdId
 }
 
-async function readDisplay(householdId: string): Promise<DisplaySettings> {
-  const { rows } = await query<{ settings: { display?: Partial<DisplaySettings> } | null }>(
-    `select settings from households where id = $1`,
+async function readDisplay(householdId: string): Promise<DisplayView> {
+  const { rows } = await query<{ settings: { display?: Partial<DisplaySettings> } | null; has_lock_code: boolean }>(
+    `select settings, (kiosk_lock_hash is not null) as has_lock_code from households where id = $1`,
     [householdId]
   )
   const d = rows[0]?.settings?.display ?? {}
@@ -115,6 +122,7 @@ async function readDisplay(householdId: string): Promise<DisplaySettings> {
     ...d,
     nightDim: { ...DISPLAY_DEFAULTS.nightDim, ...(d.nightDim ?? {}) },
     voice: { ...DISPLAY_DEFAULTS.voice, ...(d.voice ?? {}) },
+    lock: { ...DISPLAY_DEFAULTS.lock, ...(d.lock ?? {}), hasCode: !!rows[0]?.has_lock_code },
   }
 }
 
@@ -147,6 +155,12 @@ function sanitizeDisplay(body: unknown): Partial<DisplaySettings> {
     if (typeof v.picovoiceKey === 'string') out.voice.picovoiceKey = v.picovoiceKey.trim() || null
     else if (v.picovoiceKey === null) out.voice.picovoiceKey = null
     if (typeof v.keyword === 'string' && v.keyword.trim()) out.voice.keyword = v.keyword.trim().slice(0, 40)
+  }
+  const l = b.lock as Record<string, unknown> | undefined
+  if (l && typeof l === 'object') {
+    out.lock = {} as DisplaySettings['lock'] // hasCode is derived, never taken from the client
+    if (typeof l.enabled === 'boolean') out.lock.enabled = l.enabled
+    if (typeof l.idleMinutes === 'number') out.lock.idleMinutes = Math.max(1, Math.min(60, Math.round(l.idleMinutes)))
   }
   return out
 }
@@ -244,18 +258,75 @@ export function registerKioskRoutes(api: Api): void {
     const tenant = await requireTenant(req)
     requireAdmin(tenant)
     const patch = sanitizeDisplay(req.body)
-    const current = await readDisplay(tenant.householdId)
+    const { lock: { hasCode, ...currentLock }, ...current } = await readDisplay(tenant.householdId)
     const next: DisplaySettings = {
       ...current,
       ...patch,
       nightDim: { ...current.nightDim, ...(patch.nightDim ?? {}) },
       voice: { ...current.voice, ...(patch.voice ?? {}) },
+      lock: { ...currentLock, ...(patch.lock ?? {}) },
     }
     await query(
       `update households set settings = coalesce(settings, '{}'::jsonb) || jsonb_build_object('display', $2::jsonb) where id = $1`,
       [tenant.householdId, JSON.stringify(next)]
     )
-    return next
+    return { ...next, lock: { ...next.lock, hasCode } }
+  })
+
+  // ── household lock screen (fork) ───────────────────────────────────────────────
+  // One 4-digit code per household; a locked kiosk asks for it before any tap goes
+  // through. Set/cleared by an admin; checked here so the throttle can't be bypassed.
+  api.put('/api/kiosk/lock-code', async (req: Request, res: Response) => {
+    const tenant = await requireTenant(req)
+    requireAdmin(tenant)
+    const code = ((req.body ?? {}) as { code?: string }).code ?? ''
+    if (!LOCK_CODE_RE.test(code)) return res.status(400).json({ error: 'BadRequest', message: 'Lock code must be 4 digits' })
+    await query(
+      `update households set kiosk_lock_hash = $2, kiosk_lock_failed_count = 0, kiosk_lock_locked_until = null where id = $1`,
+      [tenant.householdId, hashPassword(code)]
+    )
+    return { ok: true }
+  })
+
+  api.delete('/api/kiosk/lock-code', async (req: Request) => {
+    const tenant = await requireTenant(req)
+    requireAdmin(tenant)
+    await query(
+      `update households set kiosk_lock_hash = null, kiosk_lock_failed_count = 0, kiosk_lock_locked_until = null where id = $1`,
+      [tenant.householdId]
+    )
+    return { ok: true }
+  })
+
+  // Dual-auth like GET /display: the lock covers the picker (device token) and the app
+  // (profile token). Same throttle knobs as the per-person PIN.
+  api.post('/api/kiosk/unlock', async (req: Request, res: Response) => {
+    const householdId = await resolveHouseholdId(req)
+    const { rows } = await query<{ kiosk_lock_hash: string | null; kiosk_lock_failed_count: number; kiosk_lock_locked_until: Date | null }>(
+      `select kiosk_lock_hash, kiosk_lock_failed_count, kiosk_lock_locked_until from households where id = $1`,
+      [householdId]
+    )
+    const hh = rows[0]
+    if (!hh?.kiosk_lock_hash) return res.status(409).json({ error: 'Conflict', message: 'No lock code is set.' })
+    if (hh.kiosk_lock_locked_until && hh.kiosk_lock_locked_until.getTime() > Date.now()) {
+      const retryAfter = Math.ceil((hh.kiosk_lock_locked_until.getTime() - Date.now()) / 1000)
+      return res.status(429).json({ error: 'TooManyRequests', message: 'Too many attempts. Try again soon.', retryAfter })
+    }
+    const code = ((req.body ?? {}) as { code?: string }).code ?? ''
+    if (!verifyPassword(code, hh.kiosk_lock_hash)) {
+      const next = (hh.kiosk_lock_failed_count ?? 0) + 1
+      if (next >= PIN_MAX_ATTEMPTS) {
+        await query(
+          `update households set kiosk_lock_failed_count = 0, kiosk_lock_locked_until = now() + ($2 || ' seconds')::interval where id = $1`,
+          [householdId, String(PIN_LOCKOUT_SECONDS)]
+        )
+        return res.status(429).json({ error: 'TooManyRequests', message: 'Too many attempts. Try again soon.', retryAfter: PIN_LOCKOUT_SECONDS })
+      }
+      await query(`update households set kiosk_lock_failed_count = $2 where id = $1`, [householdId, next])
+      return res.status(401).json({ error: 'Unauthorized', message: 'Incorrect code.', triesLeft: PIN_MAX_ATTEMPTS - next })
+    }
+    await query(`update households set kiosk_lock_failed_count = 0, kiosk_lock_locked_until = null where id = $1`, [householdId])
+    return { ok: true }
   })
 
   // Claim a profile → a real, person-scoped session. The crux of the feature.
