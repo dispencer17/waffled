@@ -43,7 +43,8 @@ Legend: ✅ done · 🟡 partial / in progress · 🚧 planned · ⛔ dropped (s
   permissions** (per-role capability grid for managing/approving chores, rewards & goals —
   see the [permission model](./permissions.md): *gate what touches currency or someone
   else's record; attribute collaborative actions; leave the rest open*).
-- **Kiosk** — device pairing, profile picker, optional PINs, idle screensaver.
+- **Kiosk** — device pairing, profile picker, optional PINs, idle screensaver, and a
+  household **4-digit lock screen** ("look, don't touch" for kids; web kiosk — iPad not yet).
 - **Today** — live cards + customizable per-user / family layouts.
 - **Calendar** — native events, Month/Week/Day/Agenda, create/edit/delete, participants,
   **recurring events** (RRULE picker, per-occurrence/this-and-following/all edits),

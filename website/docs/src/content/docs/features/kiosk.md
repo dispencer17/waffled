@@ -12,6 +12,7 @@ Kiosk is the ambient-hub half of Waffled — the same web app, running fullscree
 - 🔗 **Device pairing** — pair with an admin code or a one-tap "use this device"; on iPad, promote a device to kiosk and pair by code in one move. Single-login mode (no pairing) stays the **default**.
 - 👥 **Profile picker** — a per-profile picker where claiming a profile mints a **real per-person session** (the device-token model), so each person gets their own scoped view.
 - 🔒 **Optional per-person PIN** — 4–8 digits, throttled — a wrong code shows "**N tries left**" (401), and too many trips a short lockout (429, ~30s window).
+- 🔐 **Lock screen** — one 4-digit household code keeps little hands off the kiosk. Everything stays visible, but any tap asks for the code first; it re-locks itself after a few quiet minutes, when the screensaver starts, or when you tap 🔒. Web kiosk only for now — see [Kiosk & devices](/administration/kiosk/#lock-screen).
 - 🔁 **Switch & return** — switch profile at any time, and an idle timeout returns the device to the picker on its own.
 - 🚪 **Exit / un-pair without signing in** — leave kiosk mode or un-pair the device without needing a login, so a shared tablet is never stuck.
 - ☀️ **Keep-awake while displaying** — the screen stays on while it's acting as the hub.

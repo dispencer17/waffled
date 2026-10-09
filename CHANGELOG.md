@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Lock the kiosk with a 4-digit code.** Kids can still read the family display, but
+  every tap asks for the household lock code before anything goes through, so nothing
+  gets added, deleted or changed by accident. Set the code in **Settings → Display &
+  Kiosk → Lock screen**. The kiosk locks itself again after a few quiet minutes (you
+  choose how many), whenever the screensaver starts, and when you tap the 🔒 button.
+  Wrong guesses show "N tries left" and then a short wait. Web kiosk only for now.
+
 ### Security
 - **Patched a denial-of-service advisory in a bundled dependency.** The pinned
   `brace-expansion` version was the one the new advisory targets (it bypasses the
