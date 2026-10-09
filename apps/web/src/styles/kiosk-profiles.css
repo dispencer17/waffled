@@ -234,3 +234,60 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Household lock screen (fork). The shield is transparent — the display stays
+   readable — and sits above everything, the screensaver (1000) included, so no
+   tap reaches the app while locked. The keypad modal sits just above it. */
+.kl-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: transparent;
+  touch-action: none;
+  cursor: pointer;
+}
+.modal-overlay.kl-overlay {
+  z-index: 10001;
+}
+.kl-card {
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.kl-card .kp-pad {
+  margin-top: 8px;
+}
+.kl-cancel {
+  margin-top: 14px;
+}
+/* Short screens (landscape tablets ~800px tall): keep the whole pad on screen. */
+@media (max-height: 860px) {
+  .kl-card { padding: 18px 22px; }
+  .kl-card .kp-av-lg { width: 52px; height: 52px; font-size: 28px; }
+  .kl-card .kp-pad { grid-template-columns: repeat(3, 68px); gap: 10px; }
+  .kl-card .kp-key { height: 60px; font-size: 24px; }
+  .kl-cancel { margin-top: 10px; }
+}
+/* Lock-now: a small floating pill, bottom-left, clear of the rail's content. */
+.kl-lock-btn {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 800;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+  background: var(--card);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.kl-lock-btn:hover,
+.kl-lock-btn:focus-visible {
+  opacity: 1;
+}

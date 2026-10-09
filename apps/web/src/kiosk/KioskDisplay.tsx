@@ -19,6 +19,7 @@ import {
   type AgendaEvent,
 } from '../lib/api'
 import { Screensaver, screensaverPhotos } from './components/Screensaver'
+import { KioskLock } from './KioskLock'
 import { startBuildWatch } from '../lib/build-watch'
 import '../styles/kiosk-profiles.css'
 
@@ -172,6 +173,10 @@ function DisplayLayer() {
   return (
     <>
       {dim && <div className="kiosk-dim" aria-hidden="true" />}
+      {/* fork: household lock screen — paired kiosks only, and only once a code exists. */}
+      {cfg?.lock?.enabled && cfg.lock.hasCode && isKioskMode() && (
+        <KioskLock idleMinutes={cfg.lock.idleMinutes} screensaverUp={saver} />
+      )}
       {saver && cfg && cfg.content !== 'off' && (
         <Screensaver
           content={cfg.content === 'photos' ? 'photos' : 'clock'}

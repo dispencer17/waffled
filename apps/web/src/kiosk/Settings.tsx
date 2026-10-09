@@ -3552,6 +3552,9 @@ function DisplayKioskPanel() {
             )}
           </SettingCard>
 
+          {/* fork: household lock screen */}
+          {cfg.lock && <LockScreenCard lock={cfg.lock} onChange={(lock) => update({ lock })} />}
+
         </>
       )}
 
@@ -3569,6 +3572,96 @@ function DisplayKioskPanel() {
         </>
       )}
     </div>
+  )
+}
+
+// Household lock screen (fork). A paired kiosk stays readable but asks for this
+// 4-digit code before any tap goes through. The code itself is set/removed via its
+// own endpoint (hashed server-side); enabled + idleMinutes ride the display config.
+const LOCK_IDLE_OPTS = [1, 2, 3, 5, 10, 15, 30]
+function LockScreenCard({ lock, onChange }: {
+  lock: NonNullable<DisplayConfig['lock']>
+  onChange: (lock: NonNullable<DisplayConfig['lock']>) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function save() {
+    setBusy(true); setErr(null)
+    try {
+      await kioskApi.setLockCode(code)
+      // The first code switches the lock on — that's why you set one.
+      onChange({ ...lock, hasCode: true, enabled: lock.hasCode ? lock.enabled : true })
+      setEditing(false); setCode('')
+    } catch {
+      setErr('Couldn’t save the code.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function remove() {
+    setBusy(true); setErr(null)
+    try {
+      await kioskApi.clearLockCode()
+      onChange({ ...lock, hasCode: false, enabled: false })
+    } catch {
+      setErr('Couldn’t remove the code.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <SettingCard style={{ marginTop: 16 }}>
+      <SettingRow icon="🔐" title="Lock screen" sub={lock.hasCode ? 'Paired kiosks stay readable, but every tap asks for the 4-digit code first.' : 'Set a 4-digit code to keep little hands from changing things on the kiosk.'}>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={lock.enabled && lock.hasCode}
+          aria-label="Lock screen"
+          disabled={!lock.hasCode}
+          className={`toggle ${lock.enabled && lock.hasCode ? 'on' : ''}`}
+          onClick={() => onChange({ ...lock, enabled: !lock.enabled })}
+        />
+      </SettingRow>
+      <SettingRow icon="🔢" title="Lock code" sub={lock.hasCode ? 'Forgot it? Change or remove it here from any signed-in device.' : 'Only grown-ups who know it can unlock the kiosk.'}>
+        {editing ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              className="set-inline-input"
+              style={{ width: 90, letterSpacing: '0.3em', textAlign: 'center' }}
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              aria-label="New lock code"
+              placeholder="••••"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+            <button type="button" className="btn btn-primary" disabled={busy || code.length !== 4} onClick={save}>Save code</button>
+            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => { setEditing(false); setCode('') }}>Cancel</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setEditing(true)}>{lock.hasCode ? 'Change code' : 'Set code'}</button>
+            {lock.hasCode && <button type="button" className="btn btn-ghost" disabled={busy} onClick={remove}>Remove code</button>}
+          </div>
+        )}
+      </SettingRow>
+      {lock.enabled && lock.hasCode && (
+        <SettingRow icon="⏳" title="Lock again after" sub="Minutes without a tap before the kiosk locks itself. It also locks when the screensaver starts.">
+          <select className="set-inline-input" style={{ width: 120 }} value={lock.idleMinutes} onChange={(e) => onChange({ ...lock, idleMinutes: Number(e.target.value) || 3 })}>
+            {[...new Set([...LOCK_IDLE_OPTS, lock.idleMinutes])].sort((a, b) => a - b).map((m) => (
+              <option key={m} value={m}>{m} {m === 1 ? 'minute' : 'minutes'}</option>
+            ))}
+          </select>
+        </SettingRow>
+      )}
+      {err && <div className="tiny" style={{ padding: '0 16px 14px', color: 'var(--danger)', fontWeight: 600 }}>{err}</div>}
+    </SettingCard>
   )
 }
 

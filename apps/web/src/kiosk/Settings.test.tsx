@@ -152,6 +152,56 @@ describe('Settings screen', () => {
     await waitFor(() => expect(puts.some((p) => p.photoInterval === 30)).toBe(true))
   })
 
+  it('sets, then removes, the kiosk lock code and turns the lock on with it', async () => {
+    const puts: Array<Record<string, unknown>> = []
+    const lockCalls: Array<{ method: string; body?: unknown }> = []
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = String(url)
+      if (u.includes('/api/kiosk/lock-code')) {
+        lockCalls.push({ method: String(init?.method), body: init?.body ? JSON.parse(String(init.body)) : undefined })
+        return { ok: true, status: 200, json: async () => ({ ok: true }) }
+      }
+      if (u.includes('/api/kiosk/display')) {
+        if (init?.method === 'PUT') {
+          const body = JSON.parse(String(init.body)) as Record<string, unknown>
+          puts.push(body)
+          return { ok: true, json: async () => body }
+        }
+        return { ok: true, json: async () => ({ ...displayConfig, lock: { enabled: false, idleMinutes: 3, hasCode: false } }) }
+      }
+      if (u.includes('/api/household/settings')) return { ok: true, json: async () => ({ household, members }) }
+      if (u.includes('/api/household')) return { ok: true, json: async () => ({ provisioned: true, household, person: members[0] }) }
+      if (u.includes('/api/persons')) return { ok: true, json: async () => ({ persons: [] }) }
+      if (u.includes('/api/events')) return { ok: true, json: async () => ({ events: [] }) }
+      return { ok: false, status: 404, json: async () => ({}) }
+    }) as unknown as typeof fetch
+
+    renderSettings()
+    await screen.findByText('Kevin')
+    fireEvent.click(screen.getByText('Display & Kiosk'))
+
+    expect(await screen.findByText('Lock screen')).toBeInTheDocument()
+    // No code yet → the lock can't be switched on.
+    expect(screen.getByRole('switch', { name: 'Lock screen' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set code' }))
+    const input = screen.getByLabelText('New lock code')
+    fireEvent.change(input, { target: { value: '12a' } })
+    expect((input as HTMLInputElement).value).toBe('12') // digits only
+    expect(screen.getByRole('button', { name: 'Save code' })).toBeDisabled()
+    fireEvent.change(input, { target: { value: '1357' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save code' }))
+
+    await waitFor(() => expect(lockCalls).toContainEqual({ method: 'PUT', body: { code: '1357' } }))
+    // Setting the first code switches the lock on.
+    await waitFor(() => expect(puts.some((p) => (p.lock as { enabled?: boolean })?.enabled === true)).toBe(true))
+    expect(screen.getByRole('switch', { name: 'Lock screen' })).not.toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove code' }))
+    await waitFor(() => expect(lockCalls.some((c) => c.method === 'DELETE')).toBe(true))
+    expect(await screen.findByRole('button', { name: 'Set code' })).toBeInTheDocument()
+  })
+
   it('renders the permissions grid with a Manage goals column and toggles it', async () => {
     const puts: PermissionMatrix[] = []
     const emptyRow = { 'chore.manage': false, 'chore.approve': false, 'reward.manage': false, 'reward.approve': false, 'reward.grant': false, 'goal.manage': false }
