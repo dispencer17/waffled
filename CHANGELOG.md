@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   earlier mitigation); it now pins the patched release. No functional change.
 
 ### Fixed
+- **A wrong kiosk PIN now costs one try, not two.** On the web kiosk each wrong PIN
+  was quietly sent twice, so "5 tries" really meant 3 before the lockout. Each guess
+  now counts once (the new lock code uses the same fix). The iPad app was already right.
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
   mixed into the text. They're now stripped before the message is stored.
