@@ -269,4 +269,69 @@ describe('kiosk pairing + profile tokens', () => {
     const kidTok = json(await call('POST', `/api/kiosk/profile/${kid}`, {}, deviceToken)).accessToken
     expect((await call('PUT', '/api/kiosk/display', { screensaverMinutes: 5 }, kidTok)).statusCode).toBe(403)
   })
+
+  // ── household lock screen (fork) ────────────────────────────────────────────────
+  it('serves lock defaults with hasCode=false and persists/clamps lock settings', async () => {
+    const def = json(await call('GET', '/api/kiosk/display', undefined, admin))
+    expect(def.lock).toEqual({ enabled: false, idleMinutes: 3, hasCode: false })
+
+    expect((await call('PUT', '/api/kiosk/display', { lock: { enabled: true, idleMinutes: 999, hasCode: true } }, admin)).statusCode).toBe(200)
+    const after = json(await call('GET', '/api/kiosk/display', undefined, admin))
+    expect(after.lock).toEqual({ enabled: true, idleMinutes: 60, hasCode: false }) // clamped; hasCode not client-settable
+    expect(after.content).toBe('clock') // other keys untouched
+
+    expect((await call('PUT', '/api/kiosk/display', { lock: { idleMinutes: 0 } }, admin)).statusCode).toBe(200)
+    expect(json(await call('GET', '/api/kiosk/display', undefined, admin)).lock).toMatchObject({ enabled: true, idleMinutes: 1 })
+  })
+
+  it('only lets an admin set a lock code, and it must be exactly 4 digits', async () => {
+    const kidTok = json(await call('POST', `/api/kiosk/profile/${kid}`, {}, deviceToken)).accessToken
+    expect((await call('PUT', '/api/kiosk/lock-code', { code: '2468' }, kidTok)).statusCode).toBe(403)
+    expect((await call('PUT', '/api/kiosk/lock-code', { code: '2468' }, deviceToken)).statusCode).toBe(403)
+    for (const bad of ['123', '12345', 'abcd', '']) {
+      expect((await call('PUT', '/api/kiosk/lock-code', { code: bad }, admin)).statusCode).toBe(400)
+    }
+    expect((await call('PUT', '/api/kiosk/lock-code', { code: '2468' }, admin)).statusCode).toBe(200)
+  })
+
+  it('reports hasCode to the device without ever serving the hash', async () => {
+    const r = await call('GET', '/api/kiosk/display', undefined, deviceToken)
+    expect(json(r).lock).toMatchObject({ enabled: true, hasCode: true })
+    expect(r.body).not.toMatch(/scrypt|lock_hash|lockHash/i)
+  })
+
+  it('unlocks with the right code from a device or profile token', async () => {
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, deviceToken)).statusCode).toBe(200)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, admin)).statusCode).toBe(200)
+    expect([401, 403]).toContain((await call('POST', '/api/kiosk/unlock', { code: '2468' })).statusCode) // no token at all
+  })
+
+  it('throttles wrong unlock codes and refuses the right one while locked out', async () => {
+    // KIOSK_PIN_MAX_ATTEMPTS=3, KIOSK_PIN_LOCKOUT_SECONDS=1 (set in beforeAll).
+    const first = await call('POST', '/api/kiosk/unlock', { code: '0000' }, deviceToken)
+    expect(first.statusCode).toBe(401)
+    expect(json(first).triesLeft).toBe(2)
+    expect(json(await call('POST', '/api/kiosk/unlock', { code: '1111' }, deviceToken)).triesLeft).toBe(1)
+    const locked = await call('POST', '/api/kiosk/unlock', { code: '2222' }, deviceToken)
+    expect(locked.statusCode).toBe(429)
+    expect(json(locked).retryAfter).toBeGreaterThan(0)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, deviceToken)).statusCode).toBe(429)
+    await sleep(1200)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, deviceToken)).statusCode).toBe(200)
+    // A success resets the counter: a fresh miss is back to 2 tries left.
+    expect(json(await call('POST', '/api/kiosk/unlock', { code: '0000' }, deviceToken)).triesLeft).toBe(2)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, deviceToken)).statusCode).toBe(200)
+  })
+
+  it('changes and removes the lock code (admin); unlock 409s with no code', async () => {
+    expect((await call('PUT', '/api/kiosk/lock-code', { code: '1357' }, admin)).statusCode).toBe(200)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '2468' }, deviceToken)).statusCode).toBe(401)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '1357' }, deviceToken)).statusCode).toBe(200)
+
+    const kidTok = json(await call('POST', `/api/kiosk/profile/${kid}`, {}, deviceToken)).accessToken
+    expect((await call('DELETE', '/api/kiosk/lock-code', undefined, kidTok)).statusCode).toBe(403)
+    expect((await call('DELETE', '/api/kiosk/lock-code', undefined, admin)).statusCode).toBe(200)
+    expect(json(await call('GET', '/api/kiosk/display', undefined, deviceToken)).lock.hasCode).toBe(false)
+    expect((await call('POST', '/api/kiosk/unlock', { code: '1357' }, deviceToken)).statusCode).toBe(409)
+  })
 })

@@ -42,6 +42,28 @@ You can set an optional **PIN (4–8 digits)** on a person in **Settings**. PIN 
 | `KIOSK_PIN_MAX_ATTEMPTS` | `5` | Tries before lockout |
 | `KIOSK_PIN_LOCKOUT_SECONDS` | `30` | Lockout duration |
 
+## Lock screen
+
+The per-person PIN guards *opening a profile*. The **lock screen** guards the whole
+kiosk: the family display stays readable, but **any tap asks for a 4-digit code** before
+it reaches the app — so kids can look, not touch. It covers the profile picker too.
+
+1. Go to **Settings → Display & Kiosk → Lock screen** (admins only).
+2. Tap **Set code** and enter 4 digits. Setting the first code switches the lock on.
+3. Pick **Lock again after** — how many minutes without a tap before it locks itself.
+
+The kiosk also locks whenever the screensaver starts, when the page reloads, and when
+someone taps the small **🔒** button in the bottom-left corner. Wrong codes use the same
+throttle as profile PINs (the `KIOSK_PIN_*` variables above): **"N tries left"**, then a
+short wait.
+
+- **One code per household**, shared by every paired kiosk. It's stored hashed on the
+  server, never on the tablet.
+- **Forgot it?** Any admin signed in on a phone or computer can **Change code** or
+  **Remove code** in the same place. Removing the code turns the lock off.
+- Only **paired kiosks** lock — a normal signed-in browser or phone never does.
+- **Web kiosk only** for now; the iPad app doesn't have the lock screen yet.
+
 ## Manage devices
 
 In **Settings → Display & Kiosk** you can:

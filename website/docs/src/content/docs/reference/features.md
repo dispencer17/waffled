@@ -54,6 +54,7 @@ Legend: ✅ supported · 🟡 partial · 🚧 planned · ❌ not supported / N-A
 | **Kiosk device pairing** (admin code or "use this device") | ✅ | ❌ N/A | ✅ | ✅ Done — iPad: admin one-tap *promote* + pair-by-code (opt-in; iPhone never a kiosk) |
 | **Profile picker** (Netflix-style; per-profile real session) | ✅ | ❌ N/A | ✅ | ✅ Done — `KioskProfilePickerView`; device-token model, claim mints a per-person session |
 | Optional per-person **PIN** to open a profile (throttled) | ✅ | ❌ N/A | ✅ | ✅ Done — `KioskPinPad` (4–8 digits, "N tries left" on 401, lockout countdown on 429) |
+| **Lock screen** — one household 4-digit code; the display stays readable but any tap asks for the code (idle re-lock, lock-now 🔒, throttled) | ✅ | ❌ N/A | 🚧 | ✅ Done (web kiosk) — Settings → Display & Kiosk → Lock screen; [how-to](/administration/kiosk/#lock-screen) · iPad not yet |
 | "Switch profile" + idle return to picker | ✅ | ❌ N/A | ✅ | ✅ Done — tap the rail avatar (swap badge) or Settings → Display & Kiosk "Switch profile"; `returnToPicker` also drops to the picker on screensaver wake |
 | **Exit kiosk mode** on the device (un-pair this iPad) | ✅ | ❌ N/A | ✅ | ✅ Done — picker gear → "Exit shared kiosk" (no sign-in needed) or parent Settings → "Stop sharing"; local-only, returns to normal login |
 | Idle **screensaver** auto-start (after N min of no touch) | ✅ | ❌ N/A | ✅ | ✅ Done |

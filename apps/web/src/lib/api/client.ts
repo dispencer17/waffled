@@ -253,6 +253,11 @@ export async function deviceFetch(path: string, init: RequestInit): Promise<Resp
   }
   let res = await fetch(path, withAuth(tok))
   if (res.status === 401) {
+    // A wrong PIN / lock code is also a 401, but it carries triesLeft — that's an
+    // answer, not an expired token. Retrying would re-submit the guess and burn a
+    // second try, so hand it straight back.
+    const body = (await res.clone().json().catch(() => null)) as { triesLeft?: unknown } | null
+    if (typeof body?.triesLeft === 'number') return res
     if (await refreshDeviceToken()) {
       res = await fetch(path, withAuth(getDeviceToken()))
     } else {

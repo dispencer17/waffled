@@ -24,6 +24,9 @@ export interface DisplayConfig {
   photoShuffle: boolean
   // Wake-word voice control (fork). Optional: older servers won't send it.
   voice?: { wakeWord: boolean; picovoiceKey: string | null; keyword: string }
+  // Household lock screen (fork). hasCode is server-derived (read-only); older
+  // servers won't send it.
+  lock?: { enabled: boolean; idleMinutes: number; hasCode: boolean }
 }
 
 export interface KioskDevice {
@@ -118,6 +121,24 @@ export const kioskApi = {
   async heartbeat(): Promise<void> {
     await deviceFetch('/api/kiosk/heartbeat', { method: 'POST' }).catch(() => {})
   },
+
+  // Lock screen (fork): check the household code. Device-authed (a paired kiosk
+  // always has its device secret, signed in or not). Throws KioskClaimError so the
+  // keypad can show tries-left (401) vs the lockout wait (429).
+  async unlock(code: string): Promise<void> {
+    const res = await deviceFetch('/api/kiosk/unlock', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string; retryAfter?: number; triesLeft?: number }
+      throw new KioskClaimError(res.status, body.message || 'Could not unlock.', { retryAfter: body.retryAfter, triesLeft: body.triesLeft })
+    }
+  },
+  // Admin: set (4 digits) or remove the household lock code.
+  setLockCode: (code: string) => apiSend<{ ok: true }>('PUT', '/api/kiosk/lock-code', { code }),
+  clearLockCode: () => apiDelete('/api/kiosk/lock-code'),
 
   // Per-person PIN (self or admin). 4–8 digits.
   setPin: (personId: string, pin: string) => apiSend<{ ok: true }>('PUT', `/api/persons/${personId}/pin`, { pin }),

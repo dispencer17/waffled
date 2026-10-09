@@ -13,12 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Lock the kiosk with a 4-digit code.** Kids can still read the family display, but
+  every tap asks for the household lock code before anything goes through, so nothing
+  gets added, deleted or changed by accident. Set the code in **Settings → Display &
+  Kiosk → Lock screen**. The kiosk locks itself again after a few quiet minutes (you
+  choose how many), whenever the screensaver starts, and when you tap the 🔒 button.
+  Wrong guesses show "N tries left" and then a short wait. Web kiosk only for now.
+
 ### Security
 - **Patched a denial-of-service advisory in a bundled dependency.** The pinned
   `brace-expansion` version was the one the new advisory targets (it bypasses the
   earlier mitigation); it now pins the patched release. No functional change.
 
 ### Fixed
+- **A wrong kiosk PIN now costs one try, not two.** On the web kiosk each wrong PIN
+  was quietly sent twice, so "5 tries" really meant 3 before the lockout. Each guess
+  now counts once (the new lock code uses the same fix). The iPad app was already right.
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
   mixed into the text. They're now stripped before the message is stored.
