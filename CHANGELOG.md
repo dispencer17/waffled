@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and each rewrite was re-sent to every device. Over weeks that piled up millions of
   sync operations for about a thousand events, until a kiosk could no longer finish
   its first sync. Unchanged events are now left alone.
+- **A big first sync is allowed to finish.** The Live Sync watchdog treated any first
+  sync longer than three minutes as stuck, restarting it and eventually wiping the
+  partly-downloaded copy, so a large household could loop forever without ever
+  syncing. A sync that is still downloading now counts as healthy.
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
   mixed into the text. They're now stripped before the message is stored.
