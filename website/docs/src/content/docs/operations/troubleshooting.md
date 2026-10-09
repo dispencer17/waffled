@@ -94,6 +94,27 @@ it *is* set, it must be an address every client can reach: a value like
 realtime updates, no offline cache). Clearing it restores the automatic behavior.
 Settings → System Health → **Live Sync** shows what the browser you're on is doing.
 
+### Live Sync never finishes its first sync
+
+**Symptom:** a device (often a freshly set-up kiosk) stays on **Connecting** and never
+reaches **Live**, even though PowerSync is healthy and other devices are fine.
+`./waffled logs powersync` shows the same client streaming hundreds of thousands of
+operations, disconnecting, and starting over.
+
+**Diagnose:** PowerSync keeps every change as history, and a device's first sync
+downloads all of it. Self-hosted PowerSync never trims that history by itself, so after
+months of edits it can be far larger than the data itself.
+
+**Fix:** the `powersync-compact` service (part of the standard stack) trims it at
+startup and then daily. To trim it right away:
+
+```bash
+docker exec waffled-powersync node service/lib/entry.js compact
+```
+
+Compaction is safe to run while the server is live, and devices that are already
+synced are unaffected.
+
 ### Google Calendar sync failing
 
 **Symptom:** calendars stale / not updating; health `calendar` degraded; jobs log

@@ -330,6 +330,27 @@ describe('ICS calendar feeds', () => {
     expect(Number(live[0].n)).toBe(4)
   })
 
+  it('re-syncing an unchanged feed writes no rows (no PowerSync churn)', async () => {
+    // xmin changes on every row write, even a same-value one. Rewriting every feed
+    // event each 15-min poll re-streamed them all to every client and grew the
+    // household bucket to 2.4M ops (2026-10 kiosk incident).
+    const versions = () =>
+      dbQuery<{ id: string; v: string }>(
+        `select id, xmin::text as v from events where origin_ref_id = $1
+         union all
+         select o.id, o.xmin::text from event_occurrences o join events e on e.id = o.event_id
+          where e.origin_ref_id = $1
+         order by id`,
+        [feedId]
+      )
+    const before = await versions()
+    const res = await call('POST', `/api/calendar/feeds/${feedId}/sync`, kevin)
+    expect(res.statusCode).toBe(200)
+    // The counters still describe the feed (4 events present, none new).
+    expect(JSON.parse(res.body)).toMatchObject({ imported: 0, updated: 4, deleted: 0 })
+    expect(await versions()).toEqual(before)
+  })
+
   it('an event removed from the feed is soft-deleted on the next sync', async () => {
     schoolIcs = vcal([evAllDay, evUtc, evWeekly, evCancelled]) // dentist appointment vanished
     const res = await call('POST', `/api/calendar/feeds/${feedId}/sync`, kevin)

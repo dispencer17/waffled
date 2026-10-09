@@ -96,6 +96,10 @@ export interface EngineStatus {
   connecting: boolean
   hasSynced: boolean | undefined
   lastSyncedAt: number | null
+  // Ops downloaded toward the current target checkpoint (SyncStatus
+  // downloadProgress); null/absent when not downloading. A rising count means a
+  // big sync is working, not wedged.
+  downloadedOps?: number | null
 }
 
 export interface SyncHealthMonitorDeps {
@@ -156,10 +160,19 @@ export class SyncHealthMonitor {
   }
 
   noteStatus(s: EngineStatus): void {
+    const prevOps = this.status.downloadedOps ?? null
+    const ops = s.downloadedOps ?? null
     this.status = s
     if (s.connected && s.hasSynced) {
       this.lastHealthyAt = this.deps.now()
       this.attempts = 0 // recovered — next stall starts the ladder from soft again
+    } else if (s.connected && ops !== null && prevOps !== null && ops > prevOps) {
+      // Download progress is proof of life: a large first sync can outlast the
+      // stall window, and restarting it (worse, wiping it) means it never
+      // finishes — the 2026-10 kiosk incident. A wedged engine makes no progress.
+      // (A drop in the count is a new stream starting over; the next rise counts.)
+      this.lastHealthyAt = this.deps.now()
+      this.attempts = 0
     }
     this.publish()
   }

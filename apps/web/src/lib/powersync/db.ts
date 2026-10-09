@@ -51,6 +51,7 @@ async function startClient(): Promise<void> {
         connecting: s.connecting,
         hasSynced: s.hasSynced,
         lastSyncedAt: s.lastSyncedAt ? s.lastSyncedAt.getTime() : null,
+        downloadedOps: s.downloadProgress?.downloadedOperations ?? null,
       }),
   })
   // connect() retries internally; fetchCredentials returning null just means

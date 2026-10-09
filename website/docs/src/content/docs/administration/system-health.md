@@ -47,7 +47,7 @@ locally for instant offline reads.
 | **live** | Connected and fully synced — local reads are authoritative |
 | **starting…** | The engine is booting (a few seconds on every page load) |
 | **connecting…** | Establishing (or re-establishing) the sync stream |
-| **stalled — auto-restarting** | Online + signed in but no sync for several minutes; the watchdog is restarting the engine |
+| **stalled — auto-restarting** | Online + signed in but no sync — and no download progress — for several minutes; the watchdog is restarting the engine. A long first sync that is still downloading stays **connecting…** and is left to finish |
 | **offline** | No network — the local mirror serves the last-known state |
 | **failed to start — reading over REST** | The engine crashed on boot; the card shows the error, and the app reads from the server directly |
 | **off — reading over REST** | The engine is not running; the app reads from the server directly |

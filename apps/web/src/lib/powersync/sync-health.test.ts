@@ -87,6 +87,49 @@ describe('SyncHealthMonitor status', () => {
     expect(getSyncHealth().status).toBe('stalled')
   })
 
+  // 2026-10 kiosk incident: a huge first sync (2.4M ops) takes longer than the
+  // stall window. Treating it as wedged soft/hard-restarted it and — from the
+  // third rung — wiped the replica every 16 min, so it never finished.
+  it('a first sync that keeps downloading is not a stall', async () => {
+    const { m, deps, advance } = makeMonitor()
+    m.engineStarted()
+    const downloading = (ops: number) => ({ connected: true, connecting: false, hasSynced: false, lastSyncedAt: null, downloadedOps: ops })
+    m.noteStatus(downloading(0))
+    for (let i = 1; i <= 20; i++) {
+      advance(STALL_AFTER_MS - 1)
+      m.noteStatus(downloading(i * 100_000))
+      await m.tick()
+    }
+    expect(getSyncHealth().status).toBe('connecting')
+    expect(deps.softRestart).not.toHaveBeenCalled()
+    expect(deps.hardRestart).not.toHaveBeenCalled()
+  })
+
+  it('a download whose progress stops is still a stall', async () => {
+    const { m, advance } = makeMonitor()
+    m.engineStarted()
+    const downloading = (ops: number) => ({ connected: true, connecting: false, hasSynced: false, lastSyncedAt: null, downloadedOps: ops })
+    m.noteStatus(downloading(500))
+    advance(STALL_AFTER_MS - 1)
+    m.noteStatus(downloading(500)) // same count: no progress
+    advance(2)
+    await m.tick()
+    expect(getSyncHealth().status).toBe('stalled')
+  })
+
+  it('progress restarting on a new stream still counts as progress', async () => {
+    const { m, advance } = makeMonitor()
+    m.engineStarted()
+    const downloading = (ops: number) => ({ connected: true, connecting: false, hasSynced: false, lastSyncedAt: null, downloadedOps: ops })
+    m.noteStatus(downloading(900_000))
+    m.noteStatus(downloading(0)) // reconnect: counter starts over
+    advance(STALL_AFTER_MS - 1)
+    m.noteStatus(downloading(50_000))
+    advance(STALL_AFTER_MS - 1)
+    await m.tick()
+    expect(getSyncHealth().status).toBe('connecting')
+  })
+
   it('offline suppresses the stall (and resets the grace window)', async () => {
     let online = true
     const { m, advance, deps } = makeMonitor({ isOnline: () => online })

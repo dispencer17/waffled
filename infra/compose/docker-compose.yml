@@ -230,7 +230,7 @@ services:
     command: ['start', '-r', 'unified']    # API server + replication in one container
     volumes:
       - ./powersync:/config:ro             # service.yaml + sync-config.yaml
-    environment:
+    environment: &powersync-env
       POWERSYNC_CONFIG_PATH: /config/service.yaml
       NODE_OPTIONS: --max-old-space-size=1000
       PS_PORT: 8080
@@ -245,6 +245,24 @@ services:
       interval: 5s
       timeout: 2s
       retries: 20
+    restart: unless-stopped
+
+  powersync-compact:
+    # Self-hosted PowerSync never compacts on its own: every row update appends to
+    # the bucket's history and nothing collapses superseded ops, so a fresh device's
+    # first sync keeps growing (2.4M ops for ~1k rows in the 2026-10 kiosk incident).
+    # Runs the service's own `compact` at startup and then daily — it is designed
+    # to run alongside the live service. Same image/config/storage as powersync.
+    image: journeyapps/powersync-service:1.22.0
+    container_name: waffled-powersync-compact
+    depends_on:
+      powersync:
+        condition: service_healthy
+    entrypoint: ['sh', '-c']
+    command: ['while true; do node service/lib/entry.js compact || echo "compact failed; retrying next cycle"; sleep 86400; done']
+    volumes:
+      - ./powersync:/config:ro
+    environment: *powersync-env
     restart: unless-stopped
 
   caddy:

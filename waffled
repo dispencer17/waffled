@@ -805,7 +805,7 @@ case "$cmd" in
       [ "$ans" = "restore" ] || { echo "aborted"; exit 1; }
     fi
     echo "${c_dim}Stopping app services (api, powersync, caddy) so nothing writes during the restore…${c_reset}"
-    "${DC[@]}" stop api powersync caddy || true
+    "${DC[@]}" stop api powersync powersync-compact caddy || true
     echo "${c_dim}Restoring…${c_reset}"
     # Plain-SQL dump: the --clean/--if-exists header drops+recreates objects, so piping
     # it back through psql restores in place. --single-transaction → all-or-nothing.

@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   earlier mitigation); it now pins the patched release. No functional change.
 
 ### Fixed
+- **Calendar feeds no longer flood Live Sync.** Every 15-minute ICS feed poll (and
+  every recurring-event refresh) rewrote each event even when nothing had changed,
+  and each rewrite was re-sent to every device. Over weeks that piled up millions of
+  sync operations for about a thousand events, until a kiosk could no longer finish
+  its first sync. Unchanged events are now left alone.
+- **A big first sync is allowed to finish.** The Live Sync watchdog treated any first
+  sync longer than three minutes as stuck, restarting it and eventually wiping the
+  partly-downloaded copy, so a large household could loop forever without ever
+  syncing. A sync that is still downloading now counts as healthy.
+- **Live Sync history is trimmed daily.** PowerSync keeps every change as history,
+  and a new device has to download all of it. A new `powersync-compact` service now
+  runs PowerSync's own compaction at startup and then once a day, so a device's
+  first sync stays proportional to your data.
 - **Update messages read as plain English.** The deploy output is colourised for a
   terminal, and those colour codes were reaching System Health as stray characters
   mixed into the text. They're now stripped before the message is stored.
